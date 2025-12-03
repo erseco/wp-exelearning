@@ -1,0 +1,121 @@
+# Copyright (C) 2025 INTEF
+# This file is distributed under the GPL-3.0+.
+msgid ""
+msgstr ""
+"Project-Id-Version: eXeLearning 0.0.0\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/wp-exelearning\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"X-Generator: WP-CLI 2.12.0\n"
+"X-Domain: exelearning\n"
+
+#. Plugin Name of the plugin
+msgid "eXeLearning"
+msgstr ""
+
+#. Plugin URI of the plugin
+#. Author URI of the plugin
+msgid "https://github.com/exelearning/wp-exelearning"
+msgstr ""
+
+#. Description of the plugin
+msgid "Plugin to support eXeLearning .elp files in WordPress. Upload, manage and embed eXeLearning content."
+msgstr ""
+
+#. Author of the plugin
+msgid "INTEF"
+msgstr ""
+
+msgid "Settings"
+msgstr ""
+
+msgid "eXeLearning Settings"
+msgstr ""
+
+msgid "General Settings"
+msgstr ""
+
+msgid "Example Option"
+msgstr ""
+
+msgid "Title"
+msgstr ""
+
+msgid "Date"
+msgstr ""
+
+msgid "Status"
+msgstr ""
+
+msgid "Edit"
+msgstr ""
+
+msgid "Delete"
+msgstr ""
+
+msgid "Error: eXeLearning content not found"
+msgstr ""
+
+msgid "View eXeLearning Content"
+msgstr ""
+
+msgid "eXeLearning File"
+msgstr ""
+
+msgid "Add New"
+msgstr ""
+
+msgid "Add New eXeLearning File"
+msgstr ""
+
+msgid "New eXeLearning File"
+msgstr ""
+
+msgid "Edit eXeLearning File"
+msgstr ""
+
+msgid "View eXeLearning File"
+msgstr ""
+
+msgid "All eXeLearning Files"
+msgstr ""
+
+msgid "Search eXeLearning Files"
+msgstr ""
+
+msgid "Parent eXeLearning Files:"
+msgstr ""
+
+msgid "No eXeLearning Files found."
+msgstr ""
+
+msgid "No eXeLearning Files found in Trash."
+msgstr ""
+
+msgid "eXeLearning Content Preview"
+msgstr ""
+
+msgid "eXeLearning Metadata"
+msgstr ""
+
+msgid "Open in new tab"
+msgstr ""
+
+msgid "License:"
+msgstr ""
+
+msgid "Language:"
+msgstr ""
+
+msgid "Resource Type:"
+msgstr ""
+
+msgid "Select eXeLearning File"
+msgstr ""
+
+msgid "Use this file"
+msgstr ""

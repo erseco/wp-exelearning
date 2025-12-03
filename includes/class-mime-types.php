@@ -1,0 +1,40 @@
+<?php
+/**
+ * Mime types registration class.
+ *
+ * This class registers and filters mime types.
+ *
+ * @package Exelearning
+ */
+
+if ( ! defined( 'WPINC' ) ) {
+    die;
+}
+
+/**
+ * Class ExeLearning_Mime_Types.
+ *
+ * Manages custom mime type registration.
+ */
+class ExeLearning_Mime_Types {
+
+    /**
+     * Registers custom mime types.
+     */
+    public function register_mime_types() {
+        add_filter( 'upload_mimes', array( $this, 'add_elp_mime_type' ) );
+    }
+
+    /**
+     * Adds .elp and .elpx mime types.
+     *
+     * @param array $mimes Current mime types.
+     * @return array Modified mime types.
+     */
+    public function add_elp_mime_type( $mimes ) {
+        // Add .elp and .elpx mime types for eXeLearning files.
+        $mimes['elp']  = 'application/x-exe-learning';
+        $mimes['elpx'] = 'application/x-exe-learning';
+        return $mimes;
+    }
+}
