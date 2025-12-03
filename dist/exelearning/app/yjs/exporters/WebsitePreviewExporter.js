@@ -25,14 +25,20 @@ class WebsitePreviewExporter extends Html5Exporter {
   /**
    * Get versioned asset path for server resources
    * Uses basePath and version for cache busting: {basePath}/{version}/path
+   * For blob URLs in Electron, returns absolute URLs to ensure resources load correctly
    * @param {string} path - The resource path (e.g., '/libs/bootstrap.css')
-   * @returns {string} - Versioned URL (e.g., '/web/exelearning/v1.0.0/libs/bootstrap.css')
+   * @returns {string} - Versioned URL (e.g., 'http://localhost:3001/v1.0.0/libs/bootstrap.css')
    */
   getVersionedPath(path) {
     const basePath = window.eXeLearning?.symfony?.basePath || '';
     const version = window.eXeLearning?.version || 'v1.0.0';
     const cleanPath = path.startsWith('/') ? path.slice(1) : path;
-    return `${basePath}/${version}/${cleanPath}`;
+    const relativePath = `${basePath}/${version}/${cleanPath}`;
+
+    // For blob URLs in Electron, we need absolute URLs
+    // Use eXeLearning.symfony.baseURL if available (more reliable), fallback to window.location.origin
+    const baseURL = window.eXeLearning?.symfony?.baseURL || window.location.origin;
+    return `${baseURL}${relativePath}`;
   }
 
   /**
@@ -75,16 +81,22 @@ class WebsitePreviewExporter extends Html5Exporter {
         });
       }
 
-      // 5. Open in new window
+      // 5. Open in new window using Blob URL (works in Electron and avoids popup blockers)
       console.log('[WebsitePreviewExporter] Opening preview window...');
-      const previewWindow = window.open('', '_blank');
-      if (!previewWindow) {
+      const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+      const blobUrl = URL.createObjectURL(blob);
+      const previewWindow = window.open(blobUrl, '_blank');
+
+      // Clean up blob URL after a delay to allow the window to load
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+
+      // In Electron, window.open() may return null even if the window was created
+      // because the setWindowOpenHandler returns { action: 'deny' } after manually creating the window
+      const isElectron = !!(window.electronAPI || (typeof process !== 'undefined' && process.versions?.electron));
+      if (!previewWindow && !isElectron) {
+        URL.revokeObjectURL(blobUrl);
         throw new Error('Popup bloqueado. Por favor permita popups para este sitio.');
       }
-
-      previewWindow.document.open();
-      previewWindow.document.write(html);
-      previewWindow.document.close();
 
       console.log('[WebsitePreviewExporter] Preview opened successfully');
       return { success: true, window: previewWindow };
@@ -129,6 +141,7 @@ ${this.renderSpaNavigation(pages)}
 <main class="page">
 ${pagesHtml}
 </main>
+${this.renderNavButtons()}
 ${this.renderWebsiteFooter(author, license)}
 </div>
 ${this.generateWebsitePreviewScripts(themeName)}
@@ -147,7 +160,7 @@ ${this.generateWebsitePreviewScripts(themeName)}
   generateWebsitePreviewHead(themeName, usedIdevices, projectTitle, customStyles) {
     // Use versioned paths for cache busting
     const bootstrapCss = this.getVersionedPath('/libs/bootstrap/bootstrap.min.css');
-    const themeCss = this.getVersionedPath(`/files/perm/themes/base/${themeName}/content.css`);
+    const themeCss = this.getVersionedPath(`/files/perm/themes/base/${themeName}/style.css`);
     const fallbackCss = this.getVersionedPath('/style/content.css');
 
     let head = `<meta charset="utf-8">
@@ -159,14 +172,13 @@ ${this.generateWebsitePreviewScripts(themeName)}
 <!-- Server-hosted libraries (versioned paths) -->
 <link rel="stylesheet" href="${bootstrapCss}">
 
-<!-- Theme from server -->
-<link rel="stylesheet" href="${themeCss}" onerror="this.href='${fallbackCss}'">
-
-<!-- Base CSS (inline for preview) -->
+<!-- Preview-only CSS (BEFORE theme so theme styles take precedence) -->
 <style>
-${this.getBaseCss()}
 ${this.getWebsitePreviewCss()}
-</style>`;
+</style>
+
+<!-- Theme from server (loads AFTER fallback, so theme wins) -->
+<link rel="stylesheet" href="${themeCss}" onerror="this.href='${fallbackCss}'">`;
 
     // iDevice CSS from server
     const seen = new Set();
@@ -242,6 +254,7 @@ ${this.getWebsitePreviewCss()}
 
   /**
    * Render a page as an article (hidden except first)
+   * Matches the structure of the real export: main-header with page-header inside
    * @param {Object} page
    * @param {boolean} isFirst
    * @returns {string}
@@ -258,16 +271,33 @@ ${this.getWebsitePreviewCss()}
     }
 
     const displayStyle = isFirst ? '' : ' style="display:none"';
+    const pageId = page.id;
 
-    return `<article id="page-${page.id}" class="spa-page${isFirst ? ' active' : ''}"${displayStyle}>
-<header class="page-header">
-<h2 class="page-title">${this.escapeHtml(page.title)}</h2>
+    return `<article id="page-${pageId}" class="spa-page${isFirst ? ' active' : ''}"${displayStyle}>
+<header id="header-${pageId}" class="main-header">
+<div class="page-header"><h1 class="page-title">${this.escapeHtml(page.title)}</h1></div>
 </header>
-<div class="page-content">
+<div id="page-content-${pageId}" class="page-content">
 ${blockHtml}
 </div>
 </article>
 `;
+  }
+
+  /**
+   * Render navigation buttons (Previous/Next)
+   * Uses <a> elements for proper clickability and theme styling
+   * @returns {string}
+   */
+  renderNavButtons() {
+    return `<div class="nav-buttons">
+<a href="#" title="Anterior" class="nav-button nav-button-left" data-nav="prev">
+<span>Anterior</span>
+</a>
+<a href="#" title="Siguiente" class="nav-button nav-button-right" data-nav="next">
+<span>Siguiente</span>
+</a>
+</div>`;
   }
 
   /**
@@ -281,7 +311,7 @@ ${blockHtml}
     const bootstrapJs = this.getVersionedPath('/libs/bootstrap/bootstrap.bundle.min.js');
     const commonI18nJs = this.getVersionedPath('/app/common/common_i18n.js');
     const commonJs = this.getVersionedPath('/app/common/common.js');
-    const themeJs = this.getVersionedPath(`/files/perm/themes/base/${themeName}/content.js`);
+    const themeJs = this.getVersionedPath(`/files/perm/themes/base/${themeName}/style.js`);
 
     return `<script src="${jqueryJs}"></script>
 <script src="${bootstrapJs}"></script>
@@ -343,12 +373,78 @@ ${blockHtml}
     }
   }
 
+  function initNavButtons() {
+    const navButtons = document.querySelectorAll('.nav-button[data-nav]');
+    const navLinks = document.querySelectorAll('[data-page-id]');
+    const pageIds = Array.from(navLinks).map(l => l.getAttribute('data-page-id'));
+
+    navButtons.forEach(function(btn) {
+      btn.addEventListener('click', function(e) {
+        e.preventDefault(); // Prevent # navigation
+        const direction = this.getAttribute('data-nav');
+        const activePage = document.querySelector('.spa-page.active');
+        if (!activePage) return;
+
+        const currentId = activePage.id.replace('page-', '');
+        const currentIndex = pageIds.indexOf(currentId);
+        let newIndex;
+
+        if (direction === 'prev' && currentIndex > 0) {
+          newIndex = currentIndex - 1;
+        } else if (direction === 'next' && currentIndex < pageIds.length - 1) {
+          newIndex = currentIndex + 1;
+        } else {
+          return; // No navigation possible
+        }
+
+        const targetLink = document.querySelector('[data-page-id="' + pageIds[newIndex] + '"]');
+        if (targetLink) {
+          targetLink.click();
+        }
+      });
+    });
+
+    updateNavButtonsVisibility();
+  }
+
+  function updateNavButtonsVisibility() {
+    const navLinks = document.querySelectorAll('[data-page-id]');
+    const pageIds = Array.from(navLinks).map(l => l.getAttribute('data-page-id'));
+    const activePage = document.querySelector('.spa-page.active');
+    if (!activePage) return;
+
+    const currentId = activePage.id.replace('page-', '');
+    const currentIndex = pageIds.indexOf(currentId);
+
+    const prevBtn = document.querySelector('.nav-button[data-nav="prev"]');
+    const nextBtn = document.querySelector('.nav-button[data-nav="next"]');
+
+    // Hide first/last buttons when at boundaries (using display to match theme behavior)
+    if (prevBtn) {
+      prevBtn.style.display = currentIndex > 0 ? '' : 'none';
+    }
+    if (nextBtn) {
+      nextBtn.style.display = currentIndex < pageIds.length - 1 ? '' : 'none';
+    }
+  }
+
   // Initialize when DOM is ready
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initSpaNavigation);
+    document.addEventListener('DOMContentLoaded', function() {
+      initSpaNavigation();
+      initNavButtons();
+    });
   } else {
     initSpaNavigation();
+    initNavButtons();
   }
+
+  // Update nav buttons visibility when page changes
+  document.addEventListener('click', function(e) {
+    if (e.target.closest('[data-page-id]')) {
+      setTimeout(updateNavButtonsVisibility, 10);
+    }
+  });
 
   console.log('[WebsitePreview] SPA Navigation initialized');
 })();

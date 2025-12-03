@@ -28,6 +28,10 @@
         // Just the filename - the app will prepend the path
         const iconUrl = iconName ? `${name}-icon.svg` : null;
 
+        // Default export template - most iDevices use this pattern
+        // The {content} placeholder is replaced with the actual iDevice content
+        const exportHtml = `<div class="exe-${name}-template">\n    {content}\n</div>`;
+
         return {
             name: name,
             dirName: name,
@@ -48,7 +52,10 @@
             editionJs: [`${name}.js`],
             editionCss: [`${name}.css`],
             exportJs: [`${name}.js`],
-            exportCss: [`${name}.css`]
+            exportCss: [`${name}.css`],
+            // Export template HTML content (used by renderView)
+            exportTemplateContent: exportHtml,
+            exportTemplateFilename: `${name}.html`
         };
     }
 
