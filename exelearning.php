@@ -22,6 +22,12 @@ if ( ! defined( 'WPINC' ) ) {
 	die;
 }
 
+// Start output buffering early for the editor page to capture any PHP warnings/notices.
+// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+if ( isset( $_GET['page'] ) && 'exelearning-editor' === $_GET['page'] ) {
+	ob_start();
+}
+
 define( 'EXELEARNING_VERSION', '0.0.0' );
 define( 'EXELEARNING_PLUGIN_FILE', __FILE__ );
 define( 'EXELEARNING_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
@@ -52,6 +58,10 @@ require_once EXELEARNING_PLUGIN_DIR . 'public/class-shortcodes.php';
 
 // Integration classes.
 require_once EXELEARNING_PLUGIN_DIR . 'includes/integrations/class-media-library.php';
+
+// Editor classes.
+require_once EXELEARNING_PLUGIN_DIR . 'includes/class-exelearning-editor.php';
+require_once EXELEARNING_PLUGIN_DIR . 'includes/class-exelearning-rest-api.php';
 
 // Include the ELPParser library and the ELP File Service.
 require_once EXELEARNING_PLUGIN_DIR . 'includes/vendor/exelearning/elp-parser/src/ElpParser.php';

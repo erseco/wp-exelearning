@@ -1,0 +1,238 @@
+<?php
+/**
+ * eXeLearning Editor integration class.
+ *
+ * Handles the fullscreen editor modal for editing .elp files.
+ *
+ * @package Exelearning
+ */
+
+if ( ! defined( 'WPINC' ) ) {
+    die;
+}
+
+/**
+ * Class ExeLearning_Editor.
+ *
+ * Manages the eXeLearning editor integration in WordPress.
+ */
+class ExeLearning_Editor {
+
+    /**
+     * Constructor.
+     */
+    public function __construct() {
+        add_action( 'admin_menu', array( $this, 'register_editor_page' ) );
+        add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_editor_scripts' ) );
+        add_action( 'admin_footer', array( $this, 'render_editor_modal_container' ) );
+        add_filter( 'wp_prepare_attachment_for_js', array( $this, 'add_edit_capability' ), 10, 3 );
+
+        // Start output buffering early if we're on the editor page.
+        // This must happen before any output to capture deprecation warnings.
+        $this->maybe_start_buffer();
+    }
+
+    /**
+     * Start output buffering if we're on the editor page.
+     */
+    private function maybe_start_buffer() {
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+        if ( ! isset( $_GET['page'] ) || 'exelearning-editor' !== $_GET['page'] ) {
+            return;
+        }
+
+        // Start output buffering to capture any warnings/notices.
+        ob_start();
+
+        // Register to render the page and discard buffered output.
+        add_action( 'admin_init', array( $this, 'render_editor_page_and_exit' ), 1 );
+    }
+
+    /**
+     * Render the editor page and exit, discarding any buffered output.
+     */
+    public function render_editor_page_and_exit() {
+        // Discard any buffered output (warnings, notices, etc.).
+        while ( ob_get_level() > 0 ) {
+            ob_end_clean();
+        }
+
+        $this->render_editor_page();
+    }
+
+    /**
+     * Register a hidden admin page for the editor.
+     */
+    public function register_editor_page() {
+        add_submenu_page(
+            null, // No parent - hidden page.
+            __( 'eXeLearning Editor', 'exelearning' ),
+            __( 'eXeLearning Editor', 'exelearning' ),
+            'upload_files',
+            'exelearning-editor',
+            '__return_empty_string' // Empty callback - we handle rendering in admin_init.
+        );
+    }
+
+    /**
+     * Render the editor page (serves the bootstrap HTML).
+     */
+    public function render_editor_page() {
+        // Clean any output that may have been generated (e.g., deprecation warnings).
+        if ( ob_get_level() ) {
+            ob_end_clean();
+        }
+
+        // Verify nonce.
+        if ( ! isset( $_GET['_wpnonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_GET['_wpnonce'] ) ), 'exelearning_editor' ) ) {
+            wp_die( esc_html__( 'Security check failed.', 'exelearning' ) );
+        }
+
+        // Check capabilities.
+        if ( ! current_user_can( 'upload_files' ) ) {
+            wp_die( esc_html__( 'You do not have permission to access this page.', 'exelearning' ) );
+        }
+
+        // Get attachment ID.
+        $attachment_id = isset( $_GET['attachment_id'] ) ? absint( $_GET['attachment_id'] ) : 0;
+
+        if ( ! $attachment_id ) {
+            wp_die( esc_html__( 'No attachment specified.', 'exelearning' ) );
+        }
+
+        // Verify it's an ELP file.
+        $file = get_attached_file( $attachment_id );
+        $ext  = strtolower( pathinfo( $file, PATHINFO_EXTENSION ) );
+
+        if ( ! in_array( $ext, array( 'elp', 'elpx' ), true ) ) {
+            wp_die( esc_html__( 'This file is not an eXeLearning file.', 'exelearning' ) );
+        }
+
+        // Check user can edit this attachment.
+        if ( ! current_user_can( 'edit_post', $attachment_id ) ) {
+            wp_die( esc_html__( 'You do not have permission to edit this file.', 'exelearning' ) );
+        }
+
+        // Load the editor bootstrap page.
+        include EXELEARNING_PLUGIN_DIR . 'admin/views/editor-bootstrap.php';
+        exit;
+    }
+
+    /**
+     * Enqueue editor modal scripts on relevant admin pages.
+     *
+     * @param string $hook Current admin page hook.
+     */
+    public function enqueue_editor_scripts( $hook ) {
+        // Only load on media pages and post edit screens.
+        $allowed_hooks = array( 'upload.php', 'post.php', 'post-new.php', 'media.php' );
+
+        if ( ! in_array( $hook, $allowed_hooks, true ) && ! did_action( 'wp_enqueue_media' ) ) {
+            return;
+        }
+
+        wp_enqueue_script(
+            'exelearning-editor',
+            EXELEARNING_PLUGIN_URL . 'assets/js/exelearning-editor.js',
+            array( 'jquery' ),
+            EXELEARNING_VERSION,
+            true
+        );
+
+        wp_localize_script(
+            'exelearning-editor',
+            'exelearningEditorVars',
+            array(
+                'editorPageUrl' => admin_url( 'admin.php?page=exelearning-editor' ),
+                'restUrl'       => rest_url( 'exelearning/v1' ),
+                'nonce'         => wp_create_nonce( 'wp_rest' ),
+                'editorNonce'   => wp_create_nonce( 'exelearning_editor' ),
+                'i18n'          => array(
+                    'editInExelearning' => __( 'Edit in eXeLearning', 'exelearning' ),
+                    'close'             => __( 'Close', 'exelearning' ),
+                ),
+            )
+        );
+    }
+
+    /**
+     * Render the editor modal container in admin footer.
+     */
+    public function render_editor_modal_container() {
+        $screen = get_current_screen();
+
+        // Only on relevant screens.
+        if ( ! $screen || ! in_array( $screen->base, array( 'upload', 'post', 'attachment' ), true ) ) {
+            return;
+        }
+        ?>
+        <div id="exelearning-editor-modal" class="exelearning-editor-modal" style="display: none;">
+            <div class="exelearning-editor-header">
+                <div class="exelearning-editor-title">
+                    <span class="dashicons dashicons-edit"></span>
+                    <span><?php esc_html_e( 'Edit eXeLearning File', 'exelearning' ); ?></span>
+                </div>
+                <div class="exelearning-editor-actions">
+                    <button type="button" id="exelearning-editor-close" class="button">
+                        <?php esc_html_e( 'Close', 'exelearning' ); ?>
+                    </button>
+                </div>
+            </div>
+            <iframe id="exelearning-editor-iframe" class="exelearning-editor-iframe" src="about:blank"></iframe>
+        </div>
+        <?php
+    }
+
+    /**
+     * Add edit capability information to attachment JS data.
+     *
+     * @param array   $response   Attachment data for JS.
+     * @param WP_Post $attachment Attachment post object.
+     * @param array   $meta       Attachment metadata.
+     * @return array Modified response.
+     */
+    public function add_edit_capability( $response, $attachment, $meta ) {
+        // Check if this is an ELP file.
+        $file = get_attached_file( $attachment->ID );
+        $ext  = strtolower( pathinfo( $file, PATHINFO_EXTENSION ) );
+
+        if ( ! in_array( $ext, array( 'elp', 'elpx' ), true ) ) {
+            return $response;
+        }
+
+        // Add edit capability flag.
+        if ( current_user_can( 'edit_post', $attachment->ID ) ) {
+            $response['exelearningCanEdit'] = true;
+            $response['exelearningEditUrl'] = $this->get_editor_url( $attachment->ID );
+        }
+
+        return $response;
+    }
+
+    /**
+     * Generate editor URL for an attachment.
+     *
+     * @param int $attachment_id Attachment ID.
+     * @return string Editor URL.
+     */
+    public function get_editor_url( $attachment_id ) {
+        return add_query_arg(
+            array(
+                'page'          => 'exelearning-editor',
+                'attachment_id' => $attachment_id,
+                '_wpnonce'      => wp_create_nonce( 'exelearning_editor' ),
+            ),
+            admin_url( 'admin.php' )
+        );
+    }
+
+    /**
+     * Generate project ID for an attachment.
+     *
+     * @param int $attachment_id Attachment ID.
+     * @return string Project ID.
+     */
+    public function get_project_id( $attachment_id ) {
+        return 'wp-attachment-' . $attachment_id;
+    }
+}

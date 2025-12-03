@@ -141,10 +141,31 @@ public function add_elp_meta_box() {
 	            echo '</div>';
 	            echo '<p><a href="' . esc_url( $preview_url ) . '" target="_blank" rel="noopener noreferrer">' . esc_html__( 'Open in new tab', 'exelearning' ) . '</a></p>';
 	        } else {
-	            echo '<div style="padding: 20px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 4px;">';
+	            echo '<div style="padding: 20px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; margin-bottom: 15px;">';
 	            echo '<p><strong>' . esc_html__( 'No preview available', 'exelearning' ) . '</strong></p>';
 	            echo '<p>' . esc_html__( 'This is an eXeLearning v2 source file (.elp). To view the content, open it in eXeLearning and export it as HTML.', 'exelearning' ) . '</p>';
 	            echo '</div>';
+	        }
+
+	        // Add "Edit in eXeLearning" button.
+	        if ( current_user_can( 'edit_post', $post->ID ) ) {
+	            $edit_url = add_query_arg(
+	                array(
+	                    'page'          => 'exelearning-editor',
+	                    'attachment_id' => $post->ID,
+	                    '_wpnonce'      => wp_create_nonce( 'exelearning_editor' ),
+	                ),
+	                admin_url( 'admin.php' )
+	            );
+
+	            echo '<p style="margin-top: 15px;">';
+	            echo '<a href="' . esc_url( $edit_url ) . '" class="button button-primary button-large exelearning-edit-page-button" ';
+	            echo 'data-attachment-id="' . esc_attr( $post->ID ) . '" ';
+	            echo 'style="width: 100%; text-align: center;">';
+	            echo '<span class="dashicons dashicons-edit" style="vertical-align: middle; margin-right: 5px;"></span>';
+	            echo esc_html__( 'Edit in eXeLearning', 'exelearning' );
+	            echo '</a>';
+	            echo '</p>';
 	        }
 	    }
 

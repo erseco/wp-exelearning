@@ -122,3 +122,102 @@
     align-items: center;
     gap: 8px;
 }
+
+/* eXeLearning Editor Modal */
+.exelearning-editor-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 100000;
+    background: #1d2327;
+    display: flex;
+    flex-direction: column;
+}
+
+.exelearning-editor-header {
+    height: 50px;
+    min-height: 50px;
+    background: #23282d;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    border-bottom: 1px solid #1d2327;
+    box-sizing: border-box;
+}
+
+.exelearning-editor-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.exelearning-editor-title .dashicons {
+    color: #72aee6;
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+}
+
+.exelearning-editor-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.exelearning-editor-actions .button {
+    height: 32px;
+    line-height: 30px;
+}
+
+.exelearning-editor-actions .button-primary {
+    background: #2271b1;
+    border-color: #2271b1;
+}
+
+.exelearning-editor-actions .button-primary:hover {
+    background: #135e96;
+    border-color: #135e96;
+}
+
+.exelearning-editor-iframe {
+    flex: 1;
+    width: 100%;
+    border: none;
+    background: #fff;
+}
+
+/* Body class when editor is open */
+body.exelearning-editor-open {
+    overflow: hidden;
+}
+
+/* Edit button in media library */
+.exelearning-edit-button {
+    margin-top: 10px;
+}
+
+.exelearning-edit-button .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    vertical-align: text-bottom;
+}
+
+/* Edit button in attachment page meta box */
+.exelearning-edit-page-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.exelearning-edit-page-button .dashicons {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+}

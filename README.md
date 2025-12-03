@@ -1,11 +1,21 @@
 # eXeLearning
 
+![CI](https://img.shields.io/github/actions/workflow/status/exelearning/wp-exelearning/ci.yml?label=CI)
+[![codecov](https://codecov.io/gh/exelearning/wp-exelearning/graph/badge.svg)](https://codecov.io/gh/exelearning/wp-exelearning)
 ![WordPress Version](https://img.shields.io/badge/WordPress-6.1-blue)
 ![PHP Version](https://img.shields.io/badge/PHP-%3E%3D%208.0-8892bf)
 ![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)
 ![Downloads](https://img.shields.io/github/downloads/exelearning/wp-exelearning/total)
+![Last Commit](https://img.shields.io/github/last-commit/exelearning/wp-exelearning)
+![Open Issues](https://img.shields.io/github/issues/exelearning/wp-exelearning)
 
 WordPress plugin for eXeLearning content management. Upload, manage and embed eXeLearning `.elp` files directly in your WordPress site.
+
+## Demo
+
+Try eXeLearning instantly in your browser using WordPress Playground! Note that all changes will be lost when you close the browser window, as everything runs locally in your browser.
+
+[<kbd> <br> Preview in WordPress Playground <br> </kbd>](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/exelearning/wp-exelearning/refs/heads/main/blueprint.json)
 
 ## Features
 

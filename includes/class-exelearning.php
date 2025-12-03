@@ -110,6 +110,20 @@ class ExeLearning {
     private $admin_wpcli;
 
     /**
+     * Instance of the editor integration.
+     *
+     * @var ExeLearning_Editor
+     */
+    private $editor;
+
+    /**
+     * Instance of the REST API handler.
+     *
+     * @var ExeLearning_REST_API
+     */
+    private $rest_api;
+
+    /**
      * Constructor.
      */
     public function __construct() {
@@ -144,6 +158,8 @@ class ExeLearning {
         $this->admin_upload       = new ExeLearning_Admin_Upload();
         $this->elp_upload_handler = new ExeLearning_Elp_Upload_Handler();
         $this->elp_upload_block   = new ExeLearning_Elp_Upload_Block();
+        $this->editor             = new ExeLearning_Editor();
+        $this->rest_api           = new ExeLearning_REST_API();
 
         // WP-CLI commands are registered automatically if WP_CLI is defined.
     }

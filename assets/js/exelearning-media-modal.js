@@ -105,6 +105,9 @@ jQuery( document ).ready( function( $ ) {
                 'This is an eXeLearning v2 source file (.elp). To view the content, open it in eXeLearning and export it as HTML.' +
                 '</div>' + metaHtml
             );
+
+            // Still add the edit button for v2 files
+            addEditButton( attachment, $detailsThumbnail );
             return;
         }
 
@@ -123,6 +126,49 @@ jQuery( document ).ready( function( $ ) {
         // Añadir metadatos
         if ( metaHtml ) {
             $detailsThumbnail.after( metaHtml );
+        }
+
+        // Add "Edit in eXeLearning" button if user can edit
+        addEditButton( attachment, $detailsThumbnail );
+    }
+
+    // Function to add "Edit in eXeLearning" button
+    function addEditButton( attachment, $container ) {
+        // Check if editing is available
+        if ( ! attachment.get( 'exelearningCanEdit' ) ) {
+            return;
+        }
+
+        // Check if button already exists
+        if ( $container.siblings( '.exelearning-edit-button' ).length > 0 ) {
+            return;
+        }
+
+        var editUrl = attachment.get( 'exelearningEditUrl' );
+        var attachmentId = attachment.get( 'id' );
+
+        var $editButton = $( '<button type="button" class="button button-primary exelearning-edit-button" style="margin-top: 10px; width: 100%;">' +
+            '<span class="dashicons dashicons-edit" style="vertical-align: middle; margin-right: 5px;"></span>' +
+            'Edit in eXeLearning</button>' );
+
+        $editButton.on( 'click', function( e ) {
+            e.preventDefault();
+
+            // Use the ExeLearningEditor modal if available
+            if ( window.ExeLearningEditor && typeof window.ExeLearningEditor.open === 'function' ) {
+                window.ExeLearningEditor.open( attachmentId, editUrl );
+            } else {
+                // Fallback: open in new window
+                window.open( editUrl, '_blank', 'width=1200,height=800' );
+            }
+        });
+
+        // Insert after the metadata or thumbnail
+        var $metaContainer = $container.siblings( '.exelearning-metadata' );
+        if ( $metaContainer.length > 0 ) {
+            $metaContainer.after( $editButton );
+        } else {
+            $container.after( $editButton );
         }
     }
 
