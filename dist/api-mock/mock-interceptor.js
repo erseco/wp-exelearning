@@ -42,6 +42,11 @@
     function handleResourceRequest(url) {
         const urlString = typeof url === 'string' ? url : url.toString();
 
+        // Debug: always log if URL contains 'resource' keyword
+        if (urlString.includes('resource')) {
+            console.log('[WP-EXE Mock] handleResourceRequest checking URL:', urlString.substring(0, 150));
+        }
+
         // Check if this is a resource download request
         if (urlString.includes('?resource=') || urlString.includes('&resource=')) {
             const resourceMatch = urlString.match(/[?&]resource=([^&]+)/);
@@ -346,6 +351,14 @@
             const url = options.url || '';
             const method = options.method || options.type || 'GET';
 
+            // DEBUG: Log EVERY ajaxPrefilter call
+            console.log('[WP-EXE Mock] ajaxPrefilter ENTRY:', method, url ? url.substring(0, 120) : '(no url)');
+
+            // DEBUG: Log ajaxPrefilter calls
+            if (url.includes('resource') || url.includes('/api/')) {
+                console.log('[WP-EXE Mock] ajaxPrefilter matched resource/api:', method, url.substring(0, 150));
+            }
+
             // FIRST: Check for resource download requests (?resource=...)
             // Redirect these to direct file URLs
             const redirectUrl = handleResourceRequest(url);
@@ -392,11 +405,24 @@
             const url = options.url || '';
             const method = (options.method || options.type || 'GET').toUpperCase();
 
+            // DEBUG: Log EVERY $.ajax call to trace all requests
+            console.log('[WP-EXE Mock] $.ajax ENTRY:', method, url ? url.substring(0, 120) : '(no url)');
+
+            // DEBUG: Log all $.ajax calls that involve resources or API
+            if (url.includes('resource') || url.includes('/api/')) {
+                console.log('[WP-EXE Mock] $.ajax matched resource/api:', method, url.substring(0, 150));
+            }
+
             // FIRST: Check for resource download requests (?resource=...)
             // Must be before /api/ check since URLs can contain both
             const redirectUrl = handleResourceRequest(url);
+            if (url.includes('resource')) {
+                console.log('[WP-EXE Mock] $.ajax handleResourceRequest result:', redirectUrl ? 'REDIRECT to ' + redirectUrl.substring(0, 80) : 'null (no redirect)');
+            }
             if (redirectUrl) {
                 // Redirect to the actual file URL
+                // The .htaccess has been modified to serve static files directly
+                console.log('[WP-EXE Mock] Redirecting to:', redirectUrl);
                 options.url = redirectUrl;
                 return originalAjax.call(this, options);
             }
@@ -466,6 +492,11 @@
         const urlString = typeof url === 'string' ? url : url.toString();
         const method = options?.method || 'GET';
 
+        // DEBUG: Log fetch calls with resource or /api/
+        if (urlString.includes('resource') || urlString.includes('/api/')) {
+            console.log('[WP-EXE Mock] fetch called:', method, urlString.substring(0, 150));
+        }
+
         // Check for resource download requests (?resource=...) first
         const redirectUrl = handleResourceRequest(urlString);
         if (redirectUrl) {
@@ -516,5 +547,144 @@
     // Expose setup function for manual initialization
     window.wpExeMockSetupJQuery = setupJQueryInterceptor;
 
-    console.log('[WP-EXE Mock] API interceptor initialized');
+    // Intercept XMLHttpRequest at the prototype level (more reliable)
+    const originalXHROpen = XMLHttpRequest.prototype.open;
+    XMLHttpRequest.prototype.open = function(method, url, ...args) {
+        const urlString = typeof url === 'string' ? url : url.toString();
+
+        // DEBUG: Log ALL XHR opens
+        console.log('[WP-EXE Mock] XHR.open:', method, urlString.substring(0, 120));
+
+        // Check for resource redirect
+        const redirectUrl = handleResourceRequest(urlString);
+        if (redirectUrl) {
+            console.log('[WP-EXE Mock] XHR redirect:', urlString.substring(0, 80), '->', redirectUrl.substring(0, 80));
+            return originalXHROpen.call(this, method, redirectUrl, ...args);
+        }
+
+        return originalXHROpen.call(this, method, url, ...args);
+    };
+
+    /**
+     * MutationObserver to intercept DOM insertions of <link> and <img> tags
+     * that have resource URLs, and fix them before the browser fetches.
+     */
+    function fixResourceUrl(url) {
+        if (!url) return url;
+        const urlString = typeof url === 'string' ? url : url.toString();
+
+        // Check if this is a resource URL that needs fixing
+        if (urlString.includes('?resource=') || urlString.includes('&resource=')) {
+            const resourceMatch = urlString.match(/[?&]resource=([^&]+)/);
+            if (resourceMatch) {
+                let resourcePath = decodeURIComponent(resourceMatch[1]);
+                if (!resourcePath.startsWith('/')) {
+                    resourcePath = '/' + resourcePath;
+                }
+                const fixedUrl = baseUrl + '/files' + resourcePath;
+                console.log('[WP-EXE Mock] DOM element URL fix:', urlString.substring(0, 80), '->', fixedUrl.substring(0, 80));
+                return fixedUrl;
+            }
+        }
+        return url;
+    }
+
+    // Observe DOM for <link> and <img> insertions
+    const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            mutation.addedNodes.forEach(function(node) {
+                if (node.nodeType !== Node.ELEMENT_NODE) return;
+
+                // Debug: log all link and img additions
+                if (node.tagName === 'LINK' || node.tagName === 'IMG') {
+                    console.log('[WP-EXE Mock] MutationObserver:', node.tagName, node.href || node.src);
+                }
+
+                // Fix <link> elements
+                if (node.tagName === 'LINK' && node.href) {
+                    const fixed = fixResourceUrl(node.href);
+                    if (fixed !== node.href) {
+                        console.log('[WP-EXE Mock] MutationObserver fixing LINK:', node.href.substring(0, 60));
+                        node.href = fixed;
+                    }
+                }
+
+                // Fix <img> elements
+                if (node.tagName === 'IMG' && node.src) {
+                    const fixed = fixResourceUrl(node.src);
+                    if (fixed !== node.src) {
+                        console.log('[WP-EXE Mock] MutationObserver fixing IMG:', node.src.substring(0, 60));
+                        node.src = fixed;
+                    }
+                }
+
+                // Also check children
+                node.querySelectorAll && node.querySelectorAll('link[href], img[src]').forEach(function(el) {
+                    if (el.tagName === 'LINK' && el.href) {
+                        const fixed = fixResourceUrl(el.href);
+                        if (fixed !== el.href) {
+                            el.href = fixed;
+                        }
+                    }
+                    if (el.tagName === 'IMG' && el.src) {
+                        const fixed = fixResourceUrl(el.src);
+                        if (fixed !== el.src) {
+                            el.src = fixed;
+                        }
+                    }
+                });
+            });
+        });
+    });
+
+    // Start observing
+    observer.observe(document.documentElement, {
+        childList: true,
+        subtree: true
+    });
+
+    // Intercept setAttribute to catch code that uses it instead of property setters
+    const originalSetAttribute = Element.prototype.setAttribute;
+    Element.prototype.setAttribute = function(name, value) {
+        if ((name === 'src' || name === 'href') && typeof value === 'string') {
+            const fixed = fixResourceUrl(value);
+            if (fixed !== value) {
+                console.log('[WP-EXE Mock] setAttribute fix:', name, value.substring(0, 60), '->', fixed.substring(0, 60));
+            }
+            return originalSetAttribute.call(this, name, fixed);
+        }
+        return originalSetAttribute.call(this, name, value);
+    };
+
+    // Also fix any existing images/links that are already in the DOM
+    function fixExistingElements() {
+        document.querySelectorAll('img[src*="resource"], link[href*="resource"]').forEach(function(el) {
+            if (el.tagName === 'IMG' && el.src) {
+                const fixed = fixResourceUrl(el.src);
+                if (fixed !== el.src) {
+                    console.log('[WP-EXE Mock] Fixing existing img:', el.src.substring(0, 60));
+                    el.src = fixed;
+                }
+            }
+            if (el.tagName === 'LINK' && el.href) {
+                const fixed = fixResourceUrl(el.href);
+                if (fixed !== el.href) {
+                    console.log('[WP-EXE Mock] Fixing existing link:', el.href.substring(0, 60));
+                    el.href = fixed;
+                }
+            }
+        });
+    }
+
+    // Run on DOMContentLoaded and also periodically for dynamically added elements
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', fixExistingElements);
+    } else {
+        fixExistingElements();
+    }
+
+    // Also run periodically to catch dynamically added elements
+    setInterval(fixExistingElements, 500);
+
+    console.log('[WP-EXE Mock] API interceptor initialized (fetch + XHR + DOM observer + setAttribute intercept)');
 })();

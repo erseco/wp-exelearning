@@ -19,10 +19,13 @@
      * Helper to create iDevice entry
      * Note: editionJs/Css and exportJs/Css should be just filenames, not full paths
      * The full path is constructed by idevice.js using: ${this.pathEdition}${script}
+     *
+     * The icon.url should be just the filename - the app constructs the full URL
+     * by combining basePath + iDevice directory + icon.url
      */
     function createIdevice(name, title, category, iconName, componentType = 'html') {
         const iconType = iconName ? 'img' : 'exe-icon';
-        // Icon URL is relative to the iDevice directory
+        // Just the filename - the app will prepend the path
         const iconUrl = iconName ? `${name}-icon.svg` : null;
 
         return {
