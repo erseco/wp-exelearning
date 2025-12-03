@@ -142,7 +142,7 @@
                 title: 'Advanced Mode',
                 category: 'interface',
                 heritable: false,
-                value: 'false',
+                value: 'true',  // Enable advanced mode to show all action buttons
                 type: 'checkbox',
                 hide: false
             },
@@ -180,12 +180,80 @@
             }
         },
 
-        // ODE components sync properties configuration
+        // ODE components sync properties configuration (for iDevices)
         odeComponentsSyncPropertiesConfig: {
-            visibility: { type: 'boolean', default: true },
-            teacherOnly: { type: 'boolean', default: false },
-            identifier: { type: 'string', default: '' },
-            cssClass: { type: 'string', default: '' }
+            visibility: {
+                title: 'Visible in export',
+                value: 'true',
+                type: 'checkbox',
+                category: null,
+                heritable: true
+            },
+            teacherOnly: {
+                title: 'Teacher only',
+                value: 'false',
+                type: 'checkbox',
+                category: null,
+                heritable: true
+            },
+            identifier: {
+                title: 'ID',
+                type: 'text',
+                category: null,
+                heritable: false
+            },
+            cssClass: {
+                title: 'CSS Class',
+                value: '',
+                type: 'text',
+                category: null,
+                heritable: true
+            }
+        },
+
+        // ODE pag structure sync properties configuration (for blocks containing iDevices)
+        odePagStructureSyncPropertiesConfig: {
+            visibility: {
+                title: 'Visible in export',
+                value: 'true',
+                type: 'checkbox',
+                category: null,
+                heritable: true
+            },
+            teacherOnly: {
+                title: 'Teacher only',
+                value: 'false',
+                type: 'checkbox',
+                category: null,
+                heritable: true
+            },
+            allowToggle: {
+                title: 'Allows to minimize/display content',
+                value: 'true',
+                type: 'checkbox',
+                category: null,
+                heritable: true
+            },
+            minimized: {
+                title: 'Minimized',
+                value: 'false',
+                type: 'checkbox',
+                category: null,
+                heritable: true
+            },
+            identifier: {
+                title: 'ID',
+                type: 'text',
+                category: null,
+                heritable: false
+            },
+            cssClass: {
+                title: 'CSS Class',
+                value: '',
+                type: 'text',
+                category: null,
+                heritable: true
+            }
         },
 
         // ODE project sync properties configuration

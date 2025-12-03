@@ -145,9 +145,10 @@
                 return { responseMessage: 'OK' };
             }
             // Return user preferences in the format expected by userPreferences.js
+            // advancedMode: 'true' shows all action buttons (delete, clone, move, etc.)
             return {
                 userPreferences: {
-                    advancedMode: { value: 'false' },
+                    advancedMode: { value: 'true' },
                     versionControl: { value: 'inactive' },
                     locale: { value: window.wpExeMockConfig?.locale || 'en' },
                     theme: { value: 'base' },
