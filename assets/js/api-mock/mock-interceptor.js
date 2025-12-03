@@ -392,17 +392,9 @@
             const url = options.url || '';
             const method = (options.method || options.type || 'GET').toUpperCase();
 
-            // Debug: log all $.ajax calls with resource in URL
-            if (url.includes('resource')) {
-                console.log('[WP-EXE Mock] $.ajax called with URL:', url);
-            }
-
             // FIRST: Check for resource download requests (?resource=...)
             // Must be before /api/ check since URLs can contain both
             const redirectUrl = handleResourceRequest(url);
-            if (url.includes('resource')) {
-                console.log('[WP-EXE Mock] handleResourceRequest result for', url.substring(0, 100), '...:', redirectUrl ? 'REDIRECT to ' + redirectUrl : 'null');
-            }
             if (redirectUrl) {
                 // Redirect to the actual file URL
                 options.url = redirectUrl;

@@ -43,8 +43,8 @@
         const urlString = typeof url === 'string' ? url : url.toString();
 
         // Check if this is a resource download request
-        if (urlString.includes('?resource=')) {
-            const resourceMatch = urlString.match(/\?resource=([^&]+)/);
+        if (urlString.includes('?resource=') || urlString.includes('&resource=')) {
+            const resourceMatch = urlString.match(/[?&]resource=([^&]+)/);
             if (resourceMatch) {
                 let resourcePath = decodeURIComponent(resourceMatch[1]);
                 // Ensure path starts with /

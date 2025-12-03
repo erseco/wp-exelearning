@@ -433,8 +433,8 @@
                 methods: ['GET']
             },
             api_idevices_download_file_resources: {
-                // Path must include basePath for resource requests to resolve correctly
-                path: basePath + '/files/perm/idevices/base',
+                // Path for resource downloads - will be prepended with basePath by the app
+                path: '/files/perm/idevices/base',
                 methods: ['GET']
             },
             api_idevices_html_template_get: {
@@ -479,8 +479,7 @@
             },
             api_idevices_force_download_file_resources: {
                 // Use same path as api_idevices_download_file_resources for consistency
-                // Both should use the /files/ path to avoid API endpoint conflicts
-                path: basePath + '/files/perm/idevices/base',
+                path: '/files/perm/idevices/base',
                 methods: ['GET']
             },
             api_idevices_download_ode_components: {
