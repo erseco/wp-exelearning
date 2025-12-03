@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="robots" content="noindex">
+        <title>eXeLearning</title>
+        <link rel="icon" href="{{ASSET_BASE_URL}}/favicon.ico">
+    
+    <link class="exe" rel="stylesheet" href="{{ASSET_BASE_URL}}/libs/bootstrap/bootstrap.min.css">
+    <link class="exe" rel="stylesheet" href="{{ASSET_BASE_URL}}/style/workarea/main.css">
+    <link class="exe" rel="stylesheet" href="{{ASSET_BASE_URL}}/style/workarea/base.css">
+    
+    <link class="exe" rel="stylesheet" href="{{ASSET_BASE_URL}}/app/common/exe_effects/exe_effects.css">
+    <link class="exe" rel="stylesheet" href="{{ASSET_BASE_URL}}/app/common/exe_games/exe_games.css">
+    <link class="exe" rel="stylesheet" href="{{ASSET_BASE_URL}}/app/common/exe_highlighter/exe_highlighter.css">
+    <link class="exe" rel="stylesheet" href="{{ASSET_BASE_URL}}/app/common/exe_lightbox/exe_lightbox.css">
+    <link class="exe" rel="stylesheet" href="{{ASSET_BASE_URL}}/app/common/exe_media/exe_media.css">
+    <link class="exe" rel="stylesheet" href="{{ASSET_BASE_URL}}/app/common/exe_wikipedia/exe_wikipedia.css">
+        <link class="exe" rel="stylesheet" href="{{ASSET_BASE_URL}}/style/workarea/custom.css">
+        <script class="exe" src="{{ASSET_BASE_URL}}/libs/jquery/jquery.min.js"></script>
+    
+    <script class="exe" src="{{ASSET_BASE_URL}}/libs/jquery-ui/jquery-ui.min.js" defer></script>
+    <script class="exe" src="{{ASSET_BASE_URL}}/libs/bootstrap/bootstrap.bundle.min.js" defer></script>
+    <script class="exe" src="{{ASSET_BASE_URL}}/libs/multi-dropdown.js" defer></script>
+    <script class="exe" src="{{ASSET_BASE_URL}}/libs/interact/interact.min.js" defer></script>
+    <script class="exe" src="{{ASSET_BASE_URL}}/libs/showdown/showdown.min.js" defer></script>
+    
+    <script class="exe" type="module" src="{{ASSET_BASE_URL}}/app/common/app_common.js" defer></script>
+    <script class="exe" src="{{ASSET_BASE_URL}}/app/common/common_i18n.js" defer></script>
+    <script class="exe" src="{{ASSET_BASE_URL}}/app/common/common_edition.js"></script>
+    <script class="exe" src="{{ASSET_BASE_URL}}/app/common/common.js" defer></script>
+    <script class="exe" src="{{ASSET_BASE_URL}}/app/common/exe_effects/exe_effects.js" defer></script>
+    <script class="exe" src="{{ASSET_BASE_URL}}/app/common/exe_games/exe_games.js" defer></script>
+    <script class="exe" src="{{ASSET_BASE_URL}}/app/common/exe_highlighter/exe_highlighter.js" defer></script>
+    <script class="exe" src="{{ASSET_BASE_URL}}/app/common/exe_lightbox/exe_lightbox.js" defer></script>
+    <script class="exe" src="{{ASSET_BASE_URL}}/app/common/exe_media/exe_media.js" defer></script>
+    <script class="exe" src="{{ASSET_BASE_URL}}/app/common/exe_math/tex-mml-svg.js" defer></script>
+    
+    <script class="exe" src="{{ASSET_BASE_URL}}/app/common/fix_webm_duration/fix_webm_duration.js" defer></script>
+    <script class="exe" src="{{ASSET_BASE_URL}}/libs/abcjs/exe_abc_music.js" defer></script>
+    
+    <script class="exe">
+        window.eXeLearning = {
+            version: "{{VERSION}}",
+            expires: "",
+            extension: "elpx",
+            user: `{"email":"","name":"User","roles":["ROLE_USER"]}`,
+            config: `{"isOfflineInstallation":true,"enableCollaborativeEditing":false,"userStyles":false,"userIdevices":false,"platformIntegration":false,"platformName":"","defaultTheme":"base"}`,
+            symfony: `{"basePath":"","baseURL":"","fullURL":"","locale":"en","themeBaseType":"base","themeTypeBase":"base","themeTypeUser":"user"}`,
+            mercure: null,
+            projectId: null        }
+    </script>
+    
+    <script class="exe" src="{{ASSET_BASE_URL}}/libs/tinymce_5/js/tinymce/tinymce.min.js" defer></script>
+    <script class="exe" src="{{ASSET_BASE_URL}}/app/editor/tinymce_5_settings.js" defer></script>
+    
+    <script class="exe" src="{{ASSET_BASE_URL}}/app/yjs/yjs-loader.js" defer></script>
+    
+    <script class="exe" type="module" src="{{ASSET_BASE_URL}}/app/app.js"></script>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+    </head>
+    <body class="" id="main">
+    <div id="load-screen-main" class="load-screen loading position-fixed top-0 start-0 w-100 h-100 align-items-center justify-content-center bg-white" style="z-index: 1050;" data-testid="loading-main" data-visible="true">
+        <span>eXeLearning {{VERSION}}</span>
+    </div>
+    <div id="workarea" class="container-fluid d-flex flex-nowrap">
+        <aside class="asideleft col-md-4 col-lg-3 bg-light vh-100">
+            <div class="content-info">
+                <div id="exe-title" class="title-not-editing">
+                    <h2 class="exe-title content" id="change_title">...</h2>
+                    <button class="btn button-square button-tertiary tertiary-green title-menu-button exe-app-tooltip" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Change title" aria-label="Change title">
+                        <span class="exe-icon small-icon edit-icon-green"></span>
+                    </button>
+                </div>
+            </div>
+            <div class="accordion" id="menus_content">
+<div id="menu_nav" class="menu long accordion-item" size="long" pos="left" iddrag="menu">
+    <div class="accordion-header" id="menu_nav_header">
+        <div class="accordion-button">
+            <div class="content_action_buttons buttons_action_container_right">
+                <button class="btn button-secondary secondary-green button-narrow button-combo combo-left button_nav_action action_move_prev"
+                        title="Move up"
+                        data-testid="nav-move-up">
+                    <i class="small-icon arrow-up-icon-green" aria-hidden="true"></i>
+                    <span class="visually-hidden">Move up</span>
+                </button>
+                <button class="btn button-secondary secondary-green button-narrow button-combo combo-center button_nav_action action_move_next"
+                        title="Move down"
+                        data-testid="nav-move-down">
+                    <i class="small-icon arrow-down-icon-green" aria-hidden="true"></i>
+                    <span class="visually-hidden">Move down</span>
+                </button>
+                <button class="btn button-secondary secondary-green button-narrow button-combo combo-center button_nav_action action_move_up"
+                        title="Move left (up in hierarchy)"
+                        data-testid="nav-move-left">
+                    <i class="small-icon arrow-left-icon-green" aria-hidden="true"></i>
+                    <span class="visually-hidden">Move left (up in hierarchy)</span>
+                </button>
+                <button class="btn button-secondary secondary-green button-narrow button-combo combo-right button_nav_action action_move_down"
+                        title="Move right (down in hierarchy)"
+                        data-testid="nav-move-right">
+                    <i class="small-icon arrow-right-icon-green" aria-hidden="true"></i>
+                    <span class="visually-hidden">Move right (down in hierarchy)</span>
+                </button>
+            </div>
+            <div class="content_action_buttons buttons_action_container_left" id="nav_actions">
+                <button class="button_nav_action action_properties d-none"
+                        title="Page properties"
+                        data-testid="nav-properties">
+                    <i class="exe-icon" aria-hidden="true">settings</i>
+                    <span class="visually-hidden">Page properties</span>
+                </button>
+                <button class="btn button-secondary secondary-green button-square button-combo combo-left button_nav_action action_delete"
+                        title="Delete page"
+                        data-testid="nav-delete">
+                    <i class="small-icon delete-icon-green" aria-hidden="true"></i>
+                    <span class="visually-hidden">Delete page</span>
+                </button>
+                <button class="btn button-secondary secondary-green button-square button-combo combo-center button_nav_action action_clone"
+                        title="Clone page"
+                        data-testid="nav-clone">
+                    <i class="small-icon duplicate-icon-green" aria-hidden="true"></i>
+                    <span class="visually-hidden">Clone page</span>
+                </button>
+                <button class="btn button-secondary secondary-green button-square button-combo combo-right button_nav_action action_import_idevices"
+                        title="Import iDevices"
+                        data-testid="nav-import-idevices">
+                    <i class="small-icon import-icon-green" aria-hidden="true"></i>
+                    <span class="visually-hidden">Import iDevices</span>
+                </button>
+            </div>
+            <div class="content_action_buttons add-page">
+                <button class="button_nav_action action_add" title="New page" aria-label="New page" data-testid="nav-add-page">
+                    <span class="exe-icon" aria-hidden="true">add</span>
+                </button>
+            </div>
+
+        </div>
+    </div>
+    <div id="menu_nav_content" class="menu_content accordion-collapse collapse show" aria-labelledby="menu_nav_header">
+        <div id="nav_list" role="tree">
+            <div id="nav_document_root_node"></div>
+        </div>
+    </div>
+</div>
+<div id="menu_idevices" class="menu long accordion-item" size="long" pos="left" drag="menu">
+    <h2 class="accordion-header" id="menu_idevices_header">
+        <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#menu_idevices_content" aria-expanded="true" aria-controls="menu_idevices_content">
+            iDevices
+        </button>
+    </h2>
+    <div id="menu_idevices_content" class="menu_content accordion-collapse collapse show" aria-labelledby="menu_idevices_header" data-testid="idevices-menu">
+        <div id="list_menu_idevices" class="list"></div>
+    </div>
+</div>
+            </div>
+        </aside>
+        <main>
+            <header id="head">
+                <nav class="navbar bg-transparent">
+<div class="top" id="eXeLearningNavbar">
+    <div class="main-menu">
+        <div class="main-menu-left">
+<nav class="navbar navbar-expand-md navbar-light">
+    <div class="collapse navbar-collapse">
+        <button id="exe-panels-toggler" class="btn me-2 nav-link" title="Toggle panels">
+            <div class="medium-icon menu-icon"></div>
+        </button>
+        <ul class="navbar-nav mr-auto">
+            <li class="nav-item btn button-tertiary button-dropdown dropdown">
+                <a class="nav-link dropdown-toggle" href="#" id="dropdownFile" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    File
+                </a>
+                <ul class="dropdown-menu" aria-labelledby="dropdownFile">
+                    <li><a class="dropdown-item" id="navbar-button-new" href="#" data-shortcut="Mod+Alt+N" aria-keyshortcuts="Control+Alt+N Meta+Alt+N"><span class="small-icon new-icon-green"></span> New</a></li>
+                    <li class="d-none"><a class="dropdown-item" id="navbar-button-new-from-template" href="#"><span class="small-icon new-icon"></span> New from Template...</a></li>
+                    <li class="exe-online"><a class="dropdown-item" id="navbar-button-openuserodefiles" href="#" data-shortcut="Mod+O" aria-keyshortcuts="Control+O Meta+O"><span class="small-icon open-icon"></span> Open</a></li>
+                    <li class="dropdown dropend exe-online">
+                        <a class="dropdown-item dropdown-toggle" href="#" id="navbar-button-dropdown-recent-projects" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            <span class="small-icon recent-icon-green"></span> Recent projects
+                        </a>
+                        <ul class="dropdown-menu" id="navbar-dropdown-menu-recent-projects" aria-labelledby="navbar-button-dropdown-recent-projects">
+                            <li class="text-center">...</li>
+                        </ul>
+                    </li>
+                    <li class="dropdown-divider exe-online"></li>
+                    <li class="exe-online"><a id="navbar-button-save" class="dropdown-item" href="#" data-shortcut="Mod+S" aria-keyshortcuts="Control+S Meta+S"><span class="small-icon save-icon-green"></span> Save</a></li>
+                    <li class="d-none"><a id="navbar-button-save-as" class="dropdown-item exe-online" href="#" data-shortcut="Mod+Shift+S" aria-keyshortcuts="Control+Shift+S Meta+Shift+S"><span class="small-icon save-icon"></span>Save as</a></li>
+                    <li class="dropdown dropend exe-online">
+                        <a class="dropdown-item dropdown-toggle" href="#" id="dropdownExportAs" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><span class="small-icon download-icon-green"></span> Download as...</a>
+                        <ul class="dropdown-menu" aria-labelledby="dropdownExportAs">
+                            <li><a class="dropdown-item exe-advanced" id="navbar-button-download-project" href="#">eXeLearning content (.elpx)</a></li>
+                            <li><a id="navbar-button-export-html5" class="dropdown-item" href="#">Website</a></li>
+                            <li><a id="navbar-button-export-html5-sp" class="dropdown-item" href="#">Single page</a></li>
+                            <li><a id="navbar-button-export-scorm12" class="dropdown-item" href="#">SCORM 1.2</a></li>
+                            <li class="d-none"><a id="navbar-button-export-scorm2004" class="dropdown-item exe-advanced" href="#">SCORM 2004</a></li>
+                            <li><a id="navbar-button-export-ims" class="dropdown-item exe-advanced" href="#">IMS CP</a></li>
+                            <li><a id="navbar-button-export-epub3" class="dropdown-item" href="#">ePub3</a></li>
+                        </ul>
+                    </li>
+                        <li><a class="dropdown-item" id="navbar-button-open-offline" href="#" data-shortcut="Mod+O" aria-keyshortcuts="Control+O Meta+O"><span class="small-icon open-icon"></span> Open</a></li>
+                        <li><a id="navbar-button-import-elp" class="dropdown-item" href="#"><span class="small-icon import-icon-green"></span> Import (.elpx...)</a></li>
+                        <li class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" id="navbar-button-save-offline" href="#" data-shortcut="Mod+S" aria-keyshortcuts="Control+S Meta+S"><span class="small-icon save-icon-green"></span> Save</a></li>
+                        <li><a class="dropdown-item" id="navbar-button-save-as-offline" href="#" data-shortcut="Mod+Shift+S" aria-keyshortcuts="Control+Shift+S Meta+Shift+S"><span class="small-icon save-icon"></span> Save as</a></li>
+                        <li class="dropdown dropend">
+                            <a class="dropdown-item dropdown-toggle" href="#" id="dropdownExportAsOffline" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><span class="small-icon download-icon-green"></span> Export as...</a>
+                            <ul class="dropdown-menu" aria-labelledby="dropdownExportAsOffline">
+                                <li><a id="navbar-button-exportas-html5" class="dropdown-item" href="#">Website</a></li>
+                                <li><a id="navbar-button-exportas-html5-folder" class="dropdown-item" href="#">Export to Folder</a></li>
+                                <li><a id="navbar-button-exportas-html5-sp" class="dropdown-item" href="#">Single page</a></li>
+                                <li><a id="navbar-button-exportas-scorm12" class="dropdown-item" href="#">SCORM 1.2</a></li>
+                                <li class="d-none"><a id="navbar-button-exportas-scorm2004" class="dropdown-item exe-advanced" href="#">SCORM 2004</a></li>
+                                <li><a id="navbar-button-exportas-ims" class="dropdown-item exe-advanced" href="#">IMS CP</a></li>
+                                <li><a id="navbar-button-exportas-epub3" class="dropdown-item" href="#">ePub3</a></li>
+                                <li class="d-none"><a id="navbar-button-exportas-xml-properties" class="dropdown-item" href="#">Metadata (XML)</a></li>
+                            </ul>
+                        </li>
+                    <li class="dropdown-divider"></li>
+                    <li><a id="navbar-button-export-print" class="dropdown-item" href="#"><span class="small-icon print-icon-green"></span> Print</a></li>
+                    <li class="dropdown dropend exe-advanced d-none">
+                        <a class="dropdown-item dropdown-toggle" href="#" id="dropdownProperties" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Metadata</a>
+                        <ul class="dropdown-menu" aria-labelledby="dropdownProperties">
+                            <li><a id="navbar-button-import-xml-properties" class="dropdown-item" href="#">Import</a></li>
+                            <li><a id="navbar-button-export-xml-properties" class="dropdown-item" href="#">Export</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </li>
+            <li class="nav-item btn button-tertiary button-dropdown dropdown">
+                <a class="nav-link dropdown-toggle" href="#" id="dropdownUtilities" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    Utilities
+                </a>
+                <ul class="dropdown-menu" aria-labelledby="dropdownUtilities">
+                    <li><a class="dropdown-item" id="navbar-button-preview" href="#">Preview</a></li>
+                    <li><a class="dropdown-item exe-advanced" id="navbar-button-idevice-manager" href="#">iDevice manager</a></li>
+                    <li><a class="dropdown-item exe-advanced" id="navbar-button-odeusedfiles" href="#"><span class="small-icon report-icon-green"></span> Resources report</a></li>
+                    <li><a class="dropdown-item exe-advanced" id="navbar-button-odebrokenlinks" href="#"><span class="small-icon link-icon"></span>  Link validation</a></li>
+                    <li><a class="dropdown-item exe-advanced" id="navbar-button-filemanager" href="#"><span class="small-icon image-icon-green"></span> File manager</a></li>
+                </ul>
+            </li>
+            <li class="nav-item btn button-tertiary button-dropdown dropdown" id="dropdownHelpItem" >
+                <a class="nav-link dropdown-toggle" href="#" id="dropdownHelp" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    Help
+                </a>
+                <ul class="dropdown-menu" aria-labelledby="dropdownHelp">
+                    <li><a class="dropdown-item" id="navbar-button-assistant" href="#">Assistant</a></li>
+                    <li><a class="dropdown-item" id="navbar-button-exe-tutorial" href="#">User manual</a></li>
+                    <li class="d-none"><a class="dropdown-item" id="navbar-button-api-docs" href="#">API Reference (Swagger)</a></li>
+                    <li class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" id="navbar-button-about-exe" href="#">About eXeLearning</a></li>
+                    <li><a class="dropdown-item" id="navbar-button-release-notes" href="#">Release notes</a></li>
+                    <li><a class="dropdown-item" id="navbar-button-legal-notes" href="#">Legal notes</a></li>
+                    <li class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" id="navbar-button-exe-web" href="#">eXeLearning website</a></li>
+                    <li><a class="dropdown-item" id="navbar-button-report-bug" href="#">Report a bug</a></li>
+                </ul>
+            </li>
+        </ul>
+    </div>
+</nav>
+        </div>
+        <div class="main-menu-right">
+            <button id="head-top-download-button" class="btn" title="Download"  data-testid="download-button">
+                <span class="auto-icon" aria-hidden="true">download</span>
+                <span class="btn-label">Download</span>
+            </button>
+            <button id="head-top-save-button" class="btn button-display d-flex justify-content-center align-items-center" title="Save" data-testid="save-button">
+                <div class="small-icon save-icon-white"></div>
+                <span>Save</span>
+            </button>
+            <button id="head-bottom-preview" class="btn button-display display-outline button-square d-flex justify-content-center align-items-center" title="Preview">
+                <div class="small-icon preview-icon-green"></div>
+            </button>
+            <button id="dropdownStyles" class="btn button-tertiary button-square d-flex justify-content-center align-items-center" title="Styles">
+                <span class="medium-icon styles-icon"></span>
+            </button>
+            <button id="head-top-settings-button" class="btn button-tertiary button-square d-flex justify-content-center align-items-center" title="Settings" data-testid="settings-button">
+                <span class="medium-icon settings-icon"></span>
+            </button>
+            <button id="head-top-share-button"
+                    class="btn btn-share-pill exe-online d-flex align-items-center"
+                    title="Share"
+                    aria-label="Share">
+                <span class="share-visibility-indicator d-flex align-items-center">
+                    <div class="auto-icon share-visibility-icon" aria-hidden="true">lock</div>
+                    <span class="share-visibility-text">Private</span>
+                </span>
+                <span class="share-button-divider"></span>
+                <span class="share-button-text">Share</span>
+            </button>
+            <div id="exe-last-edition" class="btn">
+                <span class="content"></span>
+            </div>
+            <div id="exe-concurrent-users" class="exe-online">
+                <button id="button-more-exe-concurrent-users" class="btn button-tertiary button-square d-flex justify-content-center align-items-center" title="Users online">
+                    <span class="medium-icon concurrent-users-icon"></span>
+                </button>
+            </div>
+            <div id="head-bottom-user-logged" class="dropdown" title="" data-testid="user-menu" data-user-email="">
+                <button class="btn btn-link" type="button" id="exeUserMenuToggler" data-bs-toggle="dropdown" aria-expanded="false" title="User menu">
+                    <span class="exe-avatar" title="" data-testid="user-avatar-initial"></span>
+                </button>
+
+                <ul class="dropdown-menu" aria-labelledby="exeUserMenuToggler">
+                    <li><a class="dropdown-item" id="navbar-button-preferences" href="#">Preferences</a></li>
+                    <li class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" id="head-bottom-logout-button" href="#">Exit</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="bottom">
+    <button id="button_menu_nav" class="btn btn-light" title="Structure panel">
+        <span class="auto-icon" aria-hidden="true">vertical_split</span>
+        <span class="visually-hidden">Structure panel</span>
+    </button>
+    <button id="button_menu_idevices" class="btn btn-light" title="iDevices panel">
+        <span class="auto-icon" aria-hidden="true">dashboard_customize</span>
+        <span class="visually-hidden">iDevices panel</span>
+    </button>
+</div>
+                </nav>
+            </header>
+            <section id="node-content-container" class="exe-content js flex-grow-1 d-flex flex-column">
+                <div id="load-screen-node-content" class="load-screen hide" data-testid="loading-content" data-visible="false"></div>
+                <div id="node-content" class="content" drop='["idevice","box"]' data-testid="node-content" data-ready="false">
+                    <div>
+                        <div id="header-node-content" class="header"></div>
+                        <h1 id="page-title-node-content" class="page-title" data-testid="page-title"></h1>
+                    </div>
+                </div>
+                
+                <div id="idevices-bottom" class="idevices-bottom-menu" data-testid="idevices-quickbar">
+                </div>
+            </section>
+        </main>
+    </div>
+    
+    <div id="stylessidenav-content" class="relative z-50 navbar-menu">
+        <div id="sidenav-overlay"  class="sidenav-overlay"></div>
+        <aside id="stylessidenav" class="sidenav" role="complementary">
+            <div class="content-styles-header">
+                <h1 class="styles-title">
+                    Styles
+                </h1>
+                <div id="stylessidenavclose" class="navbar-close">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">
+                        <path d="M15 5L5 15M5 5L15 15" stroke="black" stroke-width="1.66667" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+            </div>
+            <div class="content-tabs">
+                <ul class="nav nav-tabs d-none" id="styleslist" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="exestylescontent-tab" data-bs-toggle="tab" data-bs-target="#exestylescontent" type="button" role="tab" aria-controls="exestylescontent" aria-selected="true">
+                            System
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="importedstylescontent-tab" data-bs-toggle="tab" data-bs-target="#importedstylescontent" type="button" role="tab" aria-controls="importedstylescontent" aria-selected="false">
+                            Imported
+                        </button>
+                    </li>
+                </ul>
+            </div>
+            <div class="tab-content mt-3" id="styleslistContent">
+                <div class="tab-pane fade show active" id="exestylescontent" role="tabpanel" aria-labelledby="exestylescontent-tab" tabindex="0">
+                </div>
+                <div class="tab-pane fade" id="importedstylescontent" role="tabpanel" aria-labelledby="importedstylescontent-tab">
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    
+    <div class="modals-container">
+<div class="modal exe-modal-fade" tabindex="-1" id="modalAlert" role="alertdialog" data-testid="modal-alert" data-open="false">
+    <div class="modal-dialog modal-dialog-centered modal-alert" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title"></div>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body"></div>
+            <div class="modal-footer">
+                <button type="button" class="close btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal exe-modal-fade" id="modalInfo" tabindex="-1" role="dialog" aria-hidden="true" data-testid="modal-info" data-open="false">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title"></div>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body"></div>
+        </div>
+    </div>
+</div>
+<div class="modal exe-modal-fade" tabindex="-1" id="modalConfirm" role="dialog" aria-hidden="true" data-testid="modal-confirm" data-open="false">
+    <div class="modal-dialog modal-dialog-centered modal-confirm" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title"></div>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body"></div>
+            <div class="modal-footer">
+                <button type="button" class="confirm btn button-primary" data-testid="confirm-action"><span class="hidden d-none">Confirm</span></button>
+                <button type="button" class="cancel btn button-tertiary" data-testid="cancel-action" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal exe-modal-fade" tabindex="-1" id="modalSessionLogout" role="dialog" aria-hidden="true" data-testid="modal-session-logout" data-open="false">
+    <div class="modal-dialog modal-dialog-centered modal-session-logout" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title"></div>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body"></div>
+            <div class="modal-footer">
+                <button type="button" class="session-logout-save btn btn-primary"><span class="hidden d-none">Save and exit</span></button>
+                <button type="button" class="session-logout-without-save btn btn-primary"><span class="hidden d-none">Exit without saving</span></button>
+                <button type="button" class="close btn btn-secondary" data-dismiss="modal">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal exe-modal-fade" tabindex="-1" id="modalUploadToDrive" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-confirm" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Upload to Drive</div>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="confirm btn btn-primary">Upload</button>
+                <button type="button" class="close btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal exe-modal-fade" tabindex="-1" id="modalUploadToDropbox" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-confirm" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Upload to Dropbox</div>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="confirm btn btn-primary">Upload</button>
+                <button type="button" class="close btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal exe-modal-fade" tabindex="-1" id="modalFileManager" role="dialog" aria-hidden="true" data-testid="modal-filemanager" data-open="false">
+    <div class="modal-dialog modal-dialog-centered modal-xl modal-confirm" role="document">
+        <div class="modal-content" id="modalFileManagerContent">
+            <div class="modal-header">
+                <div class="modal-title">Media Library</div>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body media-library-body">
+                <div class="media-library-toolbar">
+                    <button type="button" class="btn btn-primary media-library-upload-btn">
+                        <span class="exe-icon">add</span> Add file
+                    </button>
+                    <input type="file" class="media-library-upload-input" accept="image/*,video/*,audio/*,.pdf" multiple style="display:none;">
+
+                    <div class="media-library-view-controls">
+                        <button type="button" class="media-library-view-btn active" data-view="grid" title="Grid view">
+                            <span class="exe-icon">grid_view</span>
+                        </button>
+                        <button type="button" class="media-library-view-btn" data-view="list" title="List view">
+                            <span class="exe-icon">view_list</span>
+                        </button>
+                    </div>
+
+                    <div class="media-library-sort-controls">
+                        <label>Sort:</label>
+                        <select class="form-control media-library-sort">
+                            <option value="name-asc">Name A-Z</option>
+                            <option value="name-desc">Name Z-A</option>
+                            <option value="date-desc" selected>Newest first</option>
+                            <option value="date-asc">Oldest first</option>
+                            <option value="size-desc">Largest first</option>
+                            <option value="size-asc">Smallest first</option>
+                        </select>
+                    </div>
+
+                    <input type="text" class="form-control media-library-search" placeholder="Search...">
+                </div>
+
+                <div class="media-library-container">
+                    <div class="media-library-main">
+                        <div class="media-library-grid">
+                            <div class="media-library-loading">Loading assets...</div>
+                        </div>
+                        <table class="media-library-list" style="display:none;">
+                            <thead>
+                                <tr>
+                                    <th class="col-thumb"></th>
+                                    <th class="col-name" data-sort="name">Name</th>
+                                    <th class="col-type" data-sort="type">Type</th>
+                                    <th class="col-size" data-sort="size">Size</th>
+                                    <th class="col-date" data-sort="date">Date</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                        <div class="media-library-empty" style="display:none;">No media files yet. Click "Add file" to upload.</div>
+
+                        <div class="media-library-pagination">
+                            <button type="button" class="media-library-page-btn" data-action="prev" disabled>
+                                <span class="exe-icon">chevron_left</span>
+                            </button>
+                            <span class="media-library-page-info">Page 1 of 1</span>
+                            <button type="button" class="media-library-page-btn" data-action="next" disabled>
+                                <span class="exe-icon">chevron_right</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="media-library-sidebar">
+                        <div class="media-library-sidebar-empty">
+                            <p>Select an item to view details</p>
+                        </div>
+                        <div class="media-library-sidebar-content" style="display:none;">
+                            <div class="media-library-preview">
+                                <img src="" alt="" class="media-library-preview-img">
+                                <video src="" class="media-library-preview-video" controls style="display:none;"></video>
+                                <audio src="" class="media-library-preview-audio" controls style="display:none;"></audio>
+                                <div class="media-library-preview-file" style="display:none;">
+                                    <span class="exe-icon file-icon">description</span>
+                                </div>
+                            </div>
+                            <div class="media-library-metadata">
+                                <div class="metadata-row">
+                                    <label>Filename:</label>
+                                    <input type="text" class="form-control media-library-filename" readonly>
+                                </div>
+                                <div class="metadata-row">
+                                    <label>Type:</label>
+                                    <span class="media-library-type"></span>
+                                </div>
+                                <div class="metadata-row">
+                                    <label>Size:</label>
+                                    <span class="media-library-size"></span>
+                                </div>
+                                <div class="metadata-row media-library-dimensions-row">
+                                    <label>Dimensions:</label>
+                                    <span class="media-library-dimensions"></span>
+                                </div>
+                                <div class="metadata-row">
+                                    <label>Date:</label>
+                                    <span class="media-library-date"></span>
+                                </div>
+                                <div class="metadata-row">
+                                    <label>URL:</label>
+                                    <input type="text" class="form-control media-library-url" readonly>
+                                </div>
+                            </div>
+                            <div class="media-library-actions">
+                                <button type="button" class="btn btn-danger media-library-delete-btn">
+                                    <span class="exe-icon">delete</span> Delete
+                                </button>
+                                <button type="button" class="btn btn-primary media-library-insert-btn">
+                                    <span class="exe-icon">add_photo_alternate</span> Insert
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal exe-modal-fade" tabindex="-1" id="modalStyleManager" role="dialog" aria-hidden="true" data-testid="modal-stylemanager" data-open="false">
+    <div class="modal-dialog modal-dialog-centered modal-confirm" role="document">
+        <div class="modal-content" id="modalStyleManagerContent">
+            <div class="modal-header">
+                <div class="modal-title">Styles</div>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger alert-dismissible fade" role="alert">
+                    <div class="text"></div>
+                    <button type="button" class="close-alert" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body-content"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="confirm btn btn-primary">Save</button>
+                <button type="button" class="close btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal exe-modal-fade" tabindex="-1" id="modalIdeviceManager" role="dialog" aria-hidden="true" data-testid="modal-idevicemanager" data-open="false">
+    <div class="modal-dialog modal-dialog-centered modal-confirm" role="document">
+        <div class="modal-content" id="modalIdeviceManagerContent">
+            <div class="modal-header">
+                <div class="modal-title">iDevice manager</div>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger alert-dismissible fade" role="alert">
+                    <div class="text"></div>
+                    <button type="button" class="close-alert" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body-content"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="confirm btn btn-primary">Save</button>
+                <button type="button" class="close btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal exe-modal-fade" tabindex="-1" id="modalOdeBrokenLinks" role="dialog" aria-hidden="true" data-testid="modal-ode-broken-links" data-open="false">
+    <div class="modal-dialog modal-dialog-centered modal-confirm" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Link validation</div>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div id="odeBrokenLinks" class="modal-body">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="confirm btn btn-primary">Download CSV</button>
+                <button type="button" class="close btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal exe-modal-fade" tabindex="-1" id="modalOdeUsedFiles" role="dialog" aria-hidden="true" data-testid="modal-ode-used-files" data-open="false">
+    <div class="modal-dialog modal-dialog-centered modal-confirm" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Resources report</div>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div id="odeUsedFiles" class="modal-body">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="confirm btn btn-primary">Download CSV</button>
+                <button type="button" class="close btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal exe-modal-fade" tabindex="-1" id="modalLopd" role="dialog" aria-hidden="true" data-testid="modal-lopd" data-open="false">
+    <div class="modal-dialog modal-dialog-centered modal-confirm" role="document">
+        <div class="modal-content static">
+            <div class="modal-header">
+                <div class="modal-title"></div>
+            </div>
+            <div class="modal-body text-start"">
+                <h1 class="text-start">Privacy and Terms</h1>
+                <div class="lopdgdd-body text-start"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="confirm btn btn-primary" type="button">Accept</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal exe-modal-fade" tabindex="-1" id="modalAssistant" role="dialog" aria-hidden="true" data-testid="modal-assistant" data-open="false">
+    <div class="modal-dialog modal-dialog-centered modal-confirm" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Attendee</div>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body help-modal">
+                <div class="top-menu">
+                    <icon class="exe-icon show-tabs">menu</icon>
+                </div>
+                <div class="body-content show-tabs">
+                    <ul class="exe-form-tabs">
+                        <li>
+                            <a href="#modalAssistant-tab-1" class="exe-tab exe-form-active-tab">1. What is eXeLearning</a>
+                        </li>
+                        <li>
+                            <a href="#modalAssistant-tab-2" class="exe-tab">2. Create a project</a>
+                        </li>
+                        <li>
+                            <a href="#modalAssistant-tab-3" class="exe-tab">3. Adding pages</a>
+                        </li>
+                        <li>
+                            <a href="#modalAssistant-tab-4" class="exe-tab">4. Adding content</a>
+                        </li>
+                        <li>
+                            <a href="#modalAssistant-tab-5" class="exe-tab">5. Exporting a project</a>
+                        </li>
+                        <li>
+                            <a href="#modalAssistant-tab-6" class="exe-tab">6. More options</a>
+                        </li>
+                    </ul>
+                    <div id="modalAssistant-tab-1" class="exe-form-content exe-form-active-content">
+                        <p>...</p>
+                    </div>
+                    <div id="modalAssistant-tab-2" class="exe-form-content">
+                        <p>...</p>
+                    </div>
+                    <div id="modalAssistant-tab-3" class="exe-form-content">
+                        <p>...</p>
+                    </div>
+                    <div id="modalAssistant-tab-4" class="exe-form-content">
+                        <p>...</p>
+                    </div>
+                    <div id="modalAssistant-tab-5" class="exe-form-content">
+                        <p>...</p>
+                    </div>
+                    <div id="modalAssistant-tab-6" class="exe-form-content">
+                        <p>...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal exe-modal-fade" tabindex="-1" id="modalReleaseNotes" role="dialog" aria-hidden="true" data-testid="modal-releasenotes" data-open="false">
+    <div class="modal-dialog modal-dialog-centered modal-confirm" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Release notes</div>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body help-modal help-modal-with-logo">
+                <div class="help-modal-top">
+                    <img src="{{ASSET_BASE_URL}}/style/workarea/images/exelearning.svg" class="exe-logo content" alt="Logo ExeLearning">
+                </div>
+                <div class="help-modal-content">
+                    <h1 class="lead mb-4">Changelog</h1>
+                    <div class="body-release">
+                        <div class="changelog-content md-converted-content"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal exe-modal-fade" tabindex="-1" id="modalLegalNotes" role="dialog" aria-hidden="true" data-testid="modal-legalnotes" data-open="false">
+    <div class="modal-dialog modal-dialog-centered modal-confirm" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Legal notes</div>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body help-modal help-modal-with-logo">
+                <div class="help-modal-top">
+                    <img src="{{ASSET_BASE_URL}}/style/workarea/images/exelearning.svg" class="exe-logo content" alt="Logo ExeLearning">
+                </div>
+                <div class="help-modal-content">
+                    <ul class="exe-form-tabs">
+                        <li>
+                            <a href="#modalLegalNotes-tab-1" class="exe-tab exe-form-active-tab">Credits</a>
+                        </li>
+                        <li>
+                            <a href="#modalLegalNotes-tab-2" class="exe-tab">Third Libraries</a>
+                        </li>
+                        <li>
+                            <a href="#modalLegalNotes-tab-3" class="exe-tab">Licenses</a>
+                        </li>
+                    </ul>
+                    <div id="modalLegalNotes-tab-1" class="exe-form-content exe-form-active-content">
+                        <h3 class="visually-hidden">Credits</h3>
+                        <h4 class="lead mb-4">eXeLearning 3+</h4>
+                        <ul class="main-desc">
+                            <li>Copyright (2024):
+                                <ul>
+                                    <li><a href="https://intef.es/" target="_blank" rel="noopener" title="New window">INTEF<span class="visually-hidden"> Instituto Nacional de tecnologías educativas y formación del profesorado</span></a></li></li>
+                                    <li>Junta de Andalucía</li>
+                                    <li>Junta de Extremadura</li>
+                                </ul>
+                            </li>
+                            <li>2025-present <a href="https://exelearning.net/" target="_blank" rel="noopener" title="New window">eXeLearning.net</a>, <a href="mailto:info@exelearning.net" title="mail">info@exelearning.net</a></li>
+                        </ul>
+                        <p>License: GNU Affero GPL 3</p>
+                        <h3 class="lead my-4">Participants</h3>
+                        <ul>
+                            <li>Gobierno de Canarias</li>
+                            <li>Generalitat Valenciana</li>
+                            <li>Comunidad de Madrid</li>
+                            <li>Xunta de Galicia</li>
+                        </ul>
+                        <h4 class="lead my-4">Previous versions</h4>
+                        <ul class="main-desc">
+                            <li>Copyright: 2004-2005, University of Auckland</li>
+                            <li>2004-2011 eXe Project (exelearning.org)</li>
+                            <li>2011-2025 <a href="https://exelearning.net/" target="_blank" rel="noopener" title="New window">eXeLearning.net</a>, <a href="mailto:info@exelearning.net" title="mail">info@exelearning.net</a></li>
+                        </ul>
+                        <p>License: GPLv2</p>
+                    </div>
+                    <div id="modalLegalNotes-tab-2" class="exe-form-content">
+                        <h3 class="visually-hidden">eXeLearning. Third Libraries</h3>
+                        <div class="third-party-content md-converted-content"></div>
+                    </div>
+                    <div id="modalLegalNotes-tab-3" class="exe-form-content">
+                        <h3 class="visually-hidden">eXeLearning. Licenses</h3>
+                        <div class="licenses-list md-converted-content"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal exe-modal-fade" tabindex="-1" id="modalAbout" role="dialog" aria-hidden="true" data-testid="modal-about" data-open="false">
+    <div class="modal-dialog modal-dialog-centered modal-confirm" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">About eXeLearning</div>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body help-modal help-modal-with-logo">
+                <div class="help-modal-top">
+                    <img src="{{ASSET_BASE_URL}}/style/workarea/images/exelearning.svg" class="exe-logo content" alt="Logo ExeLearning">
+                </div>
+                <div class="help-modal-content">
+                    <h1 class="lead mb-4">eXeLearning {{VERSION}}</h1>
+                    <p>eXeLearning is a free software tool under the GNU Affero GPL that can be used to create educational interactive web contents. eXeLearning can generate interactive contents in different formats and it allows you to create easily navigable web pages. All the educational materials generated with eXeLearning can be exported in different digital formats, to be used independently or to integrate them into a LMS (Learning Management System) like Moodle.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal exe-modal-fade" tabindex="-1" id="modalProperties" role="dialog" aria-hidden="true" data-testid="modal-properties" data-open="false">
+    <div class="modal-dialog modal-dialog-centered modal-confirm" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Properties</div>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body form-properties"></div>
+            <div class="modal-footer">
+                <button type="button" class="confirm btn btn-primary" data-testid="save-properties-button">Save</button>
+                <button type="button" class="close btn btn-secondary" data-testid="close-properties-button" data-dismiss="modal">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal exe-modal-fade" tabindex="-1" id="modalOpenUserOdeFiles" role="dialog" aria-hidden="true" data-testid="modal-open-user-ode-files" data-open="false">
+    <div class="modal-dialog modal-dialog-centered modal-confirm" role="document">
+        <div class="modal-content" id="modalOpenUserOdeFilesContent">
+            <div class="modal-header">
+                <div class="modal-title">Open</div>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-body-content"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="confirm btn btn-primary">Open</button>
+                <button type="button" class="close btn btn-secondary" data-dismiss="modal">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal exe-modal-fade" tabindex="-1" id="modalTemplateSelection" role="dialog" aria-hidden="true" data-testid="modal-template-selection" data-open="false">
+    <div class="modal-dialog modal-dialog-centered modal-confirm" role="document">
+        <div class="modal-content" id="modalTemplateSelectionContent">
+            <div class="modal-header">
+                <div class="modal-title">New from Template</div>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-body-content">
+                    <p>Select a template to create a new project:</p>
+                    <div id="template-list" class="list-group"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="confirm btn btn-primary" disabled>Create</button>
+                <button type="button" class="close btn btn-secondary" data-dismiss="modal">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal exe-modal-fade" tabindex="-1" id="modalShare" role="dialog" data-open="false">
+    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalShareTitle"></h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                
+                <div id="share-invite-section" class="mb-4">
+                    <div class="input-group">
+                        <input type="email"
+                               id="share-invite-email"
+                               class="form-control"
+                               placeholder="Add people by email"
+                               aria-label="Add people by email"
+                               autocomplete="off">
+                        <button id="share-invite-button"
+                                class="btn btn-primary"
+                                type="button">
+                            Invite
+                        </button>
+                    </div>
+                    <div id="share-invite-error" class="invalid-feedback d-none"></div>
+                </div>
+
+                
+                <div id="share-people-section" class="mb-4">
+                    <h6>People with access</h6>
+                    <div id="share-people-list"></div>
+                </div>
+
+                
+                <div id="share-general-access-section" class="mb-4">
+                    <h6>General access</h6>
+                    <select id="share-visibility-select"
+                            class="form-select"
+                            aria-label="General access">
+                        <option value="private">Restricted (Private)</option>
+                        <option value="public">Anyone with the link (Public)</option>
+                    </select>
+                    <small id="share-visibility-help" class="form-text text-muted d-none">
+                        Anyone who has the link can view and edit in real time
+                    </small>
+                </div>
+
+                
+                <div id="share-link-section">
+                    <h6>Link</h6>
+                    <div class="input-group">
+                        <input type="text"
+                               id="share-link-input"
+                               class="form-control"
+                               readonly
+                               aria-label="Share link">
+                        <button id="share-copy-button"
+                                class="btn btn-outline-secondary"
+                                type="button"
+                                aria-label="Copy link">
+                            <div class="auto-icon" aria-hidden="true">content_copy</div>
+                            <span>Copy link</span>
+                        </button>
+                    </div>
+                </div>
+
+                
+                <div id="share-aria-live"
+                     class="visually-hidden"
+                     aria-live="polite"
+                     aria-atomic="true"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button"
+                        class="btn btn-primary close"
+                        data-dismiss="modal">
+                    Done
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+    </div>
+
+    
+    <div class="toasts-container">
+<div id="toastDefault" class="toast" role="alert" data-bs-autohide="false" aria-live="assertive" aria-atomic="true">
+  <div class="toast-header">
+    <span class="toast-icon exe-icon rounded me-2">info</span>
+    <strong class="toast-title me-auto"></strong>
+    <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+  </div>
+  <div class="toast-body"></div>
+</div>
+    </div>
+        <script src="{{ASSET_BASE_URL}}/app/workarea/custom.js"></script>
+    </body>
+</html>

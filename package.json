@@ -4,18 +4,19 @@
   "description": "WordPress plugin for eXeLearning integration",
   "private": true,
   "devDependencies": {
-    "@wordpress/env": "^10.12.0"
+    "@wordpress/env": "^10.12.0",
+    "nunjucks": "^3.2.4"
   },
   "scripts": {
     "wp-env": "wp-env",
     "composer": "wp-env run cli --env-cwd=wp-content/plugins/exelearning composer",
     "composer:tests-cli": "wp-env run tests-cli --env-cwd=wp-content/plugins/exelearning composer",
     "test:unit": "wp-env run tests-cli --env-cwd=wp-content/plugins/exelearning ./vendor/bin/phpunit",
-
-    "build": "npm run build:exe",
-    "build:exe": "echo 'eXeLearning assets are used directly from exelearning/public/'",
-    "build:exe:copy": "rm -rf dist/exelearning && mkdir -p dist/exelearning && cp -r exelearning/public/* dist/exelearning/",
-
+    "build": "npm run build:templates && npm run build:assets",
+    "build:templates": "node scripts/build-templates.js",
+    "build:assets": "npm run build:assets:copy && npm run build:mock",
+    "build:assets:copy": "rm -rf dist/exelearning && mkdir -p dist/exelearning && cp -r exelearning/public/* dist/exelearning/",
+    "build:mock": "mkdir -p dist/api-mock && cp -r assets/js/api-mock/* dist/api-mock/",
     "package": "npm run package:zip",
     "package:zip": "git archive --format=zip --output=wp-exelearning.zip HEAD",
     "package:zip:full": "zip -r wp-exelearning-full.zip . -x 'node_modules/*' -x '.git/*' -x '*.zip' -x '.DS_Store'"

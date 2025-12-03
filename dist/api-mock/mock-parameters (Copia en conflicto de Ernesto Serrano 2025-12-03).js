@@ -478,9 +478,12 @@
                 methods: ['POST']
             },
             api_idevices_force_download_file_resources: {
-                // Use same path as api_idevices_download_file_resources for consistency
-                // Both should use the /files/ path to avoid API endpoint conflicts
-                path: basePath + '/files/perm/idevices/base',
+                path: '/api/idevice-management/idevices/force-download',
+                methods: ['GET']
+            },
+            // Resource download endpoint (used for CSS, icons, etc.)
+            api_idevices_download_resources: {
+                path: basePath + '/api/idevice-management/idevices/download/file/resources',
                 methods: ['GET']
             },
             api_idevices_download_ode_components: {
