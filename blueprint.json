@@ -28,20 +28,16 @@
       "step": "installPlugin",
       "pluginData": {
         "resource": "url",
-        "url": "https://github.com/ateeducacion/wp-exelearning/archive/refs/heads/main.zip"
+        "url": "https://github.com/erseco/wp-exelearning/archive/refs/heads/main.zip"
       },
       "options": {
         "activate": true
       }
-    },
-    {
-      "step": "runPHP",
-      "code": "<?php require_once('/wordpress/wp-load.php'); update_option('exelearning_settings', array('conversion_engine' => 'collabora', 'collabora_base_url' => 'https://exelearning-collabora-proxy.erseco.workers.dev')); ?>"
     }
   ],
   "features": {
     "networking": true
   },
   "login": true,
-  "landingPage": "/wp-admin/edit.php?post_type=exelearning_document"
+  "landingPage": "/wp-admin/upload.php"
 }
