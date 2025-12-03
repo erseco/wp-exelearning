@@ -313,15 +313,156 @@ $wp_bridge_script = '
                 }
             });
 
-            waitForApp(function() {
+            waitForApp(async function() {
                 console.log("[WP-EXE] App initialized");
                 wpSaveBtn.style.display = "block";
 
                 var elpUrl = window.wpExeMockConfig.elpUrl;
                 if (elpUrl) {
                     console.log("[WP-EXE] Auto-importing ELP from:", elpUrl);
+                    await importElpFromUrl(elpUrl);
                 }
             });
+
+            /**
+             * Import ELP file from a URL
+             * @param {string} url - URL to the ELP file
+             */
+            async function importElpFromUrl(url) {
+                // Show loading indicator
+                var loadScreen = document.getElementById("load-screen-main");
+                var loadMessage = loadScreen ? loadScreen.querySelector(".loading-message, .load-screen-text, p") : null;
+                if (loadScreen) {
+                    loadScreen.classList.remove("hide");
+                    if (loadMessage) {
+                        loadMessage.textContent = ' . wp_json_encode( __( 'Loading project...', 'exelearning' ) ) . ';
+                    }
+                }
+
+                try {
+                    // Wait for YjsModules bridge to be ready
+                    var bridge = await waitForBridge(30);
+                    if (!bridge) {
+                        throw new Error("YjsProjectBridge not available");
+                    }
+
+                    // Check if project already has content in IndexedDB (avoid re-import)
+                    var nav = bridge.structureBinding ? bridge.structureBinding.getNavigationArray() : null;
+                    var hasExistingContent = nav && nav.length > 0;
+
+                    if (hasExistingContent) {
+                        console.log("[WP-EXE] Project already has", nav.length, "pages in IndexedDB, skipping import");
+                        if (loadMessage) {
+                            loadMessage.textContent = ' . wp_json_encode( __( 'Loading cached project...', 'exelearning' ) ) . ';
+                        }
+                    } else {
+                        console.log("[WP-EXE] Fetching ELP file...");
+                        if (loadMessage) {
+                            loadMessage.textContent = ' . wp_json_encode( __( 'Downloading file...', 'exelearning' ) ) . ';
+                        }
+
+                        // Fetch the ELP file
+                        var response = await fetch(url);
+                        if (!response.ok) {
+                            throw new Error("Failed to fetch ELP file: " + response.status + " " + response.statusText);
+                        }
+
+                        // Get filename from URL
+                        var urlParts = url.split("/");
+                        var filename = urlParts[urlParts.length - 1] || "project.elp";
+                        // Remove query string if present
+                        filename = filename.split("?")[0];
+
+                        // Convert to File object
+                        var blob = await response.blob();
+                        var file = new File([blob], filename, { type: blob.type || "application/zip" });
+
+                        console.log("[WP-EXE] ELP file loaded:", filename, "size:", file.size);
+                        if (loadMessage) {
+                            loadMessage.textContent = ' . wp_json_encode( __( 'Importing content...', 'exelearning' ) ) . ';
+                        }
+
+                        // Import the ELP file with progress callback
+                        var stats = await bridge.importFromElpx(file, {
+                            clearExisting: true,
+                            onProgress: function(progress) {
+                                console.log("[WP-EXE] Import progress:", progress.phase, progress.percent + "%", progress.message);
+                                if (loadMessage) {
+                                    loadMessage.textContent = progress.message || ' . wp_json_encode( __( 'Importing...', 'exelearning' ) ) . ';
+                                }
+                            }
+                        });
+
+                        console.log("[WP-EXE] ELP imported successfully:", stats);
+                    }
+
+                    if (loadMessage) {
+                        loadMessage.textContent = ' . wp_json_encode( __( 'Project loaded!', 'exelearning' ) ) . ';
+                    }
+
+                    // Trigger a structure refresh to update the UI
+                    if (window.eXeLearning && window.eXeLearning.app) {
+                        // Trigger structure tree update
+                        if (window.eXeLearning.app.structureTreeBuilder) {
+                            window.eXeLearning.app.structureTreeBuilder.refresh();
+                        }
+                        // Navigate to first page if available
+                        var nav = bridge.structureBinding ? bridge.structureBinding.getNavigationArray() : null;
+                        if (nav && nav.length > 0) {
+                            var firstPage = nav.get(0);
+                            if (firstPage) {
+                                var pageId = firstPage.get("id") || firstPage.get("pageId");
+                                if (pageId && window.eXeLearning.app.navigation) {
+                                    console.log("[WP-EXE] Navigating to first page:", pageId);
+                                    setTimeout(function() {
+                                        window.eXeLearning.app.navigation.goTo(pageId);
+                                    }, 500);
+                                }
+                            }
+                        }
+                    }
+
+                } catch (error) {
+                    console.error("[WP-EXE] Failed to import ELP:", error);
+                    if (loadMessage) {
+                        loadMessage.textContent = ' . wp_json_encode( __( 'Error loading project', 'exelearning' ) ) . ';
+                    }
+                    alert(' . wp_json_encode( __( 'Error loading project:', 'exelearning' ) ) . ' + " " + error.message);
+                } finally {
+                    // Hide loading screen after a short delay
+                    setTimeout(function() {
+                        if (loadScreen) {
+                            loadScreen.classList.add("hide");
+                        }
+                    }, 500);
+                }
+            }
+
+            /**
+             * Wait for YjsProjectBridge to be ready
+             * @param {number} maxAttempts - Maximum attempts (default 30)
+             * @returns {Promise<Object|null>} The bridge instance or null
+             */
+            function waitForBridge(maxAttempts) {
+                maxAttempts = maxAttempts || 30;
+                return new Promise(function(resolve) {
+                    var attempts = 0;
+                    var check = function() {
+                        attempts++;
+                        // Check for bridge via YjsModules
+                        var bridge = window.YjsModules && window.YjsModules.getBridge ? window.YjsModules.getBridge() : null;
+                        if (bridge && bridge.initialized) {
+                            resolve(bridge);
+                        } else if (attempts < maxAttempts) {
+                            setTimeout(check, 200);
+                        } else {
+                            console.error("[WP-EXE] YjsProjectBridge did not initialize in time");
+                            resolve(null);
+                        }
+                    };
+                    check();
+                });
+            }
         })();
     </script>
 ';

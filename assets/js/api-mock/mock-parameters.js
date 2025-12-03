@@ -11,15 +11,16 @@
     // Initialize mock data namespace
     window.wpExeMockData = window.wpExeMockData || {};
 
-    // Generate session ID
-    const odeSessionId = 'wp-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+    // Use projectId from WordPress config for session ID to maintain IndexedDB consistency
+    const projectId = window.wpExeMockConfig?.projectId || 'wp-project-' + Date.now();
+    const odeSessionId = projectId;  // Use same ID for both to keep data in sync
 
     // Base path from WordPress config
     const basePath = window.wpExeMockConfig?.basePath || '';
 
     window.wpExeMockData.parameters = {
         odeSessionId: odeSessionId,
-        projectId: window.wpExeMockConfig?.projectId || 'wp-project',
+        projectId: projectId,
 
         // Available locales
         locales: [
