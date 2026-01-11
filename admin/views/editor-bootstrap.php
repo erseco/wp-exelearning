@@ -149,32 +149,29 @@ $wp_config_script = sprintf(
                     settings = settings || {};
                     var requestUrl = url || settings.url || "";
 
-                    // For CSS/JS files, add error handling that returns empty content
+                    // For CSS files, intercept and return resolved promise on 404
                     if (requestUrl.includes(".css") || (requestUrl.includes("idevices") && requestUrl.includes("export"))) {
-                        var originalError = settings.error;
-                        settings.error = function(jqXHR, textStatus, errorThrown) {
-                            console.warn("[WP Mode] Resource 404 (using fallback):", requestUrl);
-                            // Call success with empty content instead of failing
-                            if (settings.success) {
-                                settings.success("", "success", jqXHR);
-                            }
-                        };
+                        // Create a deferred that we control
+                        var deferred = jQuery.Deferred();
+                        var promise = deferred.promise();
 
-                        // Also wrap the promise
-                        var result = originalAjax.call(this, url, settings);
-                        if (result && result.fail) {
-                            var originalFail = result.fail;
-                            result.fail = function(callback) {
-                                return originalFail.call(this, function(jqXHR, textStatus, error) {
-                                    if (requestUrl.includes(".css")) {
-                                        console.warn("[WP Mode] Suppressing CSS 404:", requestUrl);
-                                        return; // Skip fail callback for CSS
-                                    }
-                                    callback(jqXHR, textStatus, error);
-                                });
-                            };
-                        }
-                        return result;
+                        // Add jqXHR-like methods to the promise
+                        promise.done = function(fn) { deferred.done(fn); return this; };
+                        promise.fail = function(fn) { deferred.fail(fn); return this; };
+                        promise.always = function(fn) { deferred.always(fn); return this; };
+
+                        // Make the real request
+                        originalAjax.call(this, url, settings)
+                            .done(function(data, textStatus, jqXHR) {
+                                deferred.resolve(data, textStatus, jqXHR);
+                            })
+                            .fail(function(jqXHR, textStatus, errorThrown) {
+                                // On 404, resolve with empty content instead of rejecting
+                                console.warn("[WP Mode] CSS 404 intercepted, returning empty:", requestUrl);
+                                deferred.resolve("/* empty - file not found */", "success", jqXHR);
+                            });
+
+                        return promise;
                     }
 
                     return originalAjax.call(this, url, settings);
