@@ -87,7 +87,7 @@
          * Open the editor page.
          *
          * @param {number} attachmentId The attachment ID.
-         * @param {string} editUrl The editor URL (optional).
+         * @param {string} editUrl The editor URL (optional, ignored - always use fresh nonce).
          */
         open: function( attachmentId, editUrl ) {
             if ( ! attachmentId ) {
@@ -97,22 +97,21 @@
 
             this.currentAttachmentId = attachmentId;
 
-            // Build editor URL if not provided.
-            if ( ! editUrl ) {
-                editUrl = exelearningEditorVars.editorPageUrl +
-                    '&attachment_id=' + attachmentId +
-                    '&_wpnonce=' + exelearningEditorVars.editorNonce;
-            }
+            // Always build a fresh URL with the current nonce to avoid stale nonce issues.
+            // The editUrl parameter is ignored to ensure we use the nonce from page load.
+            var freshUrl = exelearningEditorVars.editorPageUrl +
+                '&attachment_id=' + attachmentId +
+                '&_wpnonce=' + exelearningEditorVars.editorNonce;
 
             // Try to use modal if available, otherwise open in new window.
             if ( this.modal.length && this.iframe.length ) {
                 this.modal.show();
                 this.isOpen = true;
-                this.iframe.attr( 'src', editUrl );
+                this.iframe.attr( 'src', freshUrl );
                 $( 'body' ).addClass( 'exelearning-editor-open' );
             } else {
                 // Open in new window.
-                window.open( editUrl, '_blank', 'width=900,height=700' );
+                window.open( freshUrl, '_blank', 'width=900,height=700' );
             }
         },
 
@@ -204,28 +203,40 @@
                 return;
             }
 
-            var attachment = wp.media.attachment( attachmentId );
-            if ( attachment ) {
-                // Force fetch fresh data from server.
-                attachment.fetch().done( function() {
-                    // Update preview URL in exelearning metadata if provided.
-                    if ( previewUrl ) {
-                        var exeData = attachment.get( 'exelearning' ) || {};
-                        exeData.preview_url = previewUrl;
-                        attachment.set( 'exelearning', exeData );
-                    }
+            try {
+                var attachment = wp.media.attachment( attachmentId );
+                if ( attachment && ! attachment.destroyed ) {
+                    // Force fetch fresh data from server.
+                    attachment.fetch().done( function() {
+                        try {
+                            // Update preview URL in exelearning metadata if provided.
+                            if ( previewUrl ) {
+                                var exeData = attachment.get( 'exelearning' ) || {};
+                                exeData.preview_url = previewUrl;
+                                attachment.set( 'exelearning', exeData, { silent: true } );
+                            }
 
-                    // Remove the processed class so preview gets re-rendered.
-                    $( '.attachment-details .thumbnail' )
-                        .removeClass( 'exelearning-details-preview-added' )
-                        .removeClass( 'exelearning-details-no-preview' );
+                            // Remove the processed class so preview gets re-rendered.
+                            $( '.attachment-details .thumbnail' )
+                                .removeClass( 'exelearning-details-preview-added' )
+                                .removeClass( 'exelearning-details-no-preview' );
 
-                    // Remove existing preview elements.
-                    $( '.exelearning-preview-actions, .exelearning-preview-link, .exelearning-metadata, .exelearning-edit-button' ).remove();
+                            // Remove existing preview elements.
+                            $( '.exelearning-preview-actions, .exelearning-preview-link, .exelearning-metadata, .exelearning-edit-button' ).remove();
 
-                    // Trigger change event to refresh views.
-                    attachment.trigger( 'change' );
-                });
+                            // Trigger change event to refresh views (only if not destroyed).
+                            if ( attachment && ! attachment.destroyed ) {
+                                attachment.trigger( 'change' );
+                            }
+                        } catch ( e ) {
+                            console.warn( 'ExeLearningEditor: Error updating attachment', e );
+                        }
+                    }).fail( function() {
+                        console.warn( 'ExeLearningEditor: Failed to fetch attachment', attachmentId );
+                    });
+                }
+            } catch ( e ) {
+                console.warn( 'ExeLearningEditor: Error refreshing attachment', e );
             }
         },
 
