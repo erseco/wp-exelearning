@@ -42,8 +42,8 @@ class ExeLearning_Elp_Upload_Handler {
 		$file = $upload['file'];
 		$ext  = strtolower( pathinfo( $file, PATHINFO_EXTENSION ) );
 
-		// Process only .elp and .elpx files.
-		if ( ! in_array( $ext, array( 'elp', 'elpx' ), true ) ) {
+		// Process only .elpx files (.elp is no longer supported).
+		if ( 'elpx' !== $ext ) {
 			return $upload;
 		}
 
@@ -124,7 +124,7 @@ class ExeLearning_Elp_Upload_Handler {
 		}
 
 		$ext = strtolower( pathinfo( $file, PATHINFO_EXTENSION ) );
-		if ( ! in_array( $ext, array( 'elp', 'elpx' ), true ) ) {
+		if ( 'elpx' !== $ext ) {
 			return;
 		}
 

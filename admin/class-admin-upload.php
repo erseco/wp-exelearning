@@ -50,9 +50,9 @@ class ExeLearning_Admin_Upload {
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput
 		$file = $_FILES['exelearning_file'];
 
-		// Validate file extension.
-		$ext = pathinfo( $file['name'], PATHINFO_EXTENSION );
-		if ( 'elp' !== strtolower( $ext ) ) {
+		// Validate file extension (only .elpx allowed).
+		$ext = strtolower( pathinfo( $file['name'], PATHINFO_EXTENSION ) );
+		if ( 'elpx' !== $ext ) {
 			wp_safe_redirect( add_query_arg( 'message', 'invalid_file_type', wp_get_referer() ) );
 			exit;
 		}

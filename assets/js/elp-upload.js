@@ -65,13 +65,11 @@
                     return;
                 }
 
-                // Check if it's an ELP file by extension or mime type
+                // Check if it's an ELPX file by extension or mime type
                 var filename = media.filename || media.url || '';
-                var isElpFile = filename.toLowerCase().endsWith( '.elp' ) ||
-                                filename.toLowerCase().endsWith( '.elpx' ) ||
-                                media.mime === 'application/x-exe-learning' ||
-                                media.type === 'application/x-exe-learning' ||
-                                media.subtype === 'x-exe-learning' ||
+                var isElpFile = filename.toLowerCase().endsWith( '.elpx' ) ||
+                                media.mime === 'application/zip' ||
+                                media.subtype === 'zip' ||
                                 ( media.exelearning && media.exelearning.version );
 
                 console.log( '[eXeLearning Block] Is ELP file:', isElpFile, 'filename:', filename );
@@ -118,7 +116,7 @@
                             return el( Placeholder, {
                                     icon: 'media-default',
                                     label: 'eXeLearning Content',
-                                    instructions: 'Upload or select a .elp/.elpx file from your media library',
+                                    instructions: 'Upload or select a .elpx file from your media library',
                                     className: 'exelearning-upload-placeholder'
                                 },
                                 el( 'div', { className: 'components-placeholder__controls' },

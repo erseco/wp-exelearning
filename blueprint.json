@@ -25,10 +25,6 @@
     {
       "step": "runPHP",
       "code": "<?php require_once '/wordpress/wp-load.php'; require_once ABSPATH . 'wp-admin/includes/file.php'; require_once ABSPATH . 'wp-admin/includes/media.php'; require_once ABSPATH . 'wp-admin/includes/image.php'; $plugin_dir = WP_PLUGIN_DIR; $source_file = null; foreach (glob($plugin_dir . '/*/test-content.elpx') as $file) { $source_file = $file; break; } if (!$source_file) { foreach (glob($plugin_dir . '/*/*/test-content.elpx') as $file) { $source_file = $file; break; } } if ($source_file && file_exists($source_file)) { $upload_dir = wp_upload_dir(); wp_mkdir_p($upload_dir['basedir']); $dest_path = $upload_dir['basedir'] . '/test-content.elpx'; copy($source_file, $dest_path); $file_url = $upload_dir['baseurl'] . '/test-content.elpx'; $attachment = array('post_mime_type' => 'application/zip', 'post_title' => 'Contenido de ejemplo para probar estilos y catalogacion', 'post_content' => '', 'post_status' => 'inherit', 'guid' => $file_url); $attach_id = wp_insert_attachment($attachment, $dest_path); if (!is_wp_error($attach_id)) { update_attached_file($attach_id, $dest_path); do_action('add_attachment', $attach_id); } } ?>"
-    },
-    {
-      "step": "runPHP",
-      "code": "<?php require_once '/wordpress/wp-load.php'; $attachment_id = 0; $attachments = get_posts(array('post_type' => 'attachment', 'posts_per_page' => 1, 'post_status' => 'any', 'orderby' => 'ID', 'order' => 'DESC')); if (!empty($attachments)) { $attachment_id = $attachments[0]->ID; } $post_content = $attachment_id ? '<!-- wp:exelearning/elp-upload {\"attachmentId\":' . $attachment_id . ',\"height\":600} /-->' : '<!-- wp:paragraph --><p>No se pudo cargar el contenido eXeLearning.</p><!-- /wp:paragraph -->'; wp_update_post(array('ID' => 1, 'post_title' => 'Ejemplo de contenido eXeLearning', 'post_content' => $post_content, 'post_status' => 'publish')); ?>"
     }
   ],
   "features": {

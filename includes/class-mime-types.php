@@ -26,15 +26,14 @@ class ExeLearning_Mime_Types {
 	}
 
 	/**
-	 * Adds .elp and .elpx mime types.
+	 * Adds .elpx mime type.
 	 *
 	 * @param array $mimes Current mime types.
 	 * @return array Modified mime types.
 	 */
 	public function add_elp_mime_type( $mimes ) {
-		// Add .elp and .elpx mime types for eXeLearning files.
-		$mimes['elp']  = 'application/x-exe-learning';
-		$mimes['elpx'] = 'application/x-exe-learning';
+		// Add .elpx mime type for eXeLearning files (zip is already allowed by WordPress).
+		$mimes['elpx'] = 'application/zip';
 		return $mimes;
 	}
 }

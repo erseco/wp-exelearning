@@ -40,10 +40,30 @@ jQuery( document ).ready( function( $ ) {
             // Marcar como procesado
             $thumbnail.addClass( 'exelearning-preview-added' );
 
-            // Reemplazar el contenido del thumbnail con un iframe
-            $thumbnail.html(
+            // Reemplazar el contenido del thumbnail con un iframe escalado (zoom out)
+            // 4:3 aspect ratio screenshot-like thumbnail
+            var thumbW = 120;
+            var thumbH = 90;
+            var iframeW = 1200;
+            var iframeH = 900;
+            var thumbScale = thumbW / iframeW;
+
+            $thumbnail.css({
+                'overflow': 'hidden',
+                'position': 'relative',
+                'width': thumbW + 'px',
+                'height': thumbH + 'px',
+                'max-width': thumbW + 'px',
+                'max-height': thumbH + 'px'
+            }).html(
                 '<iframe src="' + metadata.preview_url + '" ' +
-                'style="width: 100%; height: 100%; border: none; pointer-events: none;" ' +
+                'style="' +
+                    'width: ' + iframeW + 'px; ' +
+                    'height: ' + iframeH + 'px; ' +
+                    'border: none; ' +
+                    'pointer-events: none; ' +
+                    'transform: scale(' + thumbScale + '); ' +
+                    'transform-origin: 0 0;" ' +
                 'scrolling="no"></iframe>'
             );
         });
@@ -114,22 +134,72 @@ jQuery( document ).ready( function( $ ) {
         // Marcar como procesado
         $detailsThumbnail.addClass( 'exelearning-details-preview-added' );
 
-        // Reemplazar la imagen con un iframe
+        // Reemplazar la imagen con un iframe escalado (zoom out)
+        // Container holds the scaled iframe - shows a 1200px wide page scaled to fit
+        var containerWidth = 280;
+        var containerHeight = 200;
+        var iframeWidth = 1200;
+        var iframeHeight = 800;
+        var scale = containerWidth / iframeWidth;
+
+        // Set fixed height on thumbnail container to prevent overflow
+        $detailsThumbnail.css({
+            'height': containerHeight + 'px',
+            'max-height': containerHeight + 'px',
+            'overflow': 'hidden',
+            'margin-bottom': '15px'
+        });
+
         $detailsThumbnail.html(
-            '<iframe src="' + metadata.preview_url + '" ' +
-            'style="width: 100%; height: 300px; border: 1px solid #ddd; border-radius: 4px;"></iframe>' +
-            '<div class="exelearning-preview-actions" style="margin-top: 10px;">' +
-            '<a href="' + metadata.preview_url + '" target="_blank" class="button">' +
-            'Open in new tab</a></div>'
+            '<div class="exelearning-preview-container" style="' +
+                'width: ' + containerWidth + 'px; ' +
+                'height: ' + containerHeight + 'px; ' +
+                'overflow: hidden; ' +
+                'border: 1px solid #ddd; ' +
+                'border-radius: 4px; ' +
+                'background: #f5f5f5; ' +
+                'position: relative;">' +
+                '<iframe src="' + metadata.preview_url + '" ' +
+                    'style="' +
+                        'width: ' + iframeWidth + 'px; ' +
+                        'height: ' + iframeHeight + 'px; ' +
+                        'border: none; ' +
+                        'transform: scale(' + scale + '); ' +
+                        'transform-origin: 0 0; ' +
+                        'pointer-events: none;" ' +
+                    'scrolling="no"></iframe>' +
+            '</div>'
         );
 
-        // Añadir metadatos
-        if ( metaHtml ) {
-            $detailsThumbnail.after( metaHtml );
-        }
+        // Build and insert elements in correct order after thumbnail
+        // Order: Preview → Edit button → Preview in new tab → Metadata
+        var $insertPoint = $detailsThumbnail;
 
         // Add "Edit in eXeLearning" button if user can edit
-        addEditButton( attachment, $detailsThumbnail );
+        addEditButton( attachment, $insertPoint );
+
+        // Add "Preview in new tab" link after the edit button
+        var $previewLink = $(
+            '<div class="exelearning-preview-link" style="margin-top: 10px;">' +
+                '<a href="' + metadata.preview_url + '" target="_blank" class="button" style="width: 100%; text-align: center;">' +
+                'Preview in new tab</a>' +
+            '</div>'
+        );
+        // Find the edit button in the parent container and insert after it
+        var $editBtn = $detailsThumbnail.parent().find( '.exelearning-edit-button' );
+        if ( $editBtn.length > 0 ) {
+            $editBtn.after( $previewLink );
+            $insertPoint = $previewLink;
+        } else {
+            $insertPoint.after( $previewLink );
+            $insertPoint = $previewLink;
+        }
+
+        // Añadir metadatos at the end (after buttons)
+        if ( metaHtml ) {
+            var $meta = $( metaHtml );
+            $insertPoint.after( $meta );
+        }
     }
 
     // Function to add "Edit in eXeLearning" button
@@ -163,13 +233,8 @@ jQuery( document ).ready( function( $ ) {
             }
         });
 
-        // Insert after the metadata or thumbnail
-        var $metaContainer = $container.siblings( '.exelearning-metadata' );
-        if ( $metaContainer.length > 0 ) {
-            $metaContainer.after( $editButton );
-        } else {
-            $container.after( $editButton );
-        }
+        // Insert after the container passed to this function
+        $container.after( $editButton );
     }
 
     // Function to add "Edit in eXeLearning" button to the two-column attachment details view
