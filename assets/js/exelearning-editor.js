@@ -185,8 +185,48 @@
          * @param {object} data The message data.
          */
         onSaveComplete: function( data ) {
+            // Refresh the specific attachment to get updated metadata.
+            if ( data.attachmentId ) {
+                this.refreshAttachment( data.attachmentId, data.previewUrl );
+            }
             // Refresh media library to show updated content.
             this.refreshMediaLibrary();
+        },
+
+        /**
+         * Refresh a specific attachment's data.
+         *
+         * @param {number} attachmentId The attachment ID.
+         * @param {string} previewUrl The new preview URL (optional).
+         */
+        refreshAttachment: function( attachmentId, previewUrl ) {
+            if ( ! wp.media ) {
+                return;
+            }
+
+            var attachment = wp.media.attachment( attachmentId );
+            if ( attachment ) {
+                // Force fetch fresh data from server.
+                attachment.fetch().done( function() {
+                    // Update preview URL in exelearning metadata if provided.
+                    if ( previewUrl ) {
+                        var exeData = attachment.get( 'exelearning' ) || {};
+                        exeData.preview_url = previewUrl;
+                        attachment.set( 'exelearning', exeData );
+                    }
+
+                    // Remove the processed class so preview gets re-rendered.
+                    $( '.attachment-details .thumbnail' )
+                        .removeClass( 'exelearning-details-preview-added' )
+                        .removeClass( 'exelearning-details-no-preview' );
+
+                    // Remove existing preview elements.
+                    $( '.exelearning-preview-actions, .exelearning-preview-link, .exelearning-metadata, .exelearning-edit-button' ).remove();
+
+                    // Trigger change event to refresh views.
+                    attachment.trigger( 'change' );
+                });
+            }
         },
 
         /**

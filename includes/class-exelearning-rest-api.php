@@ -323,11 +323,22 @@ class ExeLearning_REST_API {
 			)
 		);
 
+		// Get the new preview URL.
+		$extracted_hash = get_post_meta( $attachment_id, '_exelearning_extracted', true );
+		$has_preview    = get_post_meta( $attachment_id, '_exelearning_has_preview', true );
+		$preview_url    = null;
+
+		if ( $extracted_hash && '1' === $has_preview ) {
+			$upload_dir  = wp_upload_dir();
+			$preview_url = $upload_dir['baseurl'] . '/exelearning/' . $extracted_hash . '/index.html';
+		}
+
 		return rest_ensure_response(
 			array(
 				'success'       => true,
 				'message'       => __( 'File saved successfully.', 'exelearning' ),
 				'attachment_id' => $attachment_id,
+				'preview_url'   => $preview_url,
 			)
 		);
 	}

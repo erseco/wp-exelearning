@@ -237,18 +237,20 @@
 
 			if ( result.success ) {
 				console.log( '[WP-EXE Bridge] Save successful' );
+				showNotification( 'success', 'Saved successfully!' );
 
 				// Update attachment ID if this was a new file
 				if ( result.attachmentId && ! config.attachmentId ) {
 					config.attachmentId = result.attachmentId;
 				}
 
-				// Notify parent window to close the editor
+				// Notify parent window to refresh the preview
 				if ( window.parent !== window ) {
 					window.parent.postMessage(
 						{
 							type: 'exelearning-save-complete',
 							attachmentId: config.attachmentId,
+							previewUrl: result.preview_url,
 						},
 						'*'
 					);
