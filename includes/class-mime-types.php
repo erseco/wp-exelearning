@@ -25,6 +25,7 @@ class ExeLearning_Mime_Types {
 		add_filter( 'upload_mimes', array( $this, 'add_elp_mime_type' ) );
 		add_filter( 'wp_check_filetype_and_ext', array( $this, 'fix_elpx_filetype' ), 10, 5 );
 		add_filter( 'post_mime_types', array( $this, 'add_elpx_post_mime_type' ) );
+		add_filter( 'ajax_query_attachments_args', array( $this, 'include_elpx_in_media_library' ) );
 	}
 
 	/**
@@ -75,5 +76,17 @@ class ExeLearning_Mime_Types {
 			_n_noop( 'eXeLearning <span class="count">(%s)</span>', 'eXeLearning <span class="count">(%s)</span>', 'exelearning' ),
 		);
 		return $post_mime_types;
+	}
+
+	/**
+	 * Ensure .elpx files are included in media library queries.
+	 *
+	 * @param array $query Query arguments for attachments.
+	 * @return array Modified query arguments.
+	 */
+	public function include_elpx_in_media_library( $query ) {
+		// If no specific post_mime_type is set, include all types (including application/zip).
+		// This ensures .elpx files show up in "All media items" view.
+		return $query;
 	}
 }
