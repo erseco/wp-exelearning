@@ -194,7 +194,7 @@ $wp_config_script = sprintf(
             window.fetch = function(input, init) {
                 var url = typeof input === "string" ? input : (input && input.url) || "";
                 return originalFetch.apply(this, arguments).then(function(response) {
-                    // If it's a CSS file that returned 404, return empty response instead
+                    // If CSS file returned 404, return empty response instead
                     if (!response.ok && (url.includes(".css") || url.includes("idevices"))) {
                         console.warn("[WP Mode] Fetch 404 fallback:", url);
                         return new Response("/* empty fallback */", {
