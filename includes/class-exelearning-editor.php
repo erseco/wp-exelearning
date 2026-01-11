@@ -128,8 +128,8 @@ class ExeLearning_Editor {
 		$file = get_attached_file( $attachment_id );
 		$ext  = strtolower( pathinfo( $file, PATHINFO_EXTENSION ) );
 
-		if ( ! in_array( $ext, array( 'elp', 'elpx' ), true ) ) {
-			wp_die( esc_html__( 'This file is not an eXeLearning file.', 'exelearning' ) );
+		if ( 'elpx' !== $ext ) {
+			wp_die( esc_html__( 'This file is not an eXeLearning file (.elpx).', 'exelearning' ) );
 		}
 
 		// Check user can edit this attachment.

@@ -62,6 +62,6 @@ class ExeLearning_Filters {
 			return false;
 		}
 		$ext = strtolower( pathinfo( $file, PATHINFO_EXTENSION ) );
-		return in_array( $ext, array( 'elp', 'elpx' ), true );
+		return 'elpx' === $ext;
 	}
 }
