@@ -23,20 +23,8 @@
       }
     },
     {
-      "step": "mkdir",
-      "path": "/wordpress/wp-content/uploads"
-    },
-    {
-      "step": "writeFile",
-      "path": "/wordpress/wp-content/uploads/test-content.elpx",
-      "data": {
-        "resource": "url",
-        "url": "https://raw.githubusercontent.com/erseco/wp-exelearning/main/test-content.elpx"
-      }
-    },
-    {
       "step": "runPHP",
-      "code": "<?php require_once '/wordpress/wp-load.php'; require_once ABSPATH . 'wp-admin/includes/file.php'; require_once ABSPATH . 'wp-admin/includes/media.php'; require_once ABSPATH . 'wp-admin/includes/image.php'; $upload_dir = wp_upload_dir(); $file_path = $upload_dir['basedir'] . '/test-content.elpx'; $file_url = $upload_dir['baseurl'] . '/test-content.elpx'; $attachment = array( 'post_mime_type' => 'application/zip', 'post_title' => 'Contenido de ejemplo para probar estilos y catalogacion', 'post_content' => '', 'post_status' => 'inherit', 'guid' => $file_url ); $attach_id = wp_insert_attachment($attachment, $file_path); if (!is_wp_error($attach_id)) { update_attached_file($attach_id, $file_path); do_action('add_attachment', $attach_id); } ?>"
+      "code": "<?php require_once '/wordpress/wp-load.php'; require_once ABSPATH . 'wp-admin/includes/file.php'; require_once ABSPATH . 'wp-admin/includes/media.php'; require_once ABSPATH . 'wp-admin/includes/image.php'; $upload_dir = wp_upload_dir(); wp_mkdir_p($upload_dir['basedir']); $file_url_remote = 'https://raw.githubusercontent.com/erseco/wp-exelearning/main/test-content.elpx'; $file_path = $upload_dir['basedir'] . '/test-content.elpx'; $file_url = $upload_dir['baseurl'] . '/test-content.elpx'; $response = wp_remote_get($file_url_remote, array('timeout' => 60)); if (!is_wp_error($response)) { file_put_contents($file_path, wp_remote_retrieve_body($response)); $attachment = array('post_mime_type' => 'application/zip', 'post_title' => 'Contenido de ejemplo para probar estilos y catalogacion', 'post_content' => '', 'post_status' => 'inherit', 'guid' => $file_url); $attach_id = wp_insert_attachment($attachment, $file_path); if (!is_wp_error($attach_id)) { update_attached_file($attach_id, $file_path); do_action('add_attachment', $attach_id); } } ?>"
     },
     {
       "step": "runPHP",
