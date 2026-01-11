@@ -474,7 +474,7 @@ class ExeLearning_REST_API {
 		}
 
 		if ( is_file( $dir ) || is_link( $dir ) ) {
-			unlink( $dir );
+			wp_delete_file( $dir );
 		} else {
 			$files = array_diff( scandir( $dir ), array( '.', '..' ) );
 			foreach ( $files as $file ) {

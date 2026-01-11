@@ -13,18 +13,6 @@
       "language": "es_ES"
     },
     {
-      "step": "runPHP",
-      "code": "<?php require_once('/wordpress/wp-load.php'); wp_insert_user(array('user_login' => 'test_user_1', 'user_email' => 'test1@example.com', 'user_pass' => wp_generate_password(), 'role' => 'editor')); ?>"
-    },
-    {
-      "step": "runPHP",
-      "code": "<?php require_once('/wordpress/wp-load.php'); wp_insert_user(array('user_login' => 'test_user_2', 'user_email' => 'test2@example.com', 'user_pass' => wp_generate_password(), 'role' => 'editor')); ?>"
-    },
-    {
-      "step": "runPHP",
-      "code": "<?php require_once('/wordpress/wp-load.php'); wp_insert_post(array( 'post_title' => 'Created by a Blueprint', 'post_content' => '<!-- wp:paragraph --><p>How do you update the meta fields?</p><!-- /wp:paragraph --><!-- wp:list --><ol><!-- wp:list-item --><li>Open the <strong>Settings</strong> sidebar by clicking the window icon next to the blue <strong>Update</strong> button.</li><!-- /wp:list-item --><!-- wp:list-item --><li>Click the <strong>Meta Block Sidebar</strong> menu (below the <strong>Summary</strong> menu).</li><!-- /wp:list-item --><!-- wp:list-item --><li>Type the <strong>Team name</strong> and the <strong>date</strong> the person joined the company in the respective fields.</li><!-- /wp:list-item --><!-- wp:list-item --><li>Click the blue <strong>Update</strong> button.</li><!-- /wp:list-item --></ol><!-- /wp:list -->','post_status' => 'publish' ));"
-    },
-    {
       "step": "installPlugin",
       "pluginData": {
         "resource": "url",
@@ -33,11 +21,27 @@
       "options": {
         "activate": true
       }
+    },
+    {
+      "step": "writeFile",
+      "path": "/wordpress/wp-content/uploads/test-content.elpx",
+      "data": {
+        "resource": "url",
+        "url": "https://raw.githubusercontent.com/erseco/wp-exelearning/main/test-content.elpx"
+      }
+    },
+    {
+      "step": "runPHP",
+      "code": "<?php require_once '/wordpress/wp-load.php'; require_once ABSPATH . 'wp-admin/includes/file.php'; require_once ABSPATH . 'wp-admin/includes/media.php'; require_once ABSPATH . 'wp-admin/includes/image.php'; $upload_dir = wp_upload_dir(); $file_path = $upload_dir['basedir'] . '/test-content.elpx'; $file_url = $upload_dir['baseurl'] . '/test-content.elpx'; $attachment = array( 'post_mime_type' => 'application/zip', 'post_title' => 'Contenido de ejemplo para probar estilos y catalogacion', 'post_content' => '', 'post_status' => 'inherit', 'guid' => $file_url ); $attach_id = wp_insert_attachment($attachment, $file_path); if (!is_wp_error($attach_id)) { update_attached_file($attach_id, $file_path); do_action('add_attachment', $attach_id); } ?>"
+    },
+    {
+      "step": "runPHP",
+      "code": "<?php require_once '/wordpress/wp-load.php'; $attachment_id = 0; $attachments = get_posts(array('post_type' => 'attachment', 'posts_per_page' => 1, 'post_status' => 'any', 'orderby' => 'ID', 'order' => 'DESC')); if (!empty($attachments)) { $attachment_id = $attachments[0]->ID; } $post_content = $attachment_id ? '<!-- wp:exelearning/elp-upload {\"attachmentId\":' . $attachment_id . ',\"height\":600} /-->' : '<!-- wp:paragraph --><p>No se pudo cargar el contenido eXeLearning.</p><!-- /wp:paragraph -->'; wp_update_post(array('ID' => 1, 'post_title' => 'Ejemplo de contenido eXeLearning', 'post_content' => $post_content, 'post_status' => 'publish')); ?>"
     }
   ],
   "features": {
     "networking": true
   },
   "login": true,
-  "landingPage": "/wp-admin/upload.php"
+  "landingPage": "/wp-admin/post.php?post=1&action=edit"
 }

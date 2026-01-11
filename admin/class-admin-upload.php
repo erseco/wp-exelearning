@@ -32,27 +32,28 @@ class ExeLearning_Admin_Upload {
 	 */
 	public function handle_upload() {
 		// Verify nonce.
-		if ( ! isset( $_POST['exelearning_upload_nonce'] ) || ! wp_verify_nonce( $_POST['exelearning_upload_nonce'], 'exelearning_upload_action' ) ) {
-			wp_die( 'Invalid nonce.' );
+		if ( ! isset( $_POST['exelearning_upload_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['exelearning_upload_nonce'] ) ), 'exelearning_upload_action' ) ) {
+			wp_die( esc_html__( 'Invalid nonce.', 'exelearning' ) );
 		}
 
 		// Check user capability.
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( 'Insufficient permissions.' );
+			wp_die( esc_html__( 'Insufficient permissions.', 'exelearning' ) );
 		}
 
 		// Check for file upload errors.
 		if ( ! isset( $_FILES['exelearning_file'] ) || UPLOAD_ERR_OK !== $_FILES['exelearning_file']['error'] ) {
-			wp_redirect( add_query_arg( 'message', 'upload_error', wp_get_referer() ) );
+			wp_safe_redirect( add_query_arg( 'message', 'upload_error', wp_get_referer() ) );
 			exit;
 		}
 
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput
 		$file = $_FILES['exelearning_file'];
 
 		// Validate file extension.
 		$ext = pathinfo( $file['name'], PATHINFO_EXTENSION );
 		if ( 'elp' !== strtolower( $ext ) ) {
-			wp_redirect( add_query_arg( 'message', 'invalid_file_type', wp_get_referer() ) );
+			wp_safe_redirect( add_query_arg( 'message', 'invalid_file_type', wp_get_referer() ) );
 			exit;
 		}
 
@@ -66,7 +67,7 @@ class ExeLearning_Admin_Upload {
 		$uploaded_file    = wp_handle_upload( $file, $upload_overrides );
 
 		if ( isset( $uploaded_file['error'] ) ) {
-			wp_redirect( add_query_arg( 'message', 'upload_error', wp_get_referer() ) );
+			wp_safe_redirect( add_query_arg( 'message', 'upload_error', wp_get_referer() ) );
 			exit;
 		}
 
@@ -84,7 +85,7 @@ class ExeLearning_Admin_Upload {
 		$attach_data = wp_generate_attachment_metadata( $attachment_id, $uploaded_file['file'] );
 		wp_update_attachment_metadata( $attachment_id, $attach_data );
 
-		wp_redirect( add_query_arg( 'message', 'upload_success', wp_get_referer() ) );
+		wp_safe_redirect( add_query_arg( 'message', 'upload_success', wp_get_referer() ) );
 		exit;
 	}
 }

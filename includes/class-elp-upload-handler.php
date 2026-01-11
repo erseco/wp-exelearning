@@ -52,7 +52,7 @@ class ExeLearning_Elp_Upload_Handler {
 		$result      = $elp_service->validate_elp_file( $file );
 
 		if ( is_wp_error( $result ) ) {
-			@unlink( $file );
+			wp_delete_file( $file );
 			return $result;
 		}
 
@@ -102,7 +102,7 @@ class ExeLearning_Elp_Upload_Handler {
 			);
 
 		} catch ( Exception $e ) {
-			@unlink( $file );
+			wp_delete_file( $file );
 			return new WP_Error( 'extract_failed', $e->getMessage() );
 		}
 
@@ -114,6 +114,8 @@ class ExeLearning_Elp_Upload_Handler {
 
 	/**
 	 * Guarda los metadatos del .elp en el attachment.
+	 *
+	 * @param int $attachment_id Attachment ID.
 	 */
 	public function save_elp_metadata( $attachment_id ) {
 		$file = get_attached_file( $attachment_id );
@@ -157,7 +159,7 @@ class ExeLearning_Elp_Upload_Handler {
 			return;
 		}
 		if ( is_file( $dir ) || is_link( $dir ) ) {
-			unlink( $dir );
+			wp_delete_file( $dir );
 		} else {
 			$files = array_diff( scandir( $dir ), array( '.', '..' ) );
 			foreach ( $files as $file ) {
@@ -172,7 +174,7 @@ class ExeLearning_Elp_Upload_Handler {
 	 *
 	 * @param int $post_id Attachment ID.
 	 */
-	function exelearning_delete_extracted_folder( $post_id ) {
+	public function exelearning_delete_extracted_folder( $post_id ) {
 		$directory = get_post_meta( $post_id, '_exelearning_extracted', true );
 
 		if ( $directory ) {

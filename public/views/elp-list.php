@@ -131,7 +131,7 @@ class Exelearning_Admin {
 		}
 
 		// Verify that the nonce is valid.
-		if ( ! wp_verify_nonce( $_POST['exelearning_content_nonce'], 'exelearning_content_metabox' ) ) {
+		if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['exelearning_content_nonce'] ) ), 'exelearning_content_metabox' ) ) {
 			return;
 		}
 
@@ -145,9 +145,9 @@ class Exelearning_Admin {
 			return;
 		}
 
-		// Save the .elp file ID
+		// Save the .elp file ID.
 		if ( isset( $_POST['exelearning_file_id'] ) ) {
-			update_post_meta( $post_id, '_exelearning_file_id', sanitize_text_field( $_POST['exelearning_file_id'] ) );
+			update_post_meta( $post_id, '_exelearning_file_id', sanitize_text_field( wp_unslash( $_POST['exelearning_file_id'] ) ) );
 		}
 	}
 }
