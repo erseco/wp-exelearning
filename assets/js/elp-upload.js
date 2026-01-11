@@ -110,7 +110,7 @@
                 return el( MediaUploadCheck, null,
                     el( MediaUpload, {
                         onSelect: onSelectFile,
-                        allowedTypes: [ 'application/x-exe-learning' ],
+                        allowedTypes: [ 'application/zip' ],
                         value: attributes.attachmentId,
                         render: function( obj ) {
                             return el( Placeholder, {
@@ -168,7 +168,7 @@
                         }),
                         el( MediaUpload, {
                             onSelect: onSelectFile,
-                            allowedTypes: [ 'application/x-exe-learning' ],
+                            allowedTypes: [ 'application/zip' ],
                             value: attributes.attachmentId,
                             render: function( obj ) {
                                 return el( ToolbarButton, {
@@ -215,7 +215,7 @@
                             }, 'Edit in eXeLearning' ),
                             el( MediaUpload, {
                                 onSelect: onSelectFile,
-                                allowedTypes: [ 'application/x-exe-learning' ],
+                                allowedTypes: [ 'application/zip' ],
                                 value: attributes.attachmentId,
                                 render: function( obj ) {
                                     return el( Button, {
