@@ -277,12 +277,12 @@ class ExeLearning_REST_API {
 			);
 		}
 
-		// Verify this is an ELP file.
+		// Verify this is an ELPX file.
 		$ext = strtolower( pathinfo( $old_file_path, PATHINFO_EXTENSION ) );
-		if ( ! in_array( $ext, array( 'elp', 'elpx' ), true ) ) {
+		if ( 'elpx' !== $ext ) {
 			return new WP_Error(
 				'invalid_file_type',
-				__( 'This is not an eXeLearning file.', 'exelearning' ),
+				__( 'This is not an eXeLearning file (.elpx).', 'exelearning' ),
 				array( 'status' => 400 )
 			);
 		}
@@ -367,10 +367,10 @@ class ExeLearning_REST_API {
 		$file     = get_attached_file( $attachment_id );
 		$ext      = strtolower( pathinfo( $file, PATHINFO_EXTENSION ) );
 
-		if ( ! in_array( $ext, array( 'elp', 'elpx' ), true ) ) {
+		if ( 'elpx' !== $ext ) {
 			return new WP_Error(
 				'invalid_file_type',
-				__( 'This is not an eXeLearning file.', 'exelearning' ),
+				__( 'This is not an eXeLearning file (.elpx).', 'exelearning' ),
 				array( 'status' => 400 )
 			);
 		}

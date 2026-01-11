@@ -123,7 +123,7 @@
                                     el( Button, {
                                         isPrimary: true,
                                         onClick: obj.open
-                                    }, 'Upload .elp/.elpx File' ),
+                                    }, 'Upload .elpx File' ),
                                     el( Button, {
                                         isSecondary: true,
                                         onClick: obj.open,
