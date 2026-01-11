@@ -135,16 +135,18 @@ jQuery( document ).ready( function( $ ) {
         $detailsThumbnail.addClass( 'exelearning-details-preview-added' );
 
         // Reemplazar la imagen con un iframe escalado (zoom out)
-        // Container holds the scaled iframe - shows a 1200px wide page scaled to fit
-        var containerWidth = 280;
-        var containerHeight = 200;
+        // Container 4:3 aspect ratio for proper preview
+        var containerWidth = 320;
+        var containerHeight = 240;
         var iframeWidth = 1200;
-        var iframeHeight = 800;
+        var iframeHeight = 900;
         var scale = containerWidth / iframeWidth;
 
-        // Set fixed height on thumbnail container to prevent overflow
+        // Set fixed dimensions on thumbnail container to prevent overflow
         $detailsThumbnail.css({
+            'width': containerWidth + 'px',
             'height': containerHeight + 'px',
+            'max-width': containerWidth + 'px',
             'max-height': containerHeight + 'px',
             'overflow': 'hidden',
             'margin-bottom': '15px'
