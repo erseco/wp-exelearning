@@ -146,15 +146,28 @@
 
 			console.log( '[WP-EXE Bridge] ELP imported successfully' );
 
-			// Navigate to first page
+			// Navigate to first page (optional - don't fail if API not available)
 			setTimeout( () => {
-				const navArray = bridge.structureBinding?.getNavigationArray();
-				if ( navArray?.length > 0 ) {
-					const firstPage = navArray.get( 0 );
-					const pageId = firstPage?.get( 'id' ) || firstPage?.get( 'pageId' );
-					if ( pageId && window.eXeLearning.app.navigation ) {
-						window.eXeLearning.app.navigation.goTo( pageId );
+				try {
+					// Try different methods to navigate to first page
+					if ( typeof bridge.structureBinding?.getNavigationArray === 'function' ) {
+						const navArray = bridge.structureBinding.getNavigationArray();
+						if ( navArray?.length > 0 ) {
+							const firstPage = navArray.get( 0 );
+							const pageId = firstPage?.get( 'id' ) || firstPage?.get( 'pageId' );
+							if ( pageId && window.eXeLearning?.app?.navigation ) {
+								window.eXeLearning.app.navigation.goTo( pageId );
+							}
+						}
+					} else if ( window.eXeLearning?.app?.project?.nodes ) {
+						// Alternative: use project nodes
+						const nodes = window.eXeLearning.app.project.nodes;
+						if ( nodes?.length > 0 && window.eXeLearning.app.navigation ) {
+							window.eXeLearning.app.navigation.goTo( nodes[ 0 ].id );
+						}
 					}
+				} catch ( navError ) {
+					console.warn( '[WP-EXE Bridge] Auto-navigation skipped:', navError.message );
 				}
 			}, 500 );
 		} catch ( error ) {
