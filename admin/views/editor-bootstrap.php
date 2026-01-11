@@ -168,7 +168,7 @@ $wp_config_script = sprintf(
                                 return originalFail.call(this, function(jqXHR, textStatus, error) {
                                     if (requestUrl.includes(".css")) {
                                         console.warn("[WP Mode] Suppressing CSS 404:", requestUrl);
-                                        return; // Don't call the fail callback for CSS
+                                        return; // Skip fail callback for CSS
                                     }
                                     callback(jqXHR, textStatus, error);
                                 });
