@@ -131,6 +131,90 @@ $wp_config_script = sprintf(
                 });
             });
         }
+
+        // Workaround for WordPress Playground: Handle 404 errors for CSS/JS files gracefully
+        // Playground sometimes fails to serve deeply nested static files from plugins
+        (function() {
+            // Patch jQuery.ajax to handle CSS/JS 404s without breaking
+            var patchJQuery = function() {
+                if (typeof jQuery === "undefined" || !jQuery.ajax) return;
+
+                var originalAjax = jQuery.ajax;
+                jQuery.ajax = function(url, settings) {
+                    // Normalize arguments
+                    if (typeof url === "object") {
+                        settings = url;
+                        url = settings.url;
+                    }
+                    settings = settings || {};
+                    var requestUrl = url || settings.url || "";
+
+                    // For CSS/JS files, add error handling that returns empty content
+                    if (requestUrl.includes(".css") || (requestUrl.includes("idevices") && requestUrl.includes("export"))) {
+                        var originalError = settings.error;
+                        settings.error = function(jqXHR, textStatus, errorThrown) {
+                            console.warn("[WP Mode] Resource 404 (using fallback):", requestUrl);
+                            // Call success with empty content instead of failing
+                            if (settings.success) {
+                                settings.success("", "success", jqXHR);
+                            }
+                        };
+
+                        // Also wrap the promise
+                        var result = originalAjax.call(this, url, settings);
+                        if (result && result.fail) {
+                            var originalFail = result.fail;
+                            result.fail = function(callback) {
+                                return originalFail.call(this, function(jqXHR, textStatus, error) {
+                                    if (requestUrl.includes(".css")) {
+                                        console.warn("[WP Mode] Suppressing CSS 404:", requestUrl);
+                                        return; // Don't call the fail callback for CSS
+                                    }
+                                    callback(jqXHR, textStatus, error);
+                                });
+                            };
+                        }
+                        return result;
+                    }
+
+                    return originalAjax.call(this, url, settings);
+                };
+                console.log("[WP Mode] jQuery.ajax patched for CSS fallback");
+            };
+
+            // Patch immediately if jQuery is available, or wait for it
+            if (typeof jQuery !== "undefined") {
+                patchJQuery();
+            } else {
+                document.addEventListener("DOMContentLoaded", patchJQuery);
+            }
+
+            // Also patch fetch for any fetch-based CSS loading
+            var originalFetch = window.fetch;
+            window.fetch = function(input, init) {
+                var url = typeof input === "string" ? input : (input && input.url) || "";
+                return originalFetch.apply(this, arguments).then(function(response) {
+                    // If it's a CSS file that returned 404, return empty response instead
+                    if (!response.ok && (url.includes(".css") || url.includes("idevices"))) {
+                        console.warn("[WP Mode] Fetch 404 fallback:", url);
+                        return new Response("/* empty fallback */", {
+                            status: 200,
+                            headers: { "Content-Type": "text/css" }
+                        });
+                    }
+                    return response;
+                }).catch(function(error) {
+                    if (url.includes(".css") || url.includes("idevices")) {
+                        console.warn("[WP Mode] Fetch error fallback:", url);
+                        return new Response("/* empty fallback */", {
+                            status: 200,
+                            headers: { "Content-Type": "text/css" }
+                        });
+                    }
+                    throw error;
+                });
+            };
+        })();
     </script>
     <script src="%s/js/wp-exe-bridge.js"></script>
 ',
