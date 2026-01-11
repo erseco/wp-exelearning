@@ -267,7 +267,7 @@ class ExeLearning_Editor {
 
 		$ext = strtolower( pathinfo( $file, PATHINFO_EXTENSION ) );
 
-		if ( ! in_array( $ext, array( 'elp', 'elpx' ), true ) ) {
+		if ( 'elpx' !== $ext ) {
 			return $response;
 		}
 
