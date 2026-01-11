@@ -114,6 +114,23 @@ $wp_config_script = sprintf(
         // Override static mode detection for WordPress
         window.__EXE_STATIC_MODE__ = true;
         window.__EXE_WP_MODE__ = true;
+
+        // Disable Service Worker in WordPress mode to prevent path conflicts
+        // and caching issues (especially in WordPress Playground)
+        if ("serviceWorker" in navigator) {
+            // Prevent new service worker registrations
+            navigator.serviceWorker.register = function() {
+                console.log("[WP Mode] Service worker registration disabled");
+                return Promise.resolve({ scope: "" });
+            };
+            // Unregister any existing service workers
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                registrations.forEach(function(registration) {
+                    registration.unregister();
+                    console.log("[WP Mode] Service worker unregistered");
+                });
+            });
+        }
     </script>
     <script src="%s/js/wp-exe-bridge.js"></script>
 ',
