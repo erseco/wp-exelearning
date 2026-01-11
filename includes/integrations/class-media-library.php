@@ -25,190 +25,184 @@ class ExeLearning_Media_Library {
 	public function __construct() {
 		add_filter( 'manage_media_columns', array( $this, 'add_elp_column' ) );
 		add_action( 'manage_media_custom_column', array( $this, 'render_elp_column' ), 10, 2 );
-    add_action( 'add_meta_boxes_attachment', array( $this, 'add_elp_meta_box' ) );
+		add_action( 'add_meta_boxes_attachment', array( $this, 'add_elp_meta_box' ) );
 
+		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_media_modal_scripts' ) );
 
-        add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_media_modal_scripts' ) );
+		add_filter( 'wp_prepare_attachment_for_js', array( $this, 'add_elp_metadata_to_js' ), 10, 3 );
+	}
 
-        add_filter( 'wp_prepare_attachment_for_js', array( $this, 'add_elp_metadata_to_js' ), 10, 3 );
+	/**
+	 * Enqueue scripts for the media modal.
+	 *
+	 * @param string $hook The current admin page hook.
+	 */
+	public function enqueue_media_modal_scripts( $hook ) {
+		// Load on pages where the media library is used.
+		$allowed_hooks = array( 'upload.php', 'post.php', 'post-new.php', 'media.php' );
 
+		if ( in_array( $hook, $allowed_hooks, true ) || did_action( 'wp_enqueue_media' ) ) {
+			wp_enqueue_media();
 
-    }
+			wp_enqueue_script(
+				'exelearning-media-modal',
+				plugins_url( '../../assets/js/exelearning-media-modal.js', __FILE__ ),
+				array( 'jquery', 'media-views' ),
+				EXELEARNING_VERSION,
+				true
+			);
 
-    /**
-     * Encola el script para el modal de medios.
-     */
-    public function enqueue_media_modal_scripts( $hook ) {
-        // Cargar en páginas donde se usa la biblioteca de medios.
-        $allowed_hooks = array( 'upload.php', 'post.php', 'post-new.php', 'media.php' );
+			wp_enqueue_style(
+				'exelearning-media-library',
+				plugins_url( '../../assets/css/exelearning-admin.css', __FILE__ ),
+				array(),
+				EXELEARNING_VERSION
+			);
+		}
+	}
 
-        if ( in_array( $hook, $allowed_hooks, true ) || did_action( 'wp_enqueue_media' ) ) {
-            wp_enqueue_media();
+	/**
+	 * Add eXeLearning metadata to the attachment JS object.
+	 *
+	 * @param array   $response The attachment response array.
+	 * @param WP_Post $post     The attachment post object.
+	 * @param array   $meta     The attachment metadata (unused).
+	 * @return array Modified response array.
+	 */
+	public function add_elp_metadata_to_js( $response, $post, $meta ) {
+		unset( $meta ); // Unused parameter.
 
-            wp_enqueue_script(
-                'exelearning-media-modal',
-                plugins_url( '../../assets/js/exelearning-media-modal.js', __FILE__ ),
-                array( 'jquery', 'media-views' ),
-                EXELEARNING_VERSION,
-                true
-            );
+		// Early return if post is not valid.
+		if ( ! $post || ! isset( $post->ID ) || empty( $post->ID ) ) {
+			return $response;
+		}
 
-            wp_enqueue_style(
-                'exelearning-media-library',
-                plugins_url( '../../assets/css/exelearning-admin.css', __FILE__ ),
-                array(),
-                EXELEARNING_VERSION
-            );
-        }
-    }
+		$extracted_hash = get_post_meta( $post->ID, '_exelearning_extracted', true );
 
-    /**
-     * Añade los metadatos de eXeLearning al objeto del adjunto.
-     */
-    public function add_elp_metadata_to_js( $response, $post, $meta ) {
-        $extracted_hash = get_post_meta( $post->ID, '_exelearning_extracted', true );
+		if ( $extracted_hash ) {
+			$has_preview = get_post_meta( $post->ID, '_exelearning_has_preview', true );
+			$version     = get_post_meta( $post->ID, '_exelearning_version', true );
 
-        if ( $extracted_hash ) {
-            $has_preview = get_post_meta( $post->ID, '_exelearning_has_preview', true );
-            $version     = get_post_meta( $post->ID, '_exelearning_version', true );
+			$response['exelearning'] = array(
+				'license'       => get_post_meta( $post->ID, '_exelearning_license', true ),
+				'language'      => get_post_meta( $post->ID, '_exelearning_language', true ),
+				'resource_type' => get_post_meta( $post->ID, '_exelearning_resource_type', true ),
+				'version'       => $version,
+				'has_preview'   => '1' === $has_preview,
+			);
 
-            $response['exelearning'] = array(
-                'license'        => get_post_meta( $post->ID, '_exelearning_license', true ),
-                'language'       => get_post_meta( $post->ID, '_exelearning_language', true ),
-                'resource_type'  => get_post_meta( $post->ID, '_exelearning_resource_type', true ),
-                'version'        => $version,
-                'has_preview'    => $has_preview === '1',
-            );
+			// Only include preview_url if the file has index.html (version 3 files).
+			if ( '1' === $has_preview ) {
+				$upload_dir                             = wp_upload_dir();
+				$response['exelearning']['preview_url'] = $upload_dir['baseurl'] . '/exelearning/' . $extracted_hash . '/index.html';
+			}
+		}
 
-            // Only include preview_url if the file has index.html (version 3 files).
-            if ( $has_preview === '1' ) {
-                $upload_dir  = wp_upload_dir();
-                $response['exelearning']['preview_url'] = $upload_dir['baseurl'] . '/exelearning/' . $extracted_hash . '/index.html';
-            }
-        }
+		return $response;
+	}
 
-        return $response;
-    }
+	/**
+	 * Adds a meta box to the attachment edit screen.
+	 */
+	public function add_elp_meta_box() {
+		global $post;
 
-/**
- * Adds a meta box to the attachment edit screen.
- */
-public function add_elp_meta_box() {
-    global $post;
+		// Early return if post is not valid.
+		if ( ! $post || ! isset( $post->ID ) || empty( $post->ID ) ) {
+			return;
+		}
 
-    $extracted_url = get_post_meta( $post->ID, '_exelearning_extracted', true );
-    
-    // Metabox para vista previa del contenido extraído
-    if ( $extracted_url ) {
-        add_meta_box(
-            'exelearning-preview-metabox',
-            __( 'eXeLearning Content Preview', 'exelearning' ),
-            array( $this, 'render_preview_meta_box' ),
-            'attachment',
-            'normal',
-            'high'
-        );
-    }
+		$extracted_url = get_post_meta( $post->ID, '_exelearning_extracted', true );
 
+		// Metabox for preview of extracted content.
+		if ( $extracted_url ) {
+			add_meta_box(
+				'exelearning-preview-metabox',
+				__( 'eXeLearning Content Preview', 'exelearning' ),
+				array( $this, 'render_preview_meta_box' ),
+				'attachment',
+				'normal',
+				'high'
+			);
+		}
 
-    if ( get_post_meta( $post->ID, '_exelearning_extracted', true ) ) {
-        add_meta_box(
-            'exelearning-metabox',
-            __( 'eXeLearning Metadata', 'exelearning' ),
-            array( $this, 'render_elp_meta_box' ),
-            'attachment',
-            'side'
-        );
-    }
-}
+		if ( get_post_meta( $post->ID, '_exelearning_extracted', true ) ) {
+			add_meta_box(
+				'exelearning-metabox',
+				__( 'eXeLearning Metadata', 'exelearning' ),
+				array( $this, 'render_elp_meta_box' ),
+				'attachment',
+				'side'
+			);
+		}
+	}
 
-	 /**
-	 * Renderiza el metabox de vista previa
+	/**
+	 * Renders the preview meta box.
+	 *
+	 * @param WP_Post $post The attachment post object.
 	 */
 	public function render_preview_meta_box( $post ) {
 
-	    $directory   = get_post_meta( $post->ID, '_exelearning_extracted', true );
-	    $has_preview = get_post_meta( $post->ID, '_exelearning_has_preview', true );
-	    $version     = get_post_meta( $post->ID, '_exelearning_version', true );
+		$directory   = get_post_meta( $post->ID, '_exelearning_extracted', true );
+		$has_preview = get_post_meta( $post->ID, '_exelearning_has_preview', true );
 
-	    if ( $directory ) {
-	        if ( $has_preview === '1' ) {
-	            $upload_dir  = wp_upload_dir();
-	            $preview_url = $upload_dir['baseurl'] . '/exelearning/' . $directory . '/index.html';
+		if ( $directory ) {
+			if ( '1' === $has_preview ) {
+				$upload_dir  = wp_upload_dir();
+				$preview_url = $upload_dir['baseurl'] . '/exelearning/' . $directory . '/index.html';
 
-	            echo '<div style="width: 100%; height: 600px; overflow: auto; margin-bottom: 15px;">';
-	            echo '<iframe src="' . esc_url( $preview_url ) . '" style="width: 100%; height: 100%; border: none;"></iframe>';
-	            echo '</div>';
-	            echo '<p><a href="' . esc_url( $preview_url ) . '" target="_blank" rel="noopener noreferrer">' . esc_html__( 'Open in new tab', 'exelearning' ) . '</a></p>';
-	        } else {
-	            echo '<div style="padding: 20px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; margin-bottom: 15px;">';
-	            echo '<p><strong>' . esc_html__( 'No preview available', 'exelearning' ) . '</strong></p>';
-	            echo '<p>' . esc_html__( 'This is an eXeLearning v2 source file (.elp). To view the content, open it in eXeLearning and export it as HTML.', 'exelearning' ) . '</p>';
-	            echo '</div>';
-	        }
+				echo '<div style="width: 100%; height: 600px; overflow: auto; margin-bottom: 15px;">';
+				echo '<iframe src="' . esc_url( $preview_url ) . '" style="width: 100%; height: 100%; border: none;"></iframe>';
+				echo '</div>';
+				echo '<p><a href="' . esc_url( $preview_url ) . '" target="_blank" rel="noopener noreferrer">' . esc_html__( 'Open in new tab', 'exelearning' ) . '</a></p>';
+			} else {
+				echo '<div style="padding: 20px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; margin-bottom: 15px;">';
+				echo '<p><strong>' . esc_html__( 'No preview available', 'exelearning' ) . '</strong></p>';
+				echo '<p>' . esc_html__( 'This is an eXeLearning v2 source file (.elp). To view the content, open it in eXeLearning and export it as HTML.', 'exelearning' ) . '</p>';
+				echo '</div>';
+			}
 
-	        // Add "Edit in eXeLearning" button.
-	        if ( current_user_can( 'edit_post', $post->ID ) ) {
-	            $edit_url = add_query_arg(
-	                array(
-	                    'page'          => 'exelearning-editor',
-	                    'attachment_id' => $post->ID,
-	                    '_wpnonce'      => wp_create_nonce( 'exelearning_editor' ),
-	                ),
-	                admin_url( 'admin.php' )
-	            );
+			// Add "Edit in eXeLearning" button.
+			if ( current_user_can( 'edit_post', $post->ID ) ) {
+				$edit_url = add_query_arg(
+					array(
+						'page'          => 'exelearning-editor',
+						'attachment_id' => $post->ID,
+						'_wpnonce'      => wp_create_nonce( 'exelearning_editor' ),
+					),
+					admin_url( 'admin.php' )
+				);
 
-	            echo '<p style="margin-top: 15px;">';
-	            echo '<a href="' . esc_url( $edit_url ) . '" class="button button-primary button-large exelearning-edit-page-button" ';
-	            echo 'data-attachment-id="' . esc_attr( $post->ID ) . '" ';
-	            echo 'style="width: 100%; text-align: center;">';
-	            echo '<span class="dashicons dashicons-edit" style="vertical-align: middle; margin-right: 5px;"></span>';
-	            echo esc_html__( 'Edit in eXeLearning', 'exelearning' );
-	            echo '</a>';
-	            echo '</p>';
-	        }
-	    }
-
+				echo '<p style="margin-top: 15px;">';
+				echo '<a href="' . esc_url( $edit_url ) . '" class="button button-primary button-large exelearning-edit-page-button" ';
+				echo 'data-attachment-id="' . esc_attr( $post->ID ) . '" ';
+				echo 'style="width: 100%; text-align: center;">';
+				echo '<span class="dashicons dashicons-edit" style="vertical-align: middle; margin-right: 5px;"></span>';
+				echo esc_html__( 'Edit in eXeLearning', 'exelearning' );
+				echo '</a>';
+				echo '</p>';
+			}
+		}
 	}
 
 
-/**
- * Renders the content of the meta box.
- */
-public function render_elp_meta_box( $post ) {
-    // $title = get_post_meta( $post->ID, '_exelearning_title', true );
-    // $description = get_post_meta( $post->ID, '_exelearning_description', true );
-    $license = get_post_meta( $post->ID, '_exelearning_license', true );
-    $language = get_post_meta( $post->ID, '_exelearning_language', true );
-    $resource_type = get_post_meta( $post->ID, '_exelearning_resource_type', true );
+	/**
+	 * Renders the content of the meta box.
+	 *
+	 * @param WP_Post $post The attachment post object.
+	 */
+	public function render_elp_meta_box( $post ) {
+		$license       = get_post_meta( $post->ID, '_exelearning_license', true );
+		$language      = get_post_meta( $post->ID, '_exelearning_language', true );
+		$resource_type = get_post_meta( $post->ID, '_exelearning_resource_type', true );
 
-    echo '<ul>';
-    // echo '<li><strong>' . esc_html__( 'Title:', 'exelearning' ) . '</strong> ' . esc_html( $title ) . '</li>';
-    // echo '<li><strong>' . esc_html__( 'Description:', 'exelearning' ) . '</strong> ' . esc_html( $description ) . '</li>';
-    echo '<li><strong>' . esc_html__( 'License:', 'exelearning' ) . '</strong> ' . esc_html( $license ) . '</li>';
-    echo '<li><strong>' . esc_html__( 'Language:', 'exelearning' ) . '</strong> ' . esc_html( $language ) . '</li>';
-    echo '<li><strong>' . esc_html__( 'Resource Type:', 'exelearning' ) . '</strong> ' . esc_html( $resource_type ) . '</li>';
-    echo '</ul>';
-}
-
-
-// /**
-//  * Adds a meta box to the attachment edit screen.
-//  */
-// public function add_elp_meta_box() {
-//     global $post;
-//     if ( get_post_meta( $post->ID, '_exelearning_title', true ) ) {
-//         add_meta_box(
-//             'exelearning-metabox',
-//             __( 'eXeLearning Metadata', 'exelearning' ),
-//             array( $this, 'render_elp_meta_box' ),
-//             'attachment',
-//             'side'
-//         );
-//     }
-// }
-
-
+		echo '<ul>';
+		echo '<li><strong>' . esc_html__( 'License:', 'exelearning' ) . '</strong> ' . esc_html( $license ) . '</li>';
+		echo '<li><strong>' . esc_html__( 'Language:', 'exelearning' ) . '</strong> ' . esc_html( $language ) . '</li>';
+		echo '<li><strong>' . esc_html__( 'Resource Type:', 'exelearning' ) . '</strong> ' . esc_html( $resource_type ) . '</li>';
+		echo '</ul>';
+	}
 
 	/**
 	 * Adds a custom column for eXeLearning files in the media library.
@@ -221,75 +215,40 @@ public function render_elp_meta_box( $post ) {
 		return $columns;
 	}
 
-	// /**
-	//  * Renders the custom eXeLearning column content.
-	//  *
-	//  * @param string $column_name Column name.
-	//  * @param int    $post_id Attachment ID.
-	//  */
-	// public function render_elp_column( $column_name, $post_id ) {
-	// 	if ( 'exelearning' !== $column_name ) {
-	// 		return;
-	// 	}
-
-	// 	$file = get_attached_file( $post_id );
-	// 	if ( 'elp' === strtolower( pathinfo( $file, PATHINFO_EXTENSION ) ) ) {
-	// 		$title = get_post_meta( $post_id, '_exelearning_title', true );
-	// 		$description = get_post_meta( $post_id, '_exelearning_description', true );
-	// 		$license = get_post_meta( $post_id, '_exelearning_license', true );
-	// 		$language = get_post_meta( $post_id, '_exelearning_language', true );
-	// 		$resource_type = get_post_meta( $post_id, '_exelearning_resource_type', true );
-
-	// 		echo '<strong>' . esc_html__( 'Title:', 'exelearning' ) . '</strong> ' . esc_html( $title ) . '<br>';
-	// 		echo '<strong>' . esc_html__( 'Description:', 'exelearning' ) . '</strong> ' . esc_html( $description ) . '<br>';
-	// 		echo '<strong>' . esc_html__( 'License:', 'exelearning' ) . '</strong> ' . esc_html( $license ) . '<br>';
-	// 		echo '<strong>' . esc_html__( 'Language:', 'exelearning' ) . '</strong> ' . esc_html( $language ) . '<br>';
-	// 		echo '<strong>' . esc_html__( 'Resource Type:', 'exelearning' ) . '</strong> ' . esc_html( $resource_type );
-	// 	}
-	// }
-
 	/**
 	 * Renders the custom eXeLearning column content.
+	 *
+	 * @param string $column_name Column name.
+	 * @param int    $post_id     Attachment ID.
 	 */
 	public function render_elp_column( $column_name, $post_id ) {
-	    if ( 'exelearning' !== $column_name ) {
-	        return;
-	    }
+		if ( 'exelearning' !== $column_name ) {
+			return;
+		}
 
-	    // Verificar si es un archivo .elp usando los metadatos
-	    $is_elp = get_post_meta( $post_id, '_exelearning_extracted', true );
+		// Check if it is an .elp file using metadata.
+		$is_elp = get_post_meta( $post_id, '_exelearning_extracted', true );
 
-	    if ( $is_elp ) {
-	        // $title = get_post_meta( $post_id, '_exelearning_title', true );
-	        // $description = get_post_meta( $post_id, '_exelearning_description', true );
-	        $license = get_post_meta( $post_id, '_exelearning_license', true );
-	        $language = get_post_meta( $post_id, '_exelearning_language', true );
-	        $resource_type = get_post_meta( $post_id, '_exelearning_resource_type', true );
+		if ( $is_elp ) {
+			$license       = get_post_meta( $post_id, '_exelearning_license', true );
+			$language      = get_post_meta( $post_id, '_exelearning_language', true );
+			$resource_type = get_post_meta( $post_id, '_exelearning_resource_type', true );
 
-	        echo '<div class="exelearning-metadata">';
-	        
-	        // if ( $title ) {
-	        //     echo '<div><strong>' . esc_html__( 'Title:', 'exelearning' ) . '</strong> ' . esc_html( $title ) . '</div>';
-	        // }
-	        
-	        // if ( $description ) {
-	        //     echo '<div><strong>' . esc_html__( 'Description:', 'exelearning' ) . '</strong> ' . esc_html( $description ) . '</div>';
-	        // }
-	        
-	        if ( $license ) {
-	            echo '<div><strong>' . esc_html__( 'License:', 'exelearning' ) . '</strong> ' . esc_html( $license ) . '</div>';
-	        }
-	        
-	        if ( $language ) {
-	            echo '<div><strong>' . esc_html__( 'Language:', 'exelearning' ) . '</strong> ' . esc_html( $language ) . '</div>';
-	        }
-	        
-	        if ( $resource_type ) {
-	            echo '<div><strong>' . esc_html__( 'Resource Type:', 'exelearning' ) . '</strong> ' . esc_html( $resource_type ) . '</div>';
-	        }
-	        
-	        echo '</div>';
-	    }
+			echo '<div class="exelearning-metadata">';
+
+			if ( $license ) {
+				echo '<div><strong>' . esc_html__( 'License:', 'exelearning' ) . '</strong> ' . esc_html( $license ) . '</div>';
+			}
+
+			if ( $language ) {
+				echo '<div><strong>' . esc_html__( 'Language:', 'exelearning' ) . '</strong> ' . esc_html( $language ) . '</div>';
+			}
+
+			if ( $resource_type ) {
+				echo '<div><strong>' . esc_html__( 'Resource Type:', 'exelearning' ) . '</strong> ' . esc_html( $resource_type ) . '</div>';
+			}
+
+			echo '</div>';
+		}
 	}
-
 }

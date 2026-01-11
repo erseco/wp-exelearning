@@ -8,7 +8,7 @@
  */
 
 if ( ! defined( 'WPINC' ) ) {
-    die;
+	die;
 }
 
 /**
@@ -18,11 +18,11 @@ if ( ! defined( 'WPINC' ) ) {
  */
 class ExeLearning_Deactivator {
 
-    /**
-     * Run on plugin deactivation.
-     */
-    public static function deactivate() {
-        // Deactivation code goes here.
-        // For example, clear scheduled hooks.
-    }
+	/**
+	 * Run on plugin deactivation.
+	 */
+	public static function deactivate() {
+		// Deactivation code goes here.
+		// For example, clear scheduled hooks.
+	}
 }

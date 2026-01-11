@@ -8,9 +8,5 @@
     },
     "mappings": {
         "wp-content/plugins/exelearning": "./"
-    },
-    "plugins":  [ 
-        "https://downloads.wordpress.org/plugins/tinymce-advanced.zip",
-        "https://downloads.wordpress.org/plugins/sql-buddy.zip"
-    ]
+    }
 }

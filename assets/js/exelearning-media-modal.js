@@ -172,10 +172,144 @@ jQuery( document ).ready( function( $ ) {
         }
     }
 
+    // Function to add "Edit in eXeLearning" button to the two-column attachment details view
+    function addEditButtonToAttachmentInfo() {
+        var $attachmentInfo = $( '.attachment-info' );
+
+        if ( $attachmentInfo.length === 0 ) {
+            return;
+        }
+
+        // Check if button already exists
+        if ( $attachmentInfo.find( '.exelearning-edit-button-actions' ).length > 0 ) {
+            return;
+        }
+
+        // Get the attachment ID from multiple sources
+        var attachmentId = null;
+
+        // Try to get from the attachment details wrapper
+        var $wrapper = $attachmentInfo.closest( '.attachment-details' );
+        if ( $wrapper.length > 0 && $wrapper.data( 'id' ) ) {
+            attachmentId = $wrapper.data( 'id' );
+        }
+
+        // Try to get from URL parameter 'item' (grid view selection)
+        if ( ! attachmentId ) {
+            var urlParams = new URLSearchParams( window.location.search );
+            attachmentId = urlParams.get( 'item' );
+        }
+
+        // Try to get from URL parameter 'post' (edit attachment page)
+        if ( ! attachmentId ) {
+            var urlParams = new URLSearchParams( window.location.search );
+            attachmentId = urlParams.get( 'post' );
+        }
+
+        // Try to get from the "edit more details" link href
+        if ( ! attachmentId ) {
+            var $editLink = $attachmentInfo.find( 'a[href*="post.php?post="]' );
+            if ( $editLink.length > 0 ) {
+                var match = $editLink.attr( 'href' ).match( /post=(\d+)/ );
+                if ( match ) {
+                    attachmentId = match[1];
+                }
+            }
+        }
+
+        // Try to get from the "view attachment" link href
+        if ( ! attachmentId ) {
+            var $viewLink = $attachmentInfo.find( 'a[href*="attachment_id="]' );
+            if ( $viewLink.length > 0 ) {
+                var match = $viewLink.attr( 'href' ).match( /attachment_id=(\d+)/ );
+                if ( match ) {
+                    attachmentId = match[1];
+                }
+            }
+        }
+
+        // Try to get from the media frame selection
+        if ( ! attachmentId && wp.media && wp.media.frame ) {
+            var state = wp.media.frame.state();
+            if ( state ) {
+                var selection = state.get( 'selection' );
+                if ( selection && selection.first() ) {
+                    attachmentId = selection.first().get( 'id' );
+                }
+            }
+        }
+
+        if ( ! attachmentId ) {
+            return;
+        }
+
+        // Convert to integer
+        attachmentId = parseInt( attachmentId, 10 );
+
+        // Fetch attachment data
+        var attachment = wp.media.attachment( attachmentId );
+
+        // Wait for the attachment to be fetched if needed
+        if ( ! attachment.get( 'id' ) ) {
+            attachment.fetch().done( function() {
+                insertEditButtonInActions( attachment, $attachmentInfo );
+            });
+        } else {
+            insertEditButtonInActions( attachment, $attachmentInfo );
+        }
+    }
+
+    // Helper function to insert the edit button into the actions div
+    function insertEditButtonInActions( attachment, $attachmentInfo ) {
+        // Check if this is an eXeLearning file
+        if ( ! attachment.get( 'exelearningCanEdit' ) ) {
+            return;
+        }
+
+        // Check if button already exists
+        if ( $attachmentInfo.find( '.exelearning-edit-button-actions' ).length > 0 ) {
+            return;
+        }
+
+        var editUrl = attachment.get( 'exelearningEditUrl' );
+        var attachmentId = attachment.get( 'id' );
+
+        // Find the actions div
+        var $actions = $attachmentInfo.find( '.actions' );
+        if ( $actions.length === 0 ) {
+            return;
+        }
+
+        // Create the edit button - styled prominently
+        var $editButton = $(
+            '<a href="' + editUrl + '" class="button button-primary exelearning-edit-button-actions" ' +
+            'style="display: inline-block; margin-bottom: 10px; padding: 6px 12px; font-size: 13px;">' +
+            '<span class="dashicons dashicons-edit" style="vertical-align: text-top; margin-right: 4px; font-size: 16px;"></span>' +
+            'Edit in eXeLearning</a>' +
+            '<br>'
+        );
+
+        $editButton.on( 'click', function( e ) {
+            e.preventDefault();
+
+            // Use the ExeLearningEditor modal if available
+            if ( window.ExeLearningEditor && typeof window.ExeLearningEditor.open === 'function' ) {
+                window.ExeLearningEditor.open( attachmentId, editUrl );
+            } else {
+                // Fallback: open in new window
+                window.open( editUrl, '_blank', 'width=1200,height=800' );
+            }
+        });
+
+        // Insert at the beginning of the actions div
+        $actions.prepend( $editButton );
+    }
+
     // Observar cambios en el DOM para detectar cuando se abren modales
     var observer = new MutationObserver( function( mutations ) {
         replaceElpThumbnail();
         addElpPreviewToDetails();
+        addEditButtonToAttachmentInfo();
     });
 
     observer.observe( document.body, {
@@ -189,7 +323,13 @@ jQuery( document ).ready( function( $ ) {
             setTimeout( function() {
                 replaceElpThumbnail();
                 addElpPreviewToDetails();
+                addEditButtonToAttachmentInfo();
             }, 100 );
         });
     }
+
+    // Run on page load for the attachment edit page (upload.php with item parameter)
+    setTimeout( function() {
+        addEditButtonToAttachmentInfo();
+    }, 500 );
 });

@@ -34,7 +34,7 @@ class ExeLearning_Elp_File_Service {
 		}
 
 		// Check if the file is version 3.
-		if ( $parser->getVersion() === 3 ) {
+		if ( 3 === $parser->getVersion() ) {
 			return array(
 				'status'  => 'valid',
 				'version' => 3,
@@ -43,7 +43,7 @@ class ExeLearning_Elp_File_Service {
 		}
 
 		// If the file is version 2, convert it to version 3.
-		if ( $parser->getVersion() === 2 ) {
+		if ( 2 === $parser->getVersion() ) {
 			$result = $this->convert_v2_to_v3( $file_path );
 			if ( is_wp_error( $result ) ) {
 				return $result;

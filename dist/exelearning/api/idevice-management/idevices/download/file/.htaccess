@@ -1,5 +1,0 @@
-# Route /resources requests to resources.php
-<IfModule mod_rewrite.c>
-    RewriteEngine On
-    RewriteRule ^resources$ resources.php [L,QSA]
-</IfModule>

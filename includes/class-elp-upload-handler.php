@@ -26,7 +26,6 @@ class ExeLearning_Elp_Upload_Handler {
 		add_action( 'delete_attachment', array( $this, 'exelearning_delete_extracted_folder' ) );
 
 		add_action( 'add_attachment', array( $this, 'save_elp_metadata' ) ); // Nuevo hook para guardar metadatos
-
 	}
 
 	/**
@@ -74,30 +73,33 @@ class ExeLearning_Elp_Upload_Handler {
 			// Check if index.html exists (only version 3 files have it).
 			$has_preview = file_exists( $destination . 'index.html' );
 
-            $post_data = array(
-                'post_excerpt' => $parser->getTitle(),     // Title va al caption
-                'post_content' => $parser->getDescription() // Description al content
-            );
+			$post_data = array(
+				'post_excerpt' => $parser->getTitle(),     // Title va al caption
+				'post_content' => $parser->getDescription(), // Description al content
+			);
 
 			// Guardar metadatos en un transitorio
 			$metadata = array(
-				'_exelearning_title' => $parser->getTitle(),
-				'_exelearning_description' => $parser->getDescription(),
-				'_exelearning_license' => $parser->getLicense(),
-				'_exelearning_language' => $parser->getLanguage(),
+				'_exelearning_title'         => $parser->getTitle(),
+				'_exelearning_description'   => $parser->getDescription(),
+				'_exelearning_license'       => $parser->getLicense(),
+				'_exelearning_language'      => $parser->getLanguage(),
 				'_exelearning_resource_type' => $parser->getLearningResourceType(),
-				'_exelearning_extracted' => $unique_hash,
-				'_exelearning_version' => $parser->getVersion(),
-				'_exelearning_has_preview' => $has_preview ? '1' : '0',
+				'_exelearning_extracted'     => $unique_hash,
+				'_exelearning_version'       => $parser->getVersion(),
+				'_exelearning_has_preview'   => $has_preview ? '1' : '0',
 			);
 
 			$transient_key = 'exelearning_data_' . md5( $file );
 
-            set_transient( $transient_key, array(
-                'post_data' => $post_data,
-                'metadata' => $metadata,
-            ), 300 );
-
+			set_transient(
+				$transient_key,
+				array(
+					'post_data' => $post_data,
+					'metadata'  => $metadata,
+				),
+				300
+			);
 
 		} catch ( Exception $e ) {
 			@unlink( $file );
@@ -106,8 +108,6 @@ class ExeLearning_Elp_Upload_Handler {
 
 		// Optionally, remove the original .elp file.
 		// @unlink( $file );
-
-
 
 		return $upload;
 	}
@@ -127,26 +127,24 @@ class ExeLearning_Elp_Upload_Handler {
 		}
 
 		$transient_key = 'exelearning_data_' . md5( $file );
-		$data = get_transient( $transient_key );
+		$data          = get_transient( $transient_key );
 
 		if ( $data ) {
-		    // Actualizar los campos principales del attachment
-		    wp_update_post( array_merge( 
-		        array( 'ID' => $attachment_id ),
-		        $data['post_data']
-		    ));
+			// Actualizar los campos principales del attachment
+			wp_update_post(
+				array_merge(
+					array( 'ID' => $attachment_id ),
+					$data['post_data']
+				)
+			);
 
+			// Guardar los metadatos adicionales
+			foreach ( $data['metadata'] as $key => $value ) {
+				update_post_meta( $attachment_id, $key, $value );
+			}
 
-            // Guardar los metadatos adicionales
-            foreach ( $data['metadata'] as $key => $value ) {
-                update_post_meta( $attachment_id, $key, $value );
-            }
-
-
-            delete_transient( $transient_key );
-        }
-
-
+			delete_transient( $transient_key );
+		}
 	}
 
 	/**
@@ -155,18 +153,18 @@ class ExeLearning_Elp_Upload_Handler {
 	 * @param string $dir Directory path.
 	 */
 	private function exelearning_recursive_delete( $dir ) {
-	    if ( ! file_exists( $dir ) ) {
-	        return;
-	    }
-	    if ( is_file( $dir ) || is_link( $dir ) ) {
-	        unlink( $dir );
-	    } else {
-	        $files = array_diff( scandir( $dir ), array( '.', '..' ) );
-	        foreach ( $files as $file ) {
-	            $this->exelearning_recursive_delete( $dir . DIRECTORY_SEPARATOR . $file );
-	        }
-	        rmdir( $dir );
-	    }
+		if ( ! file_exists( $dir ) ) {
+			return;
+		}
+		if ( is_file( $dir ) || is_link( $dir ) ) {
+			unlink( $dir );
+		} else {
+			$files = array_diff( scandir( $dir ), array( '.', '..' ) );
+			foreach ( $files as $file ) {
+				$this->exelearning_recursive_delete( $dir . DIRECTORY_SEPARATOR . $file );
+			}
+			rmdir( $dir );
+		}
 	}
 
 	/**
@@ -174,18 +172,16 @@ class ExeLearning_Elp_Upload_Handler {
 	 *
 	 * @param int $post_id Attachment ID.
 	 */
-	function exelearning_delete_extracted_folder($post_id) {
-	    $directory = get_post_meta($post_id, '_exelearning_extracted', true);
-	    
-	    if ($directory) {
-	        $upload_dir = wp_upload_dir();
-	        $full_path = trailingslashit($upload_dir['basedir']) . 'exelearning/' . $directory . '/';
-	        
-	        if (is_dir($full_path)) {
-	            $this->exelearning_recursive_delete($full_path);
-	        }
-	    }
+	function exelearning_delete_extracted_folder( $post_id ) {
+		$directory = get_post_meta( $post_id, '_exelearning_extracted', true );
+
+		if ( $directory ) {
+			$upload_dir = wp_upload_dir();
+			$full_path  = trailingslashit( $upload_dir['basedir'] ) . 'exelearning/' . $directory . '/';
+
+			if ( is_dir( $full_path ) ) {
+				$this->exelearning_recursive_delete( $full_path );
+			}
+		}
 	}
-
-
 }

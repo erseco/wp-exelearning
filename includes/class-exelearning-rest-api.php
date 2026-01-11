@@ -6,7 +6,7 @@
  */
 
 if ( ! defined( 'WPINC' ) ) {
-    die;
+	die;
 }
 
 /**
@@ -16,350 +16,471 @@ if ( ! defined( 'WPINC' ) ) {
  */
 class ExeLearning_REST_API {
 
-    /**
-     * Constructor.
-     */
-    public function __construct() {
-        add_action( 'rest_api_init', array( $this, 'register_routes' ) );
-    }
+	/**
+	 * Constructor.
+	 */
+	public function __construct() {
+		add_action( 'rest_api_init', array( $this, 'register_routes' ) );
+	}
 
-    /**
-     * Register REST API routes.
-     */
-    public function register_routes() {
-        $namespace = 'exelearning/v1';
+	/**
+	 * Register REST API routes.
+	 */
+	public function register_routes() {
+		$namespace = 'exelearning/v1';
 
-        // Save modified ELP file.
-        register_rest_route(
-            $namespace,
-            '/save/(?P<id>\d+)',
-            array(
-                'methods'             => 'POST',
-                'callback'            => array( $this, 'save_elp_file' ),
-                'permission_callback' => array( $this, 'check_edit_permission' ),
-                'args'                => array(
-                    'id' => array(
-                        'required'          => true,
-                        'type'              => 'integer',
-                        'sanitize_callback' => 'absint',
-                    ),
-                ),
-            )
-        );
+		// Save modified ELP file.
+		register_rest_route(
+			$namespace,
+			'/save/(?P<id>\d+)',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'save_elp_file' ),
+				'permission_callback' => array( $this, 'check_edit_permission' ),
+				'args'                => array(
+					'id' => array(
+						'required'          => true,
+						'type'              => 'integer',
+						'sanitize_callback' => 'absint',
+					),
+				),
+			)
+		);
 
-        // Get ELP file data for loading into editor.
-        register_rest_route(
-            $namespace,
-            '/elp-data/(?P<id>\d+)',
-            array(
-                'methods'             => 'GET',
-                'callback'            => array( $this, 'get_elp_data' ),
-                'permission_callback' => array( $this, 'check_read_permission' ),
-                'args'                => array(
-                    'id' => array(
-                        'required'          => true,
-                        'type'              => 'integer',
-                        'sanitize_callback' => 'absint',
-                    ),
-                ),
-            )
-        );
-    }
+		// Get ELP file data for loading into editor.
+		register_rest_route(
+			$namespace,
+			'/elp-data/(?P<id>\d+)',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'get_elp_data' ),
+				'permission_callback' => array( $this, 'check_read_permission' ),
+				'args'                => array(
+					'id' => array(
+						'required'          => true,
+						'type'              => 'integer',
+						'sanitize_callback' => 'absint',
+					),
+				),
+			)
+		);
 
-    /**
-     * Check if user can edit the attachment.
-     *
-     * @param WP_REST_Request $request Request object.
-     * @return bool|WP_Error True if allowed, WP_Error otherwise.
-     */
-    public function check_edit_permission( $request ) {
-        $attachment_id = $request->get_param( 'id' );
+		// Create new ELP file from editor.
+		register_rest_route(
+			$namespace,
+			'/create',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'create_elp_file' ),
+				'permission_callback' => array( $this, 'check_upload_permission' ),
+			)
+		);
+	}
 
-        if ( ! current_user_can( 'edit_post', $attachment_id ) ) {
-            return new WP_Error(
-                'rest_forbidden',
-                __( 'You do not have permission to edit this file.', 'exelearning' ),
-                array( 'status' => 403 )
-            );
-        }
+	/**
+	 * Check if user can edit the attachment.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return bool|WP_Error True if allowed, WP_Error otherwise.
+	 */
+	public function check_edit_permission( $request ) {
+		$attachment_id = $request->get_param( 'id' );
 
-        return true;
-    }
+		if ( ! current_user_can( 'edit_post', $attachment_id ) ) {
+			return new WP_Error(
+				'rest_forbidden',
+				__( 'You do not have permission to edit this file.', 'exelearning' ),
+				array( 'status' => 403 )
+			);
+		}
 
-    /**
-     * Check if user can read the attachment.
-     *
-     * @param WP_REST_Request $request Request object.
-     * @return bool|WP_Error True if allowed, WP_Error otherwise.
-     */
-    public function check_read_permission( $request ) {
-        $attachment_id = $request->get_param( 'id' );
+		return true;
+	}
 
-        if ( ! current_user_can( 'read_post', $attachment_id ) ) {
-            return new WP_Error(
-                'rest_forbidden',
-                __( 'You do not have permission to read this file.', 'exelearning' ),
-                array( 'status' => 403 )
-            );
-        }
+	/**
+	 * Check if user can read the attachment.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return bool|WP_Error True if allowed, WP_Error otherwise.
+	 */
+	public function check_read_permission( $request ) {
+		$attachment_id = $request->get_param( 'id' );
 
-        return true;
-    }
+		if ( ! current_user_can( 'read_post', $attachment_id ) ) {
+			return new WP_Error(
+				'rest_forbidden',
+				__( 'You do not have permission to read this file.', 'exelearning' ),
+				array( 'status' => 403 )
+			);
+		}
 
-    /**
-     * Save modified ELP file.
-     *
-     * @param WP_REST_Request $request Request object.
-     * @return WP_REST_Response|WP_Error Response object.
-     */
-    public function save_elp_file( $request ) {
-        $attachment_id = $request->get_param( 'id' );
+		return true;
+	}
 
-        // Verify the attachment exists.
-        $attachment = get_post( $attachment_id );
-        if ( ! $attachment || 'attachment' !== $attachment->post_type ) {
-            return new WP_Error(
-                'invalid_attachment',
-                __( 'Invalid attachment ID.', 'exelearning' ),
-                array( 'status' => 404 )
-            );
-        }
+	/**
+	 * Check if user can upload files.
+	 *
+	 * @return bool True if user can upload files.
+	 */
+	public function check_upload_permission() {
+		return current_user_can( 'upload_files' );
+	}
 
-        // Verify file upload.
-        if ( empty( $_FILES['file'] ) ) {
-            return new WP_Error(
-                'no_file',
-                __( 'No file uploaded.', 'exelearning' ),
-                array( 'status' => 400 )
-            );
-        }
+	/**
+	 * Create new ELP file from editor.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|WP_Error Response object.
+	 */
+	public function create_elp_file( $request ) {
+		// Verify file upload.
+		if ( empty( $_FILES['file'] ) ) {
+			return new WP_Error(
+				'no_file',
+				__( 'No file uploaded.', 'exelearning' ),
+				array( 'status' => 400 )
+			);
+		}
 
-        $uploaded_file = $_FILES['file']; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+		$uploaded_file = $_FILES['file']; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
 
-        // Verify upload was successful.
-        if ( UPLOAD_ERR_OK !== $uploaded_file['error'] ) {
-            return new WP_Error(
-                'upload_error',
-                __( 'File upload failed.', 'exelearning' ),
-                array( 'status' => 500 )
-            );
-        }
+		// Verify upload was successful.
+		if ( UPLOAD_ERR_OK !== $uploaded_file['error'] ) {
+			return new WP_Error(
+				'upload_error',
+				__( 'File upload failed.', 'exelearning' ),
+				array( 'status' => 500 )
+			);
+		}
 
-        // Get current file path.
-        $old_file_path = get_attached_file( $attachment_id );
+		// Use WordPress media handling.
+		require_once ABSPATH . 'wp-admin/includes/file.php';
+		require_once ABSPATH . 'wp-admin/includes/media.php';
+		require_once ABSPATH . 'wp-admin/includes/image.php';
 
-        if ( ! $old_file_path || ! file_exists( $old_file_path ) ) {
-            return new WP_Error(
-                'file_not_found',
-                __( 'Original file not found.', 'exelearning' ),
-                array( 'status' => 404 )
-            );
-        }
+		// Sanitize filename and ensure ELP extension.
+		$filename = sanitize_file_name( $uploaded_file['name'] );
+		if ( ! preg_match( '/\.elp[x]?$/i', $filename ) ) {
+			$filename = preg_replace( '/\.[^.]+$/', '', $filename ) . '.elp';
+		}
 
-        // Verify this is an ELP file.
-        $ext = strtolower( pathinfo( $old_file_path, PATHINFO_EXTENSION ) );
-        if ( ! in_array( $ext, array( 'elp', 'elpx' ), true ) ) {
-            return new WP_Error(
-                'invalid_file_type',
-                __( 'This is not an eXeLearning file.', 'exelearning' ),
-                array( 'status' => 400 )
-            );
-        }
+		$file = array(
+			'name'     => $filename,
+			'type'     => 'application/zip',
+			'tmp_name' => $uploaded_file['tmp_name'],
+			'error'    => $uploaded_file['error'],
+			'size'     => $uploaded_file['size'],
+		);
 
-        // Delete old extracted folder if exists.
-        $old_extracted = get_post_meta( $attachment_id, '_exelearning_extracted', true );
-        if ( $old_extracted ) {
-            $upload_dir = wp_upload_dir();
-            $old_folder = trailingslashit( $upload_dir['basedir'] ) . 'exelearning/' . $old_extracted . '/';
+		// Handle the upload.
+		$upload = wp_handle_upload( $file, array( 'test_form' => false ) );
 
-            if ( is_dir( $old_folder ) ) {
-                $this->recursive_delete( $old_folder );
-            }
-        }
+		if ( isset( $upload['error'] ) ) {
+			return new WP_Error(
+				'upload_error',
+				$upload['error'],
+				array( 'status' => 500 )
+			);
+		}
 
-        // Replace the file.
-        if ( ! move_uploaded_file( $uploaded_file['tmp_name'], $old_file_path ) ) {
-            return new WP_Error(
-                'move_failed',
-                __( 'Failed to save the file.', 'exelearning' ),
-                array( 'status' => 500 )
-            );
-        }
+		// Get title from filename (without extension).
+		$title = preg_replace( '/\.elp[x]?$/i', '', $filename );
 
-        // Re-process the ELP file (extract and update metadata).
-        $result = $this->reprocess_elp_file( $attachment_id, $old_file_path );
+		// Create attachment.
+		$attachment = array(
+			'post_mime_type' => 'application/zip',
+			'post_title'     => $title,
+			'post_content'   => '',
+			'post_status'    => 'inherit',
+		);
 
-        if ( is_wp_error( $result ) ) {
-            return $result;
-        }
+		$attachment_id = wp_insert_attachment( $attachment, $upload['file'] );
 
-        // Update attachment modified date.
-        wp_update_post(
-            array(
-                'ID'                => $attachment_id,
-                'post_modified'     => current_time( 'mysql' ),
-                'post_modified_gmt' => current_time( 'mysql', true ),
-            )
-        );
+		if ( is_wp_error( $attachment_id ) ) {
+			return $attachment_id;
+		}
 
-        return rest_ensure_response(
-            array(
-                'success'       => true,
-                'message'       => __( 'File saved successfully.', 'exelearning' ),
-                'attachment_id' => $attachment_id,
-            )
-        );
-    }
+		// Process the ELP file (extract and set metadata).
+		// This triggers our upload handler hooks.
+		$result = $this->reprocess_elp_file( $attachment_id, $upload['file'] );
 
-    /**
-     * Get ELP file data for loading into editor.
-     *
-     * @param WP_REST_Request $request Request object.
-     * @return WP_REST_Response|WP_Error Response object.
-     */
-    public function get_elp_data( $request ) {
-        $attachment_id = $request->get_param( 'id' );
+		if ( is_wp_error( $result ) ) {
+			// Clean up on failure.
+			wp_delete_attachment( $attachment_id, true );
+			return $result;
+		}
 
-        // Verify the attachment exists.
-        $attachment = get_post( $attachment_id );
-        if ( ! $attachment || 'attachment' !== $attachment->post_type ) {
-            return new WP_Error(
-                'invalid_attachment',
-                __( 'Invalid attachment ID.', 'exelearning' ),
-                array( 'status' => 404 )
-            );
-        }
+		// Build the editor URL for the new attachment.
+		$editor_url = admin_url(
+			'admin.php?page=exelearning-editor&attachment_id=' . $attachment_id .
+			'&_wpnonce=' . wp_create_nonce( 'exelearning_editor' )
+		);
 
-        // Get file info.
-        $file_url = wp_get_attachment_url( $attachment_id );
-        $file     = get_attached_file( $attachment_id );
-        $ext      = strtolower( pathinfo( $file, PATHINFO_EXTENSION ) );
+		return rest_ensure_response(
+			array(
+				'success'      => true,
+				'message'      => __( 'File created successfully.', 'exelearning' ),
+				'attachmentId' => $attachment_id,
+				'url'          => wp_get_attachment_url( $attachment_id ),
+				'editUrl'      => $editor_url,
+			)
+		);
+	}
 
-        if ( ! in_array( $ext, array( 'elp', 'elpx' ), true ) ) {
-            return new WP_Error(
-                'invalid_file_type',
-                __( 'This is not an eXeLearning file.', 'exelearning' ),
-                array( 'status' => 400 )
-            );
-        }
+	/**
+	 * Save modified ELP file.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|WP_Error Response object.
+	 */
+	public function save_elp_file( $request ) {
+		$attachment_id = $request->get_param( 'id' );
 
-        // Get metadata.
-        $extracted_hash = get_post_meta( $attachment_id, '_exelearning_extracted', true );
-        $has_preview    = get_post_meta( $attachment_id, '_exelearning_has_preview', true );
-        $version        = get_post_meta( $attachment_id, '_exelearning_version', true );
+		// Verify the attachment exists.
+		$attachment = get_post( $attachment_id );
+		if ( ! $attachment || 'attachment' !== $attachment->post_type ) {
+			return new WP_Error(
+				'invalid_attachment',
+				__( 'Invalid attachment ID.', 'exelearning' ),
+				array( 'status' => 404 )
+			);
+		}
 
-        $response_data = array(
-            'id'          => $attachment_id,
-            'url'         => $file_url,
-            'title'       => get_the_title( $attachment_id ),
-            'filename'    => basename( $file ),
-            'extension'   => $ext,
-            'version'     => $version ? intval( $version ) : null,
-            'hasPreview'  => '1' === $has_preview,
-            'previewUrl'  => null,
-            'metadata'    => array(
-                'title'        => get_post_meta( $attachment_id, '_exelearning_title', true ),
-                'description'  => get_post_meta( $attachment_id, '_exelearning_description', true ),
-                'license'      => get_post_meta( $attachment_id, '_exelearning_license', true ),
-                'language'     => get_post_meta( $attachment_id, '_exelearning_language', true ),
-                'resourceType' => get_post_meta( $attachment_id, '_exelearning_resource_type', true ),
-            ),
-        );
+		// Verify file upload.
+		if ( empty( $_FILES['file'] ) ) {
+			return new WP_Error(
+				'no_file',
+				__( 'No file uploaded.', 'exelearning' ),
+				array( 'status' => 400 )
+			);
+		}
 
-        // Add preview URL if available.
-        if ( $extracted_hash && '1' === $has_preview ) {
-            $upload_dir                  = wp_upload_dir();
-            $response_data['previewUrl'] = $upload_dir['baseurl'] . '/exelearning/' . $extracted_hash . '/index.html';
-        }
+		$uploaded_file = $_FILES['file']; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
 
-        return rest_ensure_response( $response_data );
-    }
+		// Verify upload was successful.
+		if ( UPLOAD_ERR_OK !== $uploaded_file['error'] ) {
+			return new WP_Error(
+				'upload_error',
+				__( 'File upload failed.', 'exelearning' ),
+				array( 'status' => 500 )
+			);
+		}
 
-    /**
-     * Re-process ELP file after save (extract and update metadata).
-     *
-     * @param int    $attachment_id Attachment ID.
-     * @param string $file_path     Path to the ELP file.
-     * @return bool|WP_Error True on success, WP_Error on failure.
-     */
-    private function reprocess_elp_file( $attachment_id, $file_path ) {
-        // Validate the file.
-        $elp_service = new ExeLearning_Elp_File_Service();
-        $result      = $elp_service->validate_elp_file( $file_path );
+		// Get current file path.
+		$old_file_path = get_attached_file( $attachment_id );
 
-        if ( is_wp_error( $result ) ) {
-            return $result;
-        }
+		if ( ! $old_file_path || ! file_exists( $old_file_path ) ) {
+			return new WP_Error(
+				'file_not_found',
+				__( 'Original file not found.', 'exelearning' ),
+				array( 'status' => 404 )
+			);
+		}
 
-        // Generate new extraction directory.
-        $upload_dir  = wp_upload_dir();
-        $unique_hash = sha1( $file_path . time() );
-        $destination = trailingslashit( $upload_dir['basedir'] ) . 'exelearning/' . $unique_hash . '/';
+		// Verify this is an ELP file.
+		$ext = strtolower( pathinfo( $old_file_path, PATHINFO_EXTENSION ) );
+		if ( ! in_array( $ext, array( 'elp', 'elpx' ), true ) ) {
+			return new WP_Error(
+				'invalid_file_type',
+				__( 'This is not an eXeLearning file.', 'exelearning' ),
+				array( 'status' => 400 )
+			);
+		}
 
-        if ( ! wp_mkdir_p( $destination ) ) {
-            return new WP_Error(
-                'mkdir_failed',
-                __( 'Failed to create directory for extracted files.', 'exelearning' ),
-                array( 'status' => 500 )
-            );
-        }
+		// Delete old extracted folder if exists.
+		$old_extracted = get_post_meta( $attachment_id, '_exelearning_extracted', true );
+		if ( $old_extracted ) {
+			$upload_dir = wp_upload_dir();
+			$old_folder = trailingslashit( $upload_dir['basedir'] ) . 'exelearning/' . $old_extracted . '/';
 
-        // Parse and extract.
-        try {
-            $parser = new Exelearning\ELPParser( $file_path );
-            $parser->extract( $destination );
+			if ( is_dir( $old_folder ) ) {
+				$this->recursive_delete( $old_folder );
+			}
+		}
 
-            // Check if index.html exists.
-            $has_preview = file_exists( $destination . 'index.html' );
+		// Replace the file.
+		if ( ! move_uploaded_file( $uploaded_file['tmp_name'], $old_file_path ) ) {
+			return new WP_Error(
+				'move_failed',
+				__( 'Failed to save the file.', 'exelearning' ),
+				array( 'status' => 500 )
+			);
+		}
 
-            // Update metadata.
-            update_post_meta( $attachment_id, '_exelearning_title', $parser->getTitle() );
-            update_post_meta( $attachment_id, '_exelearning_description', $parser->getDescription() );
-            update_post_meta( $attachment_id, '_exelearning_license', $parser->getLicense() );
-            update_post_meta( $attachment_id, '_exelearning_language', $parser->getLanguage() );
-            update_post_meta( $attachment_id, '_exelearning_resource_type', $parser->getLearningResourceType() );
-            update_post_meta( $attachment_id, '_exelearning_extracted', $unique_hash );
-            update_post_meta( $attachment_id, '_exelearning_version', $parser->getVersion() );
-            update_post_meta( $attachment_id, '_exelearning_has_preview', $has_preview ? '1' : '0' );
+		// Re-process the ELP file (extract and update metadata).
+		$result = $this->reprocess_elp_file( $attachment_id, $old_file_path );
 
-            // Update attachment title/caption.
-            wp_update_post(
-                array(
-                    'ID'           => $attachment_id,
-                    'post_excerpt' => $parser->getTitle(),
-                    'post_content' => $parser->getDescription(),
-                )
-            );
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
 
-        } catch ( Exception $e ) {
-            return new WP_Error(
-                'extract_failed',
-                $e->getMessage(),
-                array( 'status' => 500 )
-            );
-        }
+		// Update attachment modified date.
+		wp_update_post(
+			array(
+				'ID'                => $attachment_id,
+				'post_modified'     => current_time( 'mysql' ),
+				'post_modified_gmt' => current_time( 'mysql', true ),
+			)
+		);
 
-        return true;
-    }
+		return rest_ensure_response(
+			array(
+				'success'       => true,
+				'message'       => __( 'File saved successfully.', 'exelearning' ),
+				'attachment_id' => $attachment_id,
+			)
+		);
+	}
 
-    /**
-     * Recursively delete a directory.
-     *
-     * @param string $dir Directory path.
-     */
-    private function recursive_delete( $dir ) {
-        if ( ! file_exists( $dir ) ) {
-            return;
-        }
+	/**
+	 * Get ELP file data for loading into editor.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|WP_Error Response object.
+	 */
+	public function get_elp_data( $request ) {
+		$attachment_id = $request->get_param( 'id' );
 
-        if ( is_file( $dir ) || is_link( $dir ) ) {
-            unlink( $dir );
-        } else {
-            $files = array_diff( scandir( $dir ), array( '.', '..' ) );
-            foreach ( $files as $file ) {
-                $this->recursive_delete( $dir . DIRECTORY_SEPARATOR . $file );
-            }
-            rmdir( $dir );
-        }
-    }
+		// Verify the attachment exists.
+		$attachment = get_post( $attachment_id );
+		if ( ! $attachment || 'attachment' !== $attachment->post_type ) {
+			return new WP_Error(
+				'invalid_attachment',
+				__( 'Invalid attachment ID.', 'exelearning' ),
+				array( 'status' => 404 )
+			);
+		}
+
+		// Get file info.
+		$file_url = wp_get_attachment_url( $attachment_id );
+		$file     = get_attached_file( $attachment_id );
+		$ext      = strtolower( pathinfo( $file, PATHINFO_EXTENSION ) );
+
+		if ( ! in_array( $ext, array( 'elp', 'elpx' ), true ) ) {
+			return new WP_Error(
+				'invalid_file_type',
+				__( 'This is not an eXeLearning file.', 'exelearning' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		// Get metadata.
+		$extracted_hash = get_post_meta( $attachment_id, '_exelearning_extracted', true );
+		$has_preview    = get_post_meta( $attachment_id, '_exelearning_has_preview', true );
+		$version        = get_post_meta( $attachment_id, '_exelearning_version', true );
+
+		$response_data = array(
+			'id'         => $attachment_id,
+			'url'        => $file_url,
+			'title'      => get_the_title( $attachment_id ),
+			'filename'   => basename( $file ),
+			'extension'  => $ext,
+			'version'    => $version ? intval( $version ) : null,
+			'hasPreview' => '1' === $has_preview,
+			'previewUrl' => null,
+			'metadata'   => array(
+				'title'        => get_post_meta( $attachment_id, '_exelearning_title', true ),
+				'description'  => get_post_meta( $attachment_id, '_exelearning_description', true ),
+				'license'      => get_post_meta( $attachment_id, '_exelearning_license', true ),
+				'language'     => get_post_meta( $attachment_id, '_exelearning_language', true ),
+				'resourceType' => get_post_meta( $attachment_id, '_exelearning_resource_type', true ),
+			),
+		);
+
+		// Add preview URL if available.
+		if ( $extracted_hash && '1' === $has_preview ) {
+			$upload_dir                  = wp_upload_dir();
+			$response_data['previewUrl'] = $upload_dir['baseurl'] . '/exelearning/' . $extracted_hash . '/index.html';
+		}
+
+		return rest_ensure_response( $response_data );
+	}
+
+	/**
+	 * Re-process ELP file after save (extract and update metadata).
+	 *
+	 * @param int    $attachment_id Attachment ID.
+	 * @param string $file_path     Path to the ELP file.
+	 * @return bool|WP_Error True on success, WP_Error on failure.
+	 */
+	private function reprocess_elp_file( $attachment_id, $file_path ) {
+		// Validate the file.
+		$elp_service = new ExeLearning_Elp_File_Service();
+		$result      = $elp_service->validate_elp_file( $file_path );
+
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		// Generate new extraction directory.
+		$upload_dir  = wp_upload_dir();
+		$unique_hash = sha1( $file_path . time() );
+		$destination = trailingslashit( $upload_dir['basedir'] ) . 'exelearning/' . $unique_hash . '/';
+
+		if ( ! wp_mkdir_p( $destination ) ) {
+			return new WP_Error(
+				'mkdir_failed',
+				__( 'Failed to create directory for extracted files.', 'exelearning' ),
+				array( 'status' => 500 )
+			);
+		}
+
+		// Parse and extract.
+		try {
+			$parser = new Exelearning\ELPParser( $file_path );
+			$parser->extract( $destination );
+
+			// Check if index.html exists.
+			$has_preview = file_exists( $destination . 'index.html' );
+
+			// Update metadata.
+			update_post_meta( $attachment_id, '_exelearning_title', $parser->getTitle() );
+			update_post_meta( $attachment_id, '_exelearning_description', $parser->getDescription() );
+			update_post_meta( $attachment_id, '_exelearning_license', $parser->getLicense() );
+			update_post_meta( $attachment_id, '_exelearning_language', $parser->getLanguage() );
+			update_post_meta( $attachment_id, '_exelearning_resource_type', $parser->getLearningResourceType() );
+			update_post_meta( $attachment_id, '_exelearning_extracted', $unique_hash );
+			update_post_meta( $attachment_id, '_exelearning_version', $parser->getVersion() );
+			update_post_meta( $attachment_id, '_exelearning_has_preview', $has_preview ? '1' : '0' );
+
+			// Update attachment title/caption.
+			wp_update_post(
+				array(
+					'ID'           => $attachment_id,
+					'post_excerpt' => $parser->getTitle(),
+					'post_content' => $parser->getDescription(),
+				)
+			);
+
+		} catch ( Exception $e ) {
+			return new WP_Error(
+				'extract_failed',
+				$e->getMessage(),
+				array( 'status' => 500 )
+			);
+		}
+
+		return true;
+	}
+
+	/**
+	 * Recursively delete a directory.
+	 *
+	 * @param string $dir Directory path.
+	 */
+	private function recursive_delete( $dir ) {
+		if ( ! file_exists( $dir ) ) {
+			return;
+		}
+
+		if ( is_file( $dir ) || is_link( $dir ) ) {
+			unlink( $dir );
+		} else {
+			$files = array_diff( scandir( $dir ), array( '.', '..' ) );
+			foreach ( $files as $file ) {
+				$this->recursive_delete( $dir . DIRECTORY_SEPARATOR . $file );
+			}
+			rmdir( $dir );
+		}
+	}
 }

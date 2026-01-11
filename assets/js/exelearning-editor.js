@@ -9,8 +9,10 @@
     var ExeLearningEditor = {
         modal: null,
         iframe: null,
+        saveBtn: null,
         currentAttachmentId: null,
         isOpen: false,
+        isSaving: false,
 
         /**
          * Initialize the editor.
@@ -18,6 +20,7 @@
         init: function() {
             this.modal = $( '#exelearning-editor-modal' );
             this.iframe = $( '#exelearning-editor-iframe' );
+            this.saveBtn = $( '#exelearning-editor-save' );
             this.bindEvents();
         },
 
@@ -26,6 +29,11 @@
          */
         bindEvents: function() {
             var self = this;
+
+            // Save button in modal header.
+            $( '#exelearning-editor-save' ).on( 'click', function() {
+                self.requestSave();
+            });
 
             // Close button in modal.
             $( '#exelearning-editor-close' ).on( 'click', function() {
@@ -43,6 +51,36 @@
                     self.close();
                 }
             });
+        },
+
+        /**
+         * Request save from the iframe.
+         */
+        requestSave: function() {
+            if ( this.isSaving || ! this.iframe.length ) {
+                return;
+            }
+
+            var iframeWindow = this.iframe[0].contentWindow;
+            if ( iframeWindow ) {
+                iframeWindow.postMessage( { type: 'exelearning-request-save' }, '*' );
+            }
+        },
+
+        /**
+         * Set saving state and update button.
+         *
+         * @param {boolean} saving Whether save is in progress.
+         */
+        setSavingState: function( saving ) {
+            this.isSaving = saving;
+            if ( this.saveBtn.length ) {
+                this.saveBtn.prop( 'disabled', saving );
+                this.saveBtn.text( saving
+                    ? ( exelearningEditorVars.i18n?.saving || 'Saving...' )
+                    : ( exelearningEditorVars.i18n?.saveToWordPress || 'Save to WordPress' )
+                );
+            }
         },
 
         /**
@@ -116,8 +154,23 @@
             }
 
             switch ( data.type ) {
+                case 'exelearning-bridge-ready':
+                    // Bridge is ready, can enable save button if needed.
+                    break;
+
+                case 'exelearning-save-start':
+                    this.setSavingState( true );
+                    break;
+
                 case 'exelearning-save-complete':
+                    this.setSavingState( false );
                     this.onSaveComplete( data );
+                    // Close the editor after successful save
+                    this.close();
+                    break;
+
+                case 'exelearning-save-error':
+                    this.setSavingState( false );
                     break;
 
                 case 'exelearning-close':

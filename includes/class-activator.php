@@ -8,7 +8,7 @@
  */
 
 if ( ! defined( 'WPINC' ) ) {
-    die;
+	die;
 }
 
 /**
@@ -18,12 +18,12 @@ if ( ! defined( 'WPINC' ) ) {
  */
 class ExeLearning_Activator {
 
-    /**
-     * Run on plugin activation.
-     */
-    public static function activate() {
-        // Activation code goes here.
-        // For instance, flush rewrite rules if needed:
-        // flush_rewrite_rules();
-    }
+	/**
+	 * Run on plugin activation.
+	 */
+	public static function activate() {
+		// Activation code goes here.
+		// For instance, flush rewrite rules if needed:
+		// flush_rewrite_rules();
+	}
 }

@@ -12,11 +12,7 @@
     "composer": "wp-env run cli --env-cwd=wp-content/plugins/exelearning composer",
     "composer:tests-cli": "wp-env run tests-cli --env-cwd=wp-content/plugins/exelearning composer",
     "test:unit": "wp-env run tests-cli --env-cwd=wp-content/plugins/exelearning ./vendor/bin/phpunit",
-    "build": "npm run build:templates && npm run build:assets",
-    "build:templates": "node scripts/build-templates.js",
-    "build:assets": "npm run build:assets:copy && npm run build:mock",
-    "build:assets:copy": "rm -rf dist/exelearning && mkdir -p dist/exelearning && cp -r exelearning/public/* dist/exelearning/",
-    "build:mock": "mkdir -p dist/api-mock && cp -r assets/js/api-mock/* dist/api-mock/",
+    "build": "echo 'Use make build-editor instead for static editor build'",
     "package": "npm run package:zip",
     "package:zip": "git archive --format=zip --output=wp-exelearning.zip HEAD",
     "package:zip:full": "zip -r wp-exelearning-full.zip . -x 'node_modules/*' -x '.git/*' -x '*.zip' -x '.DS_Store'"

@@ -1,5 +1,56 @@
 # Makefile
 
+# ============================================
+# EXELEARNING STATIC BUILD
+# ============================================
+
+# Check if Bun is installed
+check-bun:
+	@command -v bun >/dev/null 2>&1 || { \
+		echo ""; \
+		echo "Error: Bun is not installed."; \
+		echo "   Install it from: https://bun.sh/"; \
+		echo "   Quick install: curl -fsSL https://bun.sh/install | bash"; \
+		echo ""; \
+		exit 1; \
+	}
+
+# Update submodule to correct branch
+update-submodule:
+	@echo "Updating eXeLearning submodule..."
+	git submodule update --init --remote exelearning
+	cd exelearning && git checkout release/3.1-embedable-version-refactor
+
+# Build static version of eXeLearning editor
+build-editor: check-bun update-submodule
+	@echo "Building eXeLearning static editor..."
+	cd exelearning && bun install && bun run build:static
+	@echo "Copying static build to plugin dist/static..."
+	rm -rf dist/static
+	cp -r exelearning/dist/static dist/static
+	@echo ""
+	@echo "============================================"
+	@echo "  Static editor built at dist/static/"
+	@echo "============================================"
+
+# Build editor without updating submodule (for CI/CD)
+build-editor-no-update: check-bun
+	@echo "Building eXeLearning static editor (without submodule update)..."
+	cd exelearning && bun install && bun run build:static
+	rm -rf dist/static
+	cp -r exelearning/dist/static dist/static
+	@echo "Static editor built at dist/static/"
+
+# Clean editor build
+clean-editor:
+	rm -rf dist/static
+	rm -rf exelearning/dist/static
+	rm -rf exelearning/node_modules
+
+# ============================================
+# WORDPRESS ENVIRONMENT
+# ============================================
+
 # Define SED_INPLACE based on the operating system
 ifeq ($(shell uname), Darwin)
   SED_INPLACE = sed -i ''
@@ -256,6 +307,12 @@ package:
 # Show help with available commands
 help:
 	@echo "Available commands:"
+	@echo ""
+	@echo "eXeLearning Static Editor:"
+	@echo "  build-editor       - Build static eXeLearning editor from submodule"
+	@echo "  build-editor-no-update - Build without updating submodule (for CI/CD)"
+	@echo "  update-submodule   - Update eXeLearning submodule to correct branch"
+	@echo "  clean-editor       - Remove static editor build and node_modules"
 	@echo ""
 	@echo "General:"
 	@echo "  up                 - Bring up Docker containers in interactive mode"

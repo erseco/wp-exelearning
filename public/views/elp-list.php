@@ -109,11 +109,11 @@ class Exelearning_Admin {
 			$this->plugin_name,
 			'exelearningAdmin',
 			array(
-				'title'  => __( 'Select eXeLearning File', 'exelearning' ),
-				'button' => __( 'Use this file', 'exelearning' ),
+				'title'        => __( 'Select eXeLearning File', 'exelearning' ),
+				'button'       => __( 'Use this file', 'exelearning' ),
 				'allowedTypes' => array(
 					'application/zip',
-					'.elp'
+					'.elp',
 				),
 			)
 		);

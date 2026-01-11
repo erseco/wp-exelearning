@@ -6,7 +6,7 @@
  */
 
 if ( ! defined( 'WPINC' ) ) {
-    die;
+	die;
 }
 
 /**
@@ -16,128 +16,144 @@ if ( ! defined( 'WPINC' ) ) {
  */
 class ExeLearning_Elp_Upload_Block {
 
-    /**
-     * Constructor.
-     */
-    public function __construct() {
-        add_action( 'init', array( $this, 'register_block' ) );
-        add_action( 'enqueue_block_editor_assets', array( $this, 'enqueue_block_scripts' ) );
-        add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_frontend_styles' ) );
-    }
+	/**
+	 * Constructor.
+	 */
+	public function __construct() {
+		add_action( 'init', array( $this, 'register_block' ) );
+		add_action( 'enqueue_block_editor_assets', array( $this, 'enqueue_block_scripts' ) );
+		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_frontend_styles' ) );
+	}
 
-    /**
-     * Enqueue frontend styles.
-     */
-    public function enqueue_frontend_styles() {
-        wp_enqueue_style(
-            'exelearning-frontend',
-            plugins_url( '../assets/css/exelearning.css', __FILE__ ),
-            array(),
-            EXELEARNING_VERSION
-        );
-    }
+	/**
+	 * Enqueue frontend styles.
+	 */
+	public function enqueue_frontend_styles() {
+		wp_enqueue_style(
+			'exelearning-frontend',
+			plugins_url( '../assets/css/exelearning.css', __FILE__ ),
+			array(),
+			EXELEARNING_VERSION
+		);
+	}
 
-    /**
-     * Enqueue block editor scripts and styles.
-     */
-    public function enqueue_block_scripts() {
-        wp_enqueue_script(
-            'exelearning-elp-block',
-            plugins_url( '../assets/js/elp-upload.js', __FILE__ ),
-            array( 'wp-blocks', 'wp-element', 'wp-block-editor', 'wp-components', 'wp-i18n' ),
-            EXELEARNING_VERSION,
-            true
-        );
+	/**
+	 * Enqueue block editor scripts and styles.
+	 */
+	public function enqueue_block_scripts() {
+		wp_enqueue_script(
+			'exelearning-elp-block',
+			plugins_url( '../assets/js/elp-upload.js', __FILE__ ),
+			array( 'wp-blocks', 'wp-element', 'wp-block-editor', 'wp-components', 'wp-i18n', 'exelearning-editor' ),
+			EXELEARNING_VERSION,
+			true
+		);
 
-        wp_enqueue_style(
-            'exelearning-block-editor',
-            plugins_url( '../assets/css/exelearning-admin.css', __FILE__ ),
-            array(),
-            EXELEARNING_VERSION
-        );
-    }
+		wp_enqueue_style(
+			'exelearning-block-editor',
+			plugins_url( '../assets/css/exelearning-admin.css', __FILE__ ),
+			array(),
+			EXELEARNING_VERSION
+		);
+	}
 
-    /**
-     * Register the block type.
-     */
-    public function register_block() {
-        register_block_type(
-            'exelearning/elp-upload',
-            array(
-                'editor_script'   => 'exelearning-elp-block',
-                'render_callback' => array( $this, 'render_block' ),
-                'attributes'      => array(
-                    'attachmentId' => array(
-                        'type' => 'number',
-                    ),
-                    'url' => array(
-                        'type' => 'string',
-                    ),
-                    'previewUrl' => array(
-                        'type' => 'string',
-                    ),
-                    'title' => array(
-                        'type' => 'string',
-                    ),
-                    'hasPreview' => array(
-                        'type'    => 'boolean',
-                        'default' => false,
-                    ),
-                    'height' => array(
-                        'type'    => 'number',
-                        'default' => 600,
-                    ),
-                ),
-            )
-        );
-    }
+	/**
+	 * Register the block type.
+	 */
+	public function register_block() {
+		register_block_type(
+			'exelearning/elp-upload',
+			array(
+				'editor_script'   => 'exelearning-elp-block',
+				'render_callback' => array( $this, 'render_block' ),
+				'attributes'      => array(
+					'attachmentId' => array(
+						'type' => 'number',
+					),
+					'url'          => array(
+						'type' => 'string',
+					),
+					'previewUrl'   => array(
+						'type' => 'string',
+					),
+					'title'        => array(
+						'type' => 'string',
+					),
+					'hasPreview'   => array(
+						'type'    => 'boolean',
+						'default' => false,
+					),
+					'height'       => array(
+						'type'    => 'number',
+						'default' => 600,
+					),
+					'align'        => array(
+						'type'    => 'string',
+						'default' => 'none',
+					),
+				),
+				'supports'        => array(
+					'align' => array( 'left', 'center', 'right', 'wide', 'full' ),
+					'html'  => false,
+				),
+			)
+		);
+	}
 
-    /**
-     * Render the block on the frontend.
-     *
-     * @param array $attributes Block attributes.
-     * @return string Block HTML output.
-     */
-    public function render_block( $attributes ) {
-        if ( empty( $attributes['attachmentId'] ) ) {
-            return '';
-        }
+	/**
+	 * Render the block on the frontend.
+	 *
+	 * @param array $attributes Block attributes.
+	 * @return string Block HTML output.
+	 */
+	public function render_block( $attributes ) {
+		if ( empty( $attributes['attachmentId'] ) ) {
+			return '';
+		}
 
-        $attachment_id = absint( $attributes['attachmentId'] );
-        $extracted_dir = get_post_meta( $attachment_id, '_exelearning_extracted', true );
-        $has_preview   = get_post_meta( $attachment_id, '_exelearning_has_preview', true );
-        $height        = isset( $attributes['height'] ) ? absint( $attributes['height'] ) : 600;
+		$attachment_id = absint( $attributes['attachmentId'] );
+		$extracted_dir = get_post_meta( $attachment_id, '_exelearning_extracted', true );
+		$has_preview   = get_post_meta( $attachment_id, '_exelearning_has_preview', true );
+		$height        = isset( $attributes['height'] ) ? absint( $attributes['height'] ) : 600;
+		$align         = isset( $attributes['align'] ) ? $attributes['align'] : '';
 
-        if ( ! $extracted_dir ) {
-            return '<div class="exelearning-error">' . esc_html__( 'Error: eXeLearning content not found', 'exelearning' ) . '</div>';
-        }
+		// Build wrapper classes.
+		$wrapper_classes = array( 'wp-block-exelearning-elp-upload', 'exelearning-block-frontend' );
+		if ( ! empty( $align ) && 'none' !== $align ) {
+			$wrapper_classes[] = 'align' . $align;
+		}
 
-        $upload_dir  = wp_upload_dir();
-        $preview_url = esc_url( $upload_dir['baseurl'] . '/exelearning/' . $extracted_dir . '/index.html' );
+		if ( ! $extracted_dir ) {
+			return '<div class="exelearning-error">' . esc_html__( 'Error: eXeLearning content not found', 'exelearning' ) . '</div>';
+		}
 
-        // If no preview available, show a link to download the file.
-        if ( '1' !== $has_preview ) {
-            $file_url = wp_get_attachment_url( $attachment_id );
-            $title    = get_the_title( $attachment_id );
+		$upload_dir  = wp_upload_dir();
+		$preview_url = esc_url( $upload_dir['baseurl'] . '/exelearning/' . $extracted_dir . '/index.html' );
 
-            return sprintf(
-                '<div class="exelearning-block-frontend exelearning-no-preview-frontend">
+		// If no preview available, show a link to download the file.
+		if ( '1' !== $has_preview ) {
+			$file_url = wp_get_attachment_url( $attachment_id );
+			$title    = get_the_title( $attachment_id );
+
+			return sprintf(
+				'<div class="%s exelearning-no-preview-frontend">
                     <div class="exelearning-notice">
                         <p><strong>%s</strong></p>
                         <p>%s</p>
                         <a href="%s" class="exelearning-download-link" download>%s</a>
                     </div>
                 </div>',
-                esc_html( $title ),
-                esc_html__( 'This eXeLearning content is a source file and cannot be previewed directly.', 'exelearning' ),
-                esc_url( $file_url ),
-                esc_html__( 'Download file', 'exelearning' )
-            );
-        }
+				esc_attr( implode( ' ', $wrapper_classes ) ),
+				esc_html( $title ),
+				esc_html__( 'This eXeLearning content is a source file and cannot be previewed directly.', 'exelearning' ),
+				esc_url( $file_url ),
+				esc_html__( 'Download file', 'exelearning' )
+			);
+		}
 
-        // Show iframe with the content.
-        return sprintf(
-            '<div class="exelearning-block-frontend">
+		// Show iframe with the content.
+		return sprintf(
+			'<div class="%s">
                 <iframe
                     src="%s"
                     style="width: 100%%; height: %dpx; border: 1px solid #ddd; border-radius: 4px;"
@@ -145,9 +161,10 @@ class ExeLearning_Elp_Upload_Block {
                     loading="lazy"
                 ></iframe>
             </div>',
-            $preview_url,
-            $height,
-            esc_attr( get_the_title( $attachment_id ) )
-        );
-    }
+			esc_attr( implode( ' ', $wrapper_classes ) ),
+			$preview_url,
+			$height,
+			esc_attr( get_the_title( $attachment_id ) )
+		);
+	}
 }

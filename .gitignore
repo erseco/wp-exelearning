@@ -49,5 +49,11 @@ wordpress-develop/
 artifacts/
 
 # Ignore Sass source maps
-public/style/workarea/*.css.maptest-results/
+public/style/workarea/*.css.map
+
+# Test results
+test-results/
 test-results/*
+
+# Built static editor - NOT ignored, needed for WordPress Playground
+# dist/static/
