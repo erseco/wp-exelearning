@@ -1,5 +1,8 @@
 jQuery( document ).ready( function( $ ) {
 
+    // Localized strings from PHP (via wp_localize_script)
+    var strings = window.exelearningMediaStrings || {};
+
     // Function to replace thumbnail with a preview iframe
     function replaceElpThumbnail() {
         $( '.attachment-preview.type-application' ).each( function() {
@@ -101,18 +104,18 @@ jQuery( document ).ready( function( $ ) {
         var metaHtml = '';
         if ( metadata.license || metadata.language || metadata.resource_type || metadata.version ) {
             metaHtml = '<div class="exelearning-metadata" style="margin-top: 15px; padding: 10px; background: #f5f5f5; border-radius: 4px;">';
-            metaHtml += '<strong style="display: block; margin-bottom: 5px;">eXeLearning Info</strong>';
+            metaHtml += '<strong style="display: block; margin-bottom: 5px;">' + ( strings.info || 'eXeLearning Info' ) + '</strong>';
             if ( metadata.version ) {
-                metaHtml += '<div><small>Version: ' + metadata.version + ( metadata.version === 2 ? ' (source file)' : ' (exported)' ) + '</small></div>';
+                metaHtml += '<div><small>' + ( strings.version || 'Version:' ) + ' ' + metadata.version + ( metadata.version === 2 ? ' ' + ( strings.sourceFile || '(source file)' ) : ' ' + ( strings.exported || '(exported)' ) ) + '</small></div>';
             }
             if ( metadata.license ) {
-                metaHtml += '<div><small>License: ' + metadata.license + '</small></div>';
+                metaHtml += '<div><small>' + ( strings.license || 'License:' ) + ' ' + metadata.license + '</small></div>';
             }
             if ( metadata.language ) {
-                metaHtml += '<div><small>Language: ' + metadata.language + '</small></div>';
+                metaHtml += '<div><small>' + ( strings.language || 'Language:' ) + ' ' + metadata.language + '</small></div>';
             }
             if ( metadata.resource_type ) {
-                metaHtml += '<div><small>Type: ' + metadata.resource_type + '</small></div>';
+                metaHtml += '<div><small>' + ( strings.type || 'Type:' ) + ' ' + metadata.resource_type + '</small></div>';
             }
             metaHtml += '</div>';
         }
@@ -123,8 +126,8 @@ jQuery( document ).ready( function( $ ) {
             $detailsThumbnail.addClass( 'exelearning-details-no-preview' );
             $detailsThumbnail.after(
                 '<div class="exelearning-no-preview-notice" style="margin-top: 10px; padding: 10px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; font-size: 12px;">' +
-                '<strong>No preview available</strong><br>' +
-                'This is an eXeLearning v2 source file (.elp). To view the content, open it in eXeLearning and export it as HTML.' +
+                '<strong>' + ( strings.noPreview || 'No preview available' ) + '</strong><br>' +
+                ( strings.noPreviewDesc || 'This is an eXeLearning v2 source file (.elp). To view the content, open it in eXeLearning and export it as HTML.' ) +
                 '</div>' + metaHtml
             );
 
@@ -188,7 +191,7 @@ jQuery( document ).ready( function( $ ) {
         var $previewLink = $(
             '<div class="exelearning-preview-link" style="margin-top: 10px;">' +
                 '<a href="' + metadata.preview_url + '" target="_blank" class="button" style="width: 100%; text-align: center;">' +
-                'Preview in new tab</a>' +
+                ( strings.previewNewTab || 'Preview in new tab' ) + '</a>' +
             '</div>'
         );
         // Find the edit button in the parent container and insert after it
@@ -225,7 +228,7 @@ jQuery( document ).ready( function( $ ) {
 
         var $editButton = $( '<button type="button" class="button button-primary exelearning-edit-button" style="margin-top: 10px; width: 100%;">' +
             '<span class="dashicons dashicons-edit" style="vertical-align: middle; margin-right: 5px;"></span>' +
-            'Edit in eXeLearning</button>' );
+            ( strings.editInExe || 'Edit in eXeLearning' ) + '</button>' );
 
         $editButton.on( 'click', function( e ) {
             e.preventDefault();
@@ -356,7 +359,7 @@ jQuery( document ).ready( function( $ ) {
             '<a href="' + editUrl + '" class="button button-primary exelearning-edit-button-actions" ' +
             'style="display: inline-block; margin-bottom: 10px; padding: 6px 12px; font-size: 13px;">' +
             '<span class="dashicons dashicons-edit" style="vertical-align: text-top; margin-right: 4px; font-size: 16px;"></span>' +
-            'Edit in eXeLearning</a>' +
+            ( strings.editInExe || 'Edit in eXeLearning' ) + '</a>' +
             '<br>'
         );
 

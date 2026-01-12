@@ -495,4 +495,45 @@ class ElpUploadBlockTest extends WP_UnitTestCase {
 
 		$this->assertStringContainsString( 'alignwide', $result );
 	}
+
+	/**
+	 * Test enqueue_block_scripts registers script translations.
+	 */
+	public function test_enqueue_block_scripts_registers_script_translations() {
+		global $wp_scripts;
+
+		// Dequeue and reset scripts.
+		wp_dequeue_script( 'exelearning-elp-block' );
+		wp_deregister_script( 'exelearning-elp-block' );
+
+		$this->block->enqueue_block_scripts();
+
+		// Verify script is enqueued.
+		$this->assertTrue( wp_script_is( 'exelearning-elp-block', 'enqueued' ) );
+
+		// Verify the script has wp-i18n as a dependency.
+		$script = $wp_scripts->registered['exelearning-elp-block'];
+		$this->assertContains( 'wp-i18n', $script->deps );
+	}
+
+	/**
+	 * Test enqueue_block_scripts has correct dependencies.
+	 */
+	public function test_enqueue_block_scripts_has_correct_dependencies() {
+		global $wp_scripts;
+
+		wp_dequeue_script( 'exelearning-elp-block' );
+		wp_deregister_script( 'exelearning-elp-block' );
+
+		$this->block->enqueue_block_scripts();
+
+		$script = $wp_scripts->registered['exelearning-elp-block'];
+
+		// Check all required dependencies.
+		$this->assertContains( 'wp-blocks', $script->deps );
+		$this->assertContains( 'wp-element', $script->deps );
+		$this->assertContains( 'wp-block-editor', $script->deps );
+		$this->assertContains( 'wp-components', $script->deps );
+		$this->assertContains( 'wp-i18n', $script->deps );
+	}
 }
