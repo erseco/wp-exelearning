@@ -1566,4 +1566,379 @@ class RestApiTest extends WP_UnitTestCase {
 		$this->assertArrayHasKey( 'file', $content_route[0]['args'] );
 		$this->assertEquals( 'index.html', $content_route[0]['args']['file']['default'] );
 	}
+
+	/**
+	 * Test build_save_response with preview.
+	 */
+	public function test_build_save_response_with_preview() {
+		$user_id       = $this->factory->user->create( array( 'role' => 'administrator' ) );
+		$attachment_id = $this->factory->attachment->create( array( 'post_author' => $user_id ) );
+
+		// Set up metadata for preview.
+		$hash = str_repeat( 'a', 40 );
+		update_post_meta( $attachment_id, '_exelearning_extracted', $hash );
+		update_post_meta( $attachment_id, '_exelearning_has_preview', '1' );
+
+		// Use reflection to call private method.
+		$reflection = new ReflectionMethod( $this->rest_api, 'build_save_response' );
+		$reflection->setAccessible( true );
+
+		$result = $reflection->invoke( $this->rest_api, $attachment_id );
+
+		$this->assertTrue( $result['success'] );
+		$this->assertEquals( $attachment_id, $result['attachment_id'] );
+		$this->assertNotNull( $result['preview_url'] );
+		$this->assertStringContainsString( $hash, $result['preview_url'] );
+	}
+
+	/**
+	 * Test build_save_response without preview.
+	 */
+	public function test_build_save_response_without_preview() {
+		$user_id       = $this->factory->user->create( array( 'role' => 'administrator' ) );
+		$attachment_id = $this->factory->attachment->create( array( 'post_author' => $user_id ) );
+
+		// Set up metadata without preview.
+		$hash = str_repeat( 'b', 40 );
+		update_post_meta( $attachment_id, '_exelearning_extracted', $hash );
+		update_post_meta( $attachment_id, '_exelearning_has_preview', '0' );
+
+		$reflection = new ReflectionMethod( $this->rest_api, 'build_save_response' );
+		$reflection->setAccessible( true );
+
+		$result = $reflection->invoke( $this->rest_api, $attachment_id );
+
+		$this->assertTrue( $result['success'] );
+		$this->assertEquals( $attachment_id, $result['attachment_id'] );
+		$this->assertNull( $result['preview_url'] );
+	}
+
+	/**
+	 * Test build_save_response with no extracted hash.
+	 */
+	public function test_build_save_response_no_extraction() {
+		$user_id       = $this->factory->user->create( array( 'role' => 'administrator' ) );
+		$attachment_id = $this->factory->attachment->create( array( 'post_author' => $user_id ) );
+
+		// No metadata set.
+		$reflection = new ReflectionMethod( $this->rest_api, 'build_save_response' );
+		$reflection->setAccessible( true );
+
+		$result = $reflection->invoke( $this->rest_api, $attachment_id );
+
+		$this->assertTrue( $result['success'] );
+		$this->assertEquals( $attachment_id, $result['attachment_id'] );
+		$this->assertNull( $result['preview_url'] );
+		$this->assertArrayHasKey( 'message', $result );
+	}
+
+	/**
+	 * Test validate_save_attachment with valid attachment.
+	 */
+	public function test_validate_save_attachment_valid() {
+		$attachment_id = $this->factory->attachment->create();
+
+		$reflection = new ReflectionMethod( $this->rest_api, 'validate_save_attachment' );
+		$reflection->setAccessible( true );
+
+		$result = $reflection->invoke( $this->rest_api, $attachment_id );
+
+		$this->assertTrue( $result );
+	}
+
+	/**
+	 * Test validate_save_attachment with invalid attachment.
+	 */
+	public function test_validate_save_attachment_invalid() {
+		$reflection = new ReflectionMethod( $this->rest_api, 'validate_save_attachment' );
+		$reflection->setAccessible( true );
+
+		$result = $reflection->invoke( $this->rest_api, 999999 );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertEquals( 'invalid_attachment', $result->get_error_code() );
+	}
+
+	/**
+	 * Test validate_save_attachment with non-attachment post.
+	 */
+	public function test_validate_save_attachment_non_attachment() {
+		$post_id = $this->factory->post->create( array( 'post_type' => 'post' ) );
+
+		$reflection = new ReflectionMethod( $this->rest_api, 'validate_save_attachment' );
+		$reflection->setAccessible( true );
+
+		$result = $reflection->invoke( $this->rest_api, $post_id );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertEquals( 'invalid_attachment', $result->get_error_code() );
+	}
+
+	/**
+	 * Test validate_uploaded_file with valid file.
+	 */
+	public function test_validate_uploaded_file_valid() {
+		$_FILES['file'] = array(
+			'name'     => 'test.elpx',
+			'type'     => 'application/zip',
+			'tmp_name' => tempnam( sys_get_temp_dir(), 'test' ),
+			'error'    => UPLOAD_ERR_OK,
+			'size'     => 100,
+		);
+		file_put_contents( $_FILES['file']['tmp_name'], 'test content' );
+
+		$reflection = new ReflectionMethod( $this->rest_api, 'validate_uploaded_file' );
+		$reflection->setAccessible( true );
+
+		$result = $reflection->invoke( $this->rest_api );
+
+		$this->assertIsArray( $result );
+		$this->assertEquals( 'test.elpx', $result['name'] );
+		$this->assertEquals( UPLOAD_ERR_OK, $result['error'] );
+
+		unlink( $_FILES['file']['tmp_name'] );
+		unset( $_FILES['file'] );
+	}
+
+	/**
+	 * Test validate_uploaded_file with no file.
+	 */
+	public function test_validate_uploaded_file_no_file() {
+		unset( $_FILES['file'] );
+
+		$reflection = new ReflectionMethod( $this->rest_api, 'validate_uploaded_file' );
+		$reflection->setAccessible( true );
+
+		$result = $reflection->invoke( $this->rest_api );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertEquals( 'no_file', $result->get_error_code() );
+	}
+
+	/**
+	 * Test validate_uploaded_file with upload error.
+	 */
+	public function test_validate_uploaded_file_with_error() {
+		$_FILES['file'] = array(
+			'name'     => 'test.elpx',
+			'type'     => 'application/zip',
+			'tmp_name' => '',
+			'error'    => UPLOAD_ERR_NO_TMP_DIR,
+			'size'     => 0,
+		);
+
+		$reflection = new ReflectionMethod( $this->rest_api, 'validate_uploaded_file' );
+		$reflection->setAccessible( true );
+
+		$result = $reflection->invoke( $this->rest_api );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertEquals( 'upload_error', $result->get_error_code() );
+
+		unset( $_FILES['file'] );
+	}
+
+	/**
+	 * Test validate_elp_file_path with valid elpx file.
+	 */
+	public function test_validate_elp_file_path_valid() {
+		$attachment_id = $this->factory->attachment->create();
+
+		$upload_dir = wp_upload_dir();
+		$file_path  = $upload_dir['basedir'] . '/valid-test.elpx';
+		file_put_contents( $file_path, 'test content' );
+
+		update_attached_file( $attachment_id, $file_path );
+
+		$reflection = new ReflectionMethod( $this->rest_api, 'validate_elp_file_path' );
+		$reflection->setAccessible( true );
+
+		$result = $reflection->invoke( $this->rest_api, $attachment_id );
+
+		$this->assertEquals( $file_path, $result );
+
+		unlink( $file_path );
+	}
+
+	/**
+	 * Test validate_elp_file_path with non-elpx file.
+	 */
+	public function test_validate_elp_file_path_non_elpx() {
+		$attachment_id = $this->factory->attachment->create();
+
+		$upload_dir = wp_upload_dir();
+		$file_path  = $upload_dir['basedir'] . '/test.txt';
+		file_put_contents( $file_path, 'test content' );
+
+		update_attached_file( $attachment_id, $file_path );
+
+		$reflection = new ReflectionMethod( $this->rest_api, 'validate_elp_file_path' );
+		$reflection->setAccessible( true );
+
+		$result = $reflection->invoke( $this->rest_api, $attachment_id );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertEquals( 'invalid_file_type', $result->get_error_code() );
+
+		unlink( $file_path );
+	}
+
+	/**
+	 * Test validate_elp_file_path with missing file.
+	 */
+	public function test_validate_elp_file_path_missing() {
+		$attachment_id = $this->factory->attachment->create();
+
+		update_attached_file( $attachment_id, '/nonexistent/file.elpx' );
+
+		$reflection = new ReflectionMethod( $this->rest_api, 'validate_elp_file_path' );
+		$reflection->setAccessible( true );
+
+		$result = $reflection->invoke( $this->rest_api, $attachment_id );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertEquals( 'file_not_found', $result->get_error_code() );
+	}
+
+	/**
+	 * Test cleanup_old_extraction with no extraction.
+	 */
+	public function test_cleanup_old_extraction_no_extraction() {
+		$attachment_id = $this->factory->attachment->create();
+
+		// No extraction metadata set.
+		$reflection = new ReflectionMethod( $this->rest_api, 'cleanup_old_extraction' );
+		$reflection->setAccessible( true );
+
+		// Should not throw any errors.
+		$result = $reflection->invoke( $this->rest_api, $attachment_id );
+
+		$this->assertNull( $result );
+	}
+
+	/**
+	 * Test cleanup_old_extraction with existing folder.
+	 */
+	public function test_cleanup_old_extraction_with_folder() {
+		$attachment_id = $this->factory->attachment->create();
+
+		$upload_dir = wp_upload_dir();
+		$hash       = str_repeat( 'c', 40 );
+		$folder     = trailingslashit( $upload_dir['basedir'] ) . 'exelearning/' . $hash . '/';
+
+		wp_mkdir_p( $folder );
+		file_put_contents( $folder . 'test.html', '<html></html>' );
+
+		update_post_meta( $attachment_id, '_exelearning_extracted', $hash );
+
+		$this->assertTrue( is_dir( $folder ) );
+
+		$reflection = new ReflectionMethod( $this->rest_api, 'cleanup_old_extraction' );
+		$reflection->setAccessible( true );
+
+		$reflection->invoke( $this->rest_api, $attachment_id );
+
+		$this->assertFalse( is_dir( $folder ) );
+	}
+
+	/**
+	 * Test cleanup_old_extraction with non-existent folder.
+	 */
+	public function test_cleanup_old_extraction_nonexistent_folder() {
+		$attachment_id = $this->factory->attachment->create();
+
+		$hash = str_repeat( 'd', 40 );
+		update_post_meta( $attachment_id, '_exelearning_extracted', $hash );
+
+		$reflection = new ReflectionMethod( $this->rest_api, 'cleanup_old_extraction' );
+		$reflection->setAccessible( true );
+
+		// Should not throw any errors.
+		$result = $reflection->invoke( $this->rest_api, $attachment_id );
+
+		$this->assertNull( $result );
+	}
+
+	/**
+	 * Test recursive_delete with non-existent path.
+	 */
+	public function test_recursive_delete_nonexistent() {
+		$reflection = new ReflectionMethod( $this->rest_api, 'recursive_delete' );
+		$reflection->setAccessible( true );
+
+		// Should not throw any errors.
+		$result = $reflection->invoke( $this->rest_api, '/nonexistent/path/to/delete' );
+
+		$this->assertNull( $result );
+	}
+
+	/**
+	 * Test recursive_delete with file.
+	 */
+	public function test_recursive_delete_file() {
+		$upload_dir = wp_upload_dir();
+		$file_path  = $upload_dir['basedir'] . '/test-delete-file.txt';
+		file_put_contents( $file_path, 'test content' );
+
+		$this->assertTrue( file_exists( $file_path ) );
+
+		$reflection = new ReflectionMethod( $this->rest_api, 'recursive_delete' );
+		$reflection->setAccessible( true );
+
+		$reflection->invoke( $this->rest_api, $file_path );
+
+		$this->assertFalse( file_exists( $file_path ) );
+	}
+
+	/**
+	 * Test recursive_delete with nested directory.
+	 */
+	public function test_recursive_delete_nested_directory() {
+		$upload_dir = wp_upload_dir();
+		$base_dir   = $upload_dir['basedir'] . '/test-nested-delete/';
+		$sub_dir    = $base_dir . 'subdir/';
+
+		wp_mkdir_p( $sub_dir );
+		file_put_contents( $base_dir . 'file1.txt', 'content1' );
+		file_put_contents( $sub_dir . 'file2.txt', 'content2' );
+
+		$this->assertTrue( is_dir( $base_dir ) );
+		$this->assertTrue( is_dir( $sub_dir ) );
+
+		$reflection = new ReflectionMethod( $this->rest_api, 'recursive_delete' );
+		$reflection->setAccessible( true );
+
+		$reflection->invoke( $this->rest_api, $base_dir );
+
+		$this->assertFalse( is_dir( $base_dir ) );
+	}
+
+	/**
+	 * Test recursive_delete with symlink.
+	 */
+	public function test_recursive_delete_symlink() {
+		$upload_dir  = wp_upload_dir();
+		$target_file = $upload_dir['basedir'] . '/symlink-target.txt';
+		$symlink     = $upload_dir['basedir'] . '/test-symlink';
+
+		file_put_contents( $target_file, 'target content' );
+
+		// Create symlink if supported.
+		if ( @symlink( $target_file, $symlink ) ) {
+			$this->assertTrue( is_link( $symlink ) );
+
+			$reflection = new ReflectionMethod( $this->rest_api, 'recursive_delete' );
+			$reflection->setAccessible( true );
+
+			$reflection->invoke( $this->rest_api, $symlink );
+
+			$this->assertFalse( is_link( $symlink ) );
+			// Target should still exist.
+			$this->assertTrue( file_exists( $target_file ) );
+		}
+
+		if ( file_exists( $target_file ) ) {
+			unlink( $target_file );
+		}
+	}
 }
