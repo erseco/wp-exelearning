@@ -1,4 +1,4 @@
-# Copyright (C) 2025 INTEF
+# Copyright (C) 2026 INTEF
 # This file is distributed under the GPL-3.0+.
 msgid ""
 msgstr ""
@@ -42,6 +42,51 @@ msgstr ""
 msgid "Example Option"
 msgstr ""
 
+msgid "Invalid nonce."
+msgstr ""
+
+msgid "Insufficient permissions."
+msgstr ""
+
+msgid "eXeLearning static editor not found. Please run \"make build-editor\" in the plugin directory."
+msgstr ""
+
+msgid "Editor Missing"
+msgstr ""
+
+msgid "Failed to load eXeLearning editor template."
+msgstr ""
+
+msgid "Template Error"
+msgstr ""
+
+msgid "Saving..."
+msgstr ""
+
+msgid "Saved to WordPress successfully"
+msgstr ""
+
+msgid "Save to WordPress"
+msgstr ""
+
+msgid "Loading project..."
+msgstr ""
+
+msgid "Error"
+msgstr ""
+
+msgid "Invalid content identifier."
+msgstr ""
+
+msgid "Invalid file path."
+msgstr ""
+
+msgid "File not found."
+msgstr ""
+
+msgid "Access denied."
+msgstr ""
+
 msgid "Title"
 msgstr ""
 
@@ -60,41 +105,78 @@ msgstr ""
 msgid "Error: eXeLearning content not found"
 msgstr ""
 
-msgid "View eXeLearning Content"
+msgid "This eXeLearning content is a source file and cannot be previewed directly."
 msgstr ""
 
-msgid "eXeLearning File"
+msgid "Download file"
 msgstr ""
 
-msgid "Add New"
+msgid "eXeLearning Editor"
 msgstr ""
 
-msgid "Add New eXeLearning File"
+msgid "Security check failed."
 msgstr ""
 
-msgid "New eXeLearning File"
+msgid "You do not have permission to access this page."
+msgstr ""
+
+msgid "No attachment specified."
+msgstr ""
+
+msgid "This file is not an eXeLearning file (.elpx)."
+msgstr ""
+
+msgid "You do not have permission to edit this file."
+msgstr ""
+
+msgid "Edit in eXeLearning"
+msgstr ""
+
+msgid "Close"
 msgstr ""
 
 msgid "Edit eXeLearning File"
 msgstr ""
 
-msgid "View eXeLearning File"
+msgid "You do not have permission to read this file."
 msgstr ""
 
-msgid "All eXeLearning Files"
+msgid "No file uploaded."
 msgstr ""
 
-msgid "Search eXeLearning Files"
+msgid "File upload failed."
 msgstr ""
 
-msgid "Parent eXeLearning Files:"
+msgid "File created successfully."
 msgstr ""
 
-msgid "No eXeLearning Files found."
+msgid "Invalid attachment ID."
 msgstr ""
 
-msgid "No eXeLearning Files found in Trash."
+msgid "Original file not found."
 msgstr ""
+
+msgid "This is not an eXeLearning file (.elpx)."
+msgstr ""
+
+msgid "Failed to save the file."
+msgstr ""
+
+msgid "File saved successfully."
+msgstr ""
+
+msgid "Failed to create directory for extracted files."
+msgstr ""
+
+msgid "Manage eXeLearning Files"
+msgstr ""
+
+#. translators: %s: number of files
+#, php-format
+msgid "eXeLearning <span class=\"count\">(%s)</span>"
+msgid_plural "eXeLearning <span class=\"count\">(%s)</span>"
+msgstr[0] ""
+msgstr[1] ""
 
 msgid "eXeLearning Content Preview"
 msgstr ""
@@ -105,6 +187,12 @@ msgstr ""
 msgid "Open in new tab"
 msgstr ""
 
+msgid "No preview available"
+msgstr ""
+
+msgid "This is an eXeLearning v2 source file (.elp). To view the content, open it in eXeLearning and export it as HTML."
+msgstr ""
+
 msgid "License:"
 msgstr ""
 
@@ -112,6 +200,21 @@ msgid "Language:"
 msgstr ""
 
 msgid "Resource Type:"
+msgstr ""
+
+msgid "Invalid eXeLearning file ID."
+msgstr ""
+
+msgid "eXeLearning file not found."
+msgstr ""
+
+msgid "This is a source file that cannot be previewed directly. Download it to open with eXeLearning."
+msgstr ""
+
+msgid "Download source file"
+msgstr ""
+
+msgid "View fullscreen"
 msgstr ""
 
 msgid "Select eXeLearning File"
