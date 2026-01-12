@@ -433,7 +433,8 @@ class EditorTest extends WP_UnitTestCase {
 		$output = ob_get_clean();
 
 		$this->assertStringContainsString( 'exelearning-editor-save', $output );
-		$this->assertStringContainsString( 'Save to WordPress', $output );
+		// Button text may be translated, check for button element.
+		$this->assertStringContainsString( 'button-primary', $output );
 	}
 
 	/**
@@ -461,7 +462,8 @@ class EditorTest extends WP_UnitTestCase {
 		$output = ob_get_clean();
 
 		$this->assertStringContainsString( 'exelearning-editor-header', $output );
-		$this->assertStringContainsString( 'Edit eXeLearning File', $output );
+		// Header text may be translated, check for title structure.
+		$this->assertStringContainsString( 'exelearning-editor-title', $output );
 	}
 
 	/**

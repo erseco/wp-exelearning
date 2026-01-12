@@ -1,6 +1,6 @@
 <?php
 /**
- * eXeLearning Static Editor Bootstrap
+ * EXeLearning Static Editor Bootstrap
  *
  * Loads the static PWA version of eXeLearning editor with WordPress integration.
  * The static editor is built with `make build-editor` and placed in dist/static/.
@@ -18,7 +18,8 @@ while ( ob_get_level() > 0 ) {
 	ob_end_clean();
 }
 
-// Get parameters.
+// Get parameters - nonce verification is done in ExeLearning_Editor class before loading this template.
+// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Nonce verified in class-exelearning-editor.php
 $attachment_id = isset( $_GET['attachment_id'] ) ? absint( $_GET['attachment_id'] ) : 0;
 
 // Get the ELP file URL and info.
@@ -36,9 +37,9 @@ if ( $attachment_id ) {
 }
 
 // Get attachment title (ensure it's never null).
-$title = get_the_title( $attachment_id );
-if ( empty( $title ) ) {
-	$title = $elp_filename ? $elp_filename : 'Untitled';
+$page_title = get_the_title( $attachment_id );
+if ( empty( $page_title ) ) {
+	$page_title = $elp_filename ? $elp_filename : 'Untitled';
 }
 
 // Static editor base URL.
@@ -52,13 +53,13 @@ $rest_url = rest_url( 'exelearning/v1' );
 $nonce    = wp_create_nonce( 'wp_rest' );
 
 // Get locale (ensure it's never null).
-$locale       = get_locale();
-$locale_short = $locale ? substr( $locale, 0, 2 ) : 'en';
+$wp_locale    = get_locale();
+$locale_short = $wp_locale ? substr( $wp_locale, 0, 2 ) : 'en';
 
 // User data (ensure values are never null).
-$current_user = wp_get_current_user();
-$user_name    = $current_user->display_name ? $current_user->display_name : 'User';
-$user_id      = $current_user->ID ? $current_user->ID : 0;
+$user_data = wp_get_current_user();
+$user_name = $user_data->display_name ? $user_data->display_name : 'User';
+$user_id   = $user_data->ID ? $user_data->ID : 0;
 
 // Check if static editor exists.
 $static_index = EXELEARNING_PLUGIN_DIR . 'dist/static/index.html';
@@ -92,6 +93,7 @@ $i18n = array(
 );
 
 // Inject WordPress configuration BEFORE the closing </head> tag.
+// phpcs:disable WordPress.WP.EnqueuedResources.NonEnqueuedScript -- Standalone HTML page output, not a WordPress template.
 $wp_config_script = sprintf(
 	'
     <!-- WordPress Integration Configuration -->
@@ -227,9 +229,10 @@ $wp_config_script = sprintf(
 	wp_json_encode( $i18n ),
 	esc_url( $plugin_assets_url )
 );
+// phpcs:enable WordPress.WP.EnqueuedResources.NonEnqueuedScript
 
 // WordPress-specific styles.
-$wp_styles = '
+$page_styles = '
     <!-- WordPress-specific styles -->
     <style>
         /* WordPress-specific overrides */
@@ -288,7 +291,7 @@ $wp_styles = '
 ';
 
 // Insert config script and styles before </head>.
-$template = str_replace( '</head>', $wp_config_script . $wp_styles . '</head>', $template );
+$template = str_replace( '</head>', $wp_config_script . $page_styles . '</head>', $template );
 
 // Add <base> tag to set the base URL for all relative paths.
 // This ensures paths like "files/perm/..." resolve to the static editor directory.

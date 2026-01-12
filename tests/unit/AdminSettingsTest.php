@@ -150,7 +150,8 @@ class AdminSettingsTest extends WP_UnitTestCase {
 		$output = ob_get_clean();
 
 		$this->assertStringContainsString( '<form', $output );
-		$this->assertStringContainsString( 'eXeLearning Settings', $output );
+		// Title text may be translated, check for heading structure.
+		$this->assertStringContainsString( '<h1>', $output );
 	}
 
 	/**

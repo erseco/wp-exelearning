@@ -42,10 +42,10 @@ class ExeLearning_Editor {
 			return;
 		}
 
-		// Suppress error display for this request.
-        // phpcs:ignore WordPress.PHP.DevelopmentFunctions.prevent_path_disclosure_error_reporting
+		// Suppress error display for this request to prevent output corruption.
+		// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.PHP.IniSet.display_errors_Disallowed -- Required to prevent output corruption in standalone editor page.
 		@ini_set( 'display_errors', '0' );
-        // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.runtime_configuration_error_reporting
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.runtime_configuration_error_reporting, WordPress.PHP.NoSilencedErrors.Discouraged
 		@error_reporting( 0 );
 
 		// Start output buffering to capture any warnings/notices.
@@ -60,7 +60,7 @@ class ExeLearning_Editor {
 	 */
 	public function render_editor_page_and_exit() {
 		// Suppress error display for this request to prevent output corruption.
-        // phpcs:ignore WordPress.PHP.DevelopmentFunctions.prevent_path_disclosure_error_reporting
+		// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.PHP.IniSet.display_errors_Disallowed -- Required to prevent output corruption in standalone editor page.
 		@ini_set( 'display_errors', '0' );
 
 		// Discard any buffered output (warnings, notices, etc.).
@@ -248,10 +248,10 @@ class ExeLearning_Editor {
 	 *
 	 * @param array   $response   Attachment data for JS.
 	 * @param WP_Post $attachment Attachment post object.
-	 * @param array   $meta       Attachment metadata.
+	 * @param array   $meta       Attachment metadata (unused, required by WordPress filter API).
 	 * @return array Modified response.
 	 */
-	public function add_edit_capability( $response, $attachment, $meta ) {
+	public function add_edit_capability( $response, $attachment, $meta ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- Required by WordPress filter API.
 		// Skip if attachment is not valid.
 		if ( ! $attachment || ! isset( $attachment->ID ) || empty( $attachment->ID ) ) {
 			return $response;

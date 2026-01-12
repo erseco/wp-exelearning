@@ -66,10 +66,10 @@ class ExeLearning_Media_Library {
 	 *
 	 * @param array   $response The attachment response array.
 	 * @param WP_Post $post     The attachment post object.
-	 * @param array   $meta     The attachment metadata (unused).
+	 * @param array   $meta     The attachment metadata (unused, required by WordPress filter API).
 	 * @return array Modified response array.
 	 */
-	public function add_elp_metadata_to_js( $response, $post, $meta ) {
+	public function add_elp_metadata_to_js( $response, $post, $meta ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- Required by WordPress filter API.
 		unset( $meta ); // Unused parameter.
 
 		// Early return if post is not valid.

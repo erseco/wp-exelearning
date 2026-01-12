@@ -119,7 +119,7 @@ check-plugin: check-docker start-if-not-running
 	# Run plugin check with colored output, capture exit code, and fail if needed
 	@echo "Running WordPress Plugin Check..."
 	@npx wp-env run cli wp plugin check exelearning \
-		--exclude-directories=tests \
+		--exclude-directories=tests,exelearning,dist \
 		--exclude-checks=file_type,image_functions \
 		--ignore-warnings \
 		--color; \

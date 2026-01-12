@@ -725,7 +725,8 @@ class RestApiTest extends WP_UnitTestCase {
 		$result = $this->rest_api->check_read_permission( $request );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertStringContainsString( 'permission', $result->get_error_message() );
+		// Check error code instead of translated message.
+		$this->assertEquals( 'rest_forbidden', $result->get_error_code() );
 	}
 
 	/**
@@ -741,7 +742,8 @@ class RestApiTest extends WP_UnitTestCase {
 		$result = $this->rest_api->check_edit_permission( $request );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertStringContainsString( 'permission', $result->get_error_message() );
+		// Check error code instead of translated message.
+		$this->assertEquals( 'rest_forbidden', $result->get_error_code() );
 	}
 
 	/**

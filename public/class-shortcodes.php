@@ -32,12 +32,12 @@ class ExeLearning_Shortcodes {
 	 * - [exelearning id="123"] - Display ELP content with default height
 	 * - [exelearning id="123" height="800"] - Display with custom height
 	 *
-	 * @param array  $atts Shortcode attributes.
-	 * @param string $content Enclosed content (not used).
+	 * @param array       $atts Shortcode attributes.
+	 * @param string|null $content Enclosed content (not used, required by WordPress shortcode API).
 	 *
 	 * @return string Processed shortcode content.
 	 */
-	public function display_exelearning( $atts, $content = null ) {
+	public function display_exelearning( $atts, $content = null ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- Required by WordPress shortcode API.
 		$atts = shortcode_atts(
 			array(
 				'id'     => 0,
