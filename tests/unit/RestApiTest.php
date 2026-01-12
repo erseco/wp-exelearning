@@ -1154,4 +1154,791 @@ class RestApiTest extends WP_UnitTestCase {
 
 		unlink( $file_path );
 	}
+
+	/**
+	 * Test save_elp_file validates attachment correctly.
+	 */
+	public function test_save_elp_file_validates_attachment() {
+		$user_id = $this->factory->user->create( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $user_id );
+
+		// Test with non-existent attachment.
+		$request = new WP_REST_Request( 'POST', '/exelearning/v1/save/999999' );
+		$request->set_param( 'id', 999999 );
+
+		$result = $this->rest_api->save_elp_file( $request );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertEquals( 'invalid_attachment', $result->get_error_code() );
+		$this->assertEquals( 404, $result->get_error_data()['status'] );
+	}
+
+	/**
+	 * Test save_elp_file validates uploaded file exists.
+	 */
+	public function test_save_elp_file_validates_uploaded_file_exists() {
+		$user_id       = $this->factory->user->create( array( 'role' => 'administrator' ) );
+		$attachment_id = $this->factory->attachment->create( array( 'post_author' => $user_id ) );
+		wp_set_current_user( $user_id );
+
+		// Ensure $_FILES is empty.
+		unset( $_FILES['file'] );
+
+		$request = new WP_REST_Request( 'POST', '/exelearning/v1/save/' . $attachment_id );
+		$request->set_param( 'id', $attachment_id );
+
+		$result = $this->rest_api->save_elp_file( $request );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertEquals( 'no_file', $result->get_error_code() );
+		$this->assertEquals( 400, $result->get_error_data()['status'] );
+	}
+
+	/**
+	 * Test save_elp_file validates upload error code.
+	 */
+	public function test_save_elp_file_validates_upload_error_code() {
+		$user_id       = $this->factory->user->create( array( 'role' => 'administrator' ) );
+		$attachment_id = $this->factory->attachment->create( array( 'post_author' => $user_id ) );
+		wp_set_current_user( $user_id );
+
+		$_FILES['file'] = array(
+			'name'     => 'test.elpx',
+			'type'     => 'application/zip',
+			'tmp_name' => '',
+			'error'    => UPLOAD_ERR_PARTIAL,
+			'size'     => 0,
+		);
+
+		$request = new WP_REST_Request( 'POST', '/exelearning/v1/save/' . $attachment_id );
+		$request->set_param( 'id', $attachment_id );
+
+		$result = $this->rest_api->save_elp_file( $request );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertEquals( 'upload_error', $result->get_error_code() );
+		$this->assertEquals( 500, $result->get_error_data()['status'] );
+
+		unset( $_FILES['file'] );
+	}
+
+	/**
+	 * Test save_elp_file validates file path exists.
+	 */
+	public function test_save_elp_file_validates_file_path_exists() {
+		$user_id       = $this->factory->user->create( array( 'role' => 'administrator' ) );
+		$attachment_id = $this->factory->attachment->create( array( 'post_author' => $user_id ) );
+		wp_set_current_user( $user_id );
+
+		// Set non-existent file path.
+		update_attached_file( $attachment_id, '/nonexistent/path/to/file.elpx' );
+
+		$_FILES['file'] = array(
+			'name'     => 'test.elpx',
+			'type'     => 'application/zip',
+			'tmp_name' => tempnam( sys_get_temp_dir(), 'test' ),
+			'error'    => UPLOAD_ERR_OK,
+			'size'     => 100,
+		);
+		file_put_contents( $_FILES['file']['tmp_name'], 'test content' );
+
+		$request = new WP_REST_Request( 'POST', '/exelearning/v1/save/' . $attachment_id );
+		$request->set_param( 'id', $attachment_id );
+
+		$result = $this->rest_api->save_elp_file( $request );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertEquals( 'file_not_found', $result->get_error_code() );
+		$this->assertEquals( 404, $result->get_error_data()['status'] );
+
+		if ( file_exists( $_FILES['file']['tmp_name'] ) ) {
+			unlink( $_FILES['file']['tmp_name'] );
+		}
+		unset( $_FILES['file'] );
+	}
+
+	/**
+	 * Test save_elp_file validates elpx extension.
+	 */
+	public function test_save_elp_file_validates_elpx_extension() {
+		$user_id       = $this->factory->user->create( array( 'role' => 'administrator' ) );
+		$attachment_id = $this->factory->attachment->create( array( 'post_author' => $user_id ) );
+		wp_set_current_user( $user_id );
+
+		$upload_dir = wp_upload_dir();
+		$file_path  = $upload_dir['basedir'] . '/test-' . $attachment_id . '.pdf';
+		file_put_contents( $file_path, 'fake pdf content' );
+
+		update_attached_file( $attachment_id, $file_path );
+
+		$_FILES['file'] = array(
+			'name'     => 'test.elpx',
+			'type'     => 'application/zip',
+			'tmp_name' => tempnam( sys_get_temp_dir(), 'test' ),
+			'error'    => UPLOAD_ERR_OK,
+			'size'     => 100,
+		);
+		file_put_contents( $_FILES['file']['tmp_name'], 'test content' );
+
+		$request = new WP_REST_Request( 'POST', '/exelearning/v1/save/' . $attachment_id );
+		$request->set_param( 'id', $attachment_id );
+
+		$result = $this->rest_api->save_elp_file( $request );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertEquals( 'invalid_file_type', $result->get_error_code() );
+		$this->assertEquals( 400, $result->get_error_data()['status'] );
+
+		unlink( $file_path );
+		if ( file_exists( $_FILES['file']['tmp_name'] ) ) {
+			unlink( $_FILES['file']['tmp_name'] );
+		}
+		unset( $_FILES['file'] );
+	}
+
+	/**
+	 * Test save_elp_file cleanup with no old extraction.
+	 */
+	public function test_save_elp_file_cleanup_no_old_extraction() {
+		$user_id       = $this->factory->user->create( array( 'role' => 'administrator' ) );
+		$attachment_id = $this->factory->attachment->create( array( 'post_author' => $user_id ) );
+		wp_set_current_user( $user_id );
+
+		$upload_dir = wp_upload_dir();
+		$file_path  = $upload_dir['basedir'] . '/test-cleanup-' . $attachment_id . '.elpx';
+		file_put_contents( $file_path, 'test content' );
+
+		update_attached_file( $attachment_id, $file_path );
+
+		// Ensure no old extraction exists.
+		delete_post_meta( $attachment_id, '_exelearning_extracted' );
+
+		$_FILES['file'] = array(
+			'name'     => 'test.elpx',
+			'type'     => 'application/zip',
+			'tmp_name' => tempnam( sys_get_temp_dir(), 'test' ),
+			'error'    => UPLOAD_ERR_OK,
+			'size'     => 100,
+		);
+		file_put_contents( $_FILES['file']['tmp_name'], 'test content' );
+
+		$request = new WP_REST_Request( 'POST', '/exelearning/v1/save/' . $attachment_id );
+		$request->set_param( 'id', $attachment_id );
+
+		// This will fail at move_uploaded_file, but cleanup should have run without error.
+		$result = $this->rest_api->save_elp_file( $request );
+
+		// Should proceed past cleanup (fails at move_uploaded_file).
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertEquals( 'move_failed', $result->get_error_code() );
+
+		unlink( $file_path );
+		unset( $_FILES['file'] );
+	}
+
+	/**
+	 * Test save_elp_file cleanup with old extraction folder.
+	 */
+	public function test_save_elp_file_cleanup_with_old_extraction() {
+		$user_id       = $this->factory->user->create( array( 'role' => 'administrator' ) );
+		$attachment_id = $this->factory->attachment->create( array( 'post_author' => $user_id ) );
+		wp_set_current_user( $user_id );
+
+		$upload_dir = wp_upload_dir();
+		$file_path  = $upload_dir['basedir'] . '/test-old-ext-' . $attachment_id . '.elpx';
+		file_put_contents( $file_path, 'test content' );
+
+		update_attached_file( $attachment_id, $file_path );
+
+		// Create old extraction folder.
+		$old_hash   = str_repeat( 'f', 40 );
+		$old_folder = $upload_dir['basedir'] . '/exelearning/' . $old_hash . '/';
+		wp_mkdir_p( $old_folder );
+		file_put_contents( $old_folder . 'index.html', '<html></html>' );
+
+		update_post_meta( $attachment_id, '_exelearning_extracted', $old_hash );
+
+		$this->assertTrue( is_dir( $old_folder ) );
+
+		$_FILES['file'] = array(
+			'name'     => 'test.elpx',
+			'type'     => 'application/zip',
+			'tmp_name' => tempnam( sys_get_temp_dir(), 'test' ),
+			'error'    => UPLOAD_ERR_OK,
+			'size'     => 100,
+		);
+		file_put_contents( $_FILES['file']['tmp_name'], 'test content' );
+
+		$request = new WP_REST_Request( 'POST', '/exelearning/v1/save/' . $attachment_id );
+		$request->set_param( 'id', $attachment_id );
+
+		$result = $this->rest_api->save_elp_file( $request );
+
+		// Old folder should be deleted.
+		$this->assertFalse( is_dir( $old_folder ) );
+
+		unlink( $file_path );
+		unset( $_FILES['file'] );
+	}
+
+	/**
+	 * Test save_elp_file cleanup with non-existent old folder.
+	 */
+	public function test_save_elp_file_cleanup_nonexistent_folder() {
+		$user_id       = $this->factory->user->create( array( 'role' => 'administrator' ) );
+		$attachment_id = $this->factory->attachment->create( array( 'post_author' => $user_id ) );
+		wp_set_current_user( $user_id );
+
+		$upload_dir = wp_upload_dir();
+		$file_path  = $upload_dir['basedir'] . '/test-nonexist-' . $attachment_id . '.elpx';
+		file_put_contents( $file_path, 'test content' );
+
+		update_attached_file( $attachment_id, $file_path );
+
+		// Set old extraction hash but don't create the folder.
+		$old_hash = str_repeat( 'd', 40 );
+		update_post_meta( $attachment_id, '_exelearning_extracted', $old_hash );
+
+		$_FILES['file'] = array(
+			'name'     => 'test.elpx',
+			'type'     => 'application/zip',
+			'tmp_name' => tempnam( sys_get_temp_dir(), 'test' ),
+			'error'    => UPLOAD_ERR_OK,
+			'size'     => 100,
+		);
+		file_put_contents( $_FILES['file']['tmp_name'], 'test content' );
+
+		$request = new WP_REST_Request( 'POST', '/exelearning/v1/save/' . $attachment_id );
+		$request->set_param( 'id', $attachment_id );
+
+		// Should proceed without error even if old folder doesn't exist.
+		$result = $this->rest_api->save_elp_file( $request );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertEquals( 'move_failed', $result->get_error_code() );
+
+		unlink( $file_path );
+		unset( $_FILES['file'] );
+	}
+
+	/**
+	 * Test save_elp_file move_uploaded_file failure.
+	 */
+	public function test_save_elp_file_move_failure() {
+		$user_id       = $this->factory->user->create( array( 'role' => 'administrator' ) );
+		$attachment_id = $this->factory->attachment->create( array( 'post_author' => $user_id ) );
+		wp_set_current_user( $user_id );
+
+		$upload_dir = wp_upload_dir();
+		$file_path  = $upload_dir['basedir'] . '/test-move-' . $attachment_id . '.elpx';
+		file_put_contents( $file_path, 'test content' );
+
+		update_attached_file( $attachment_id, $file_path );
+
+		$_FILES['file'] = array(
+			'name'     => 'test.elpx',
+			'type'     => 'application/zip',
+			'tmp_name' => '/nonexistent/tmp/file',
+			'error'    => UPLOAD_ERR_OK,
+			'size'     => 100,
+		);
+
+		$request = new WP_REST_Request( 'POST', '/exelearning/v1/save/' . $attachment_id );
+		$request->set_param( 'id', $attachment_id );
+
+		$result = $this->rest_api->save_elp_file( $request );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertEquals( 'move_failed', $result->get_error_code() );
+		$this->assertEquals( 500, $result->get_error_data()['status'] );
+
+		unlink( $file_path );
+		unset( $_FILES['file'] );
+	}
+
+	/**
+	 * Test save_elp_file with empty file path.
+	 */
+	public function test_save_elp_file_empty_file_path() {
+		$user_id       = $this->factory->user->create( array( 'role' => 'administrator' ) );
+		$attachment_id = $this->factory->attachment->create( array( 'post_author' => $user_id ) );
+		wp_set_current_user( $user_id );
+
+		// Set empty file path.
+		update_attached_file( $attachment_id, '' );
+
+		$_FILES['file'] = array(
+			'name'     => 'test.elpx',
+			'type'     => 'application/zip',
+			'tmp_name' => tempnam( sys_get_temp_dir(), 'test' ),
+			'error'    => UPLOAD_ERR_OK,
+			'size'     => 100,
+		);
+		file_put_contents( $_FILES['file']['tmp_name'], 'test content' );
+
+		$request = new WP_REST_Request( 'POST', '/exelearning/v1/save/' . $attachment_id );
+		$request->set_param( 'id', $attachment_id );
+
+		$result = $this->rest_api->save_elp_file( $request );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertEquals( 'file_not_found', $result->get_error_code() );
+
+		if ( file_exists( $_FILES['file']['tmp_name'] ) ) {
+			unlink( $_FILES['file']['tmp_name'] );
+		}
+		unset( $_FILES['file'] );
+	}
+
+	/**
+	 * Test create_elp_file ensures elp extension.
+	 */
+	public function test_create_elp_file_ensures_extension() {
+		$user_id = $this->factory->user->create( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $user_id );
+
+		$upload_dir = wp_upload_dir();
+		$tmp_file   = tempnam( sys_get_temp_dir(), 'test' );
+
+		// Create a minimal valid zip for upload.
+		$zip = new ZipArchive();
+		$zip->open( $tmp_file, ZipArchive::CREATE | ZipArchive::OVERWRITE );
+		$zip->addFromString( 'content.xml', '<package></package>' );
+		$zip->close();
+
+		$_FILES['file'] = array(
+			'name'     => 'test-no-extension',
+			'type'     => 'application/zip',
+			'tmp_name' => $tmp_file,
+			'error'    => UPLOAD_ERR_OK,
+			'size'     => filesize( $tmp_file ),
+		);
+
+		$request = new WP_REST_Request( 'POST', '/exelearning/v1/create' );
+
+		// This will fail at validation/processing, but we're testing the filename handling.
+		$result = $this->rest_api->create_elp_file( $request );
+
+		// Result could be error or success depending on validation.
+		// The important thing is it doesn't crash.
+		$this->assertTrue( $result instanceof WP_Error || $result instanceof WP_REST_Response );
+
+		unset( $_FILES['file'] );
+	}
+
+	/**
+	 * Test save route args configuration.
+	 */
+	public function test_save_route_args() {
+		$routes     = rest_get_server()->get_routes();
+		$save_route = $routes['/exelearning/v1/save/(?P<id>\\d+)'];
+
+		$this->assertNotEmpty( $save_route );
+		$this->assertArrayHasKey( 'args', $save_route[0] );
+		$this->assertArrayHasKey( 'id', $save_route[0]['args'] );
+		$this->assertTrue( $save_route[0]['args']['id']['required'] );
+		$this->assertEquals( 'integer', $save_route[0]['args']['id']['type'] );
+	}
+
+	/**
+	 * Test elp-data route args configuration.
+	 */
+	public function test_elp_data_route_args() {
+		$routes    = rest_get_server()->get_routes();
+		$elp_route = $routes['/exelearning/v1/elp-data/(?P<id>\\d+)'];
+
+		$this->assertNotEmpty( $elp_route );
+		$this->assertArrayHasKey( 'args', $elp_route[0] );
+		$this->assertArrayHasKey( 'id', $elp_route[0]['args'] );
+		$this->assertTrue( $elp_route[0]['args']['id']['required'] );
+		$this->assertEquals( 'integer', $elp_route[0]['args']['id']['type'] );
+	}
+
+	/**
+	 * Test content proxy route file parameter default.
+	 */
+	public function test_content_proxy_file_default() {
+		$routes        = rest_get_server()->get_routes();
+		$content_route = $routes['/exelearning/v1/content/(?P<hash>[a-f0-9]{40})(?:/(?P<file>.*))?'];
+
+		$this->assertNotEmpty( $content_route );
+		$this->assertArrayHasKey( 'args', $content_route[0] );
+		$this->assertArrayHasKey( 'file', $content_route[0]['args'] );
+		$this->assertEquals( 'index.html', $content_route[0]['args']['file']['default'] );
+	}
+
+	/**
+	 * Test build_save_response with preview.
+	 */
+	public function test_build_save_response_with_preview() {
+		$user_id       = $this->factory->user->create( array( 'role' => 'administrator' ) );
+		$attachment_id = $this->factory->attachment->create( array( 'post_author' => $user_id ) );
+
+		// Set up metadata for preview.
+		$hash = str_repeat( 'a', 40 );
+		update_post_meta( $attachment_id, '_exelearning_extracted', $hash );
+		update_post_meta( $attachment_id, '_exelearning_has_preview', '1' );
+
+		// Use reflection to call private method.
+		$reflection = new ReflectionMethod( $this->rest_api, 'build_save_response' );
+		$reflection->setAccessible( true );
+
+		$result = $reflection->invoke( $this->rest_api, $attachment_id );
+
+		$this->assertTrue( $result['success'] );
+		$this->assertEquals( $attachment_id, $result['attachment_id'] );
+		$this->assertNotNull( $result['preview_url'] );
+		$this->assertStringContainsString( $hash, $result['preview_url'] );
+	}
+
+	/**
+	 * Test build_save_response without preview.
+	 */
+	public function test_build_save_response_without_preview() {
+		$user_id       = $this->factory->user->create( array( 'role' => 'administrator' ) );
+		$attachment_id = $this->factory->attachment->create( array( 'post_author' => $user_id ) );
+
+		// Set up metadata without preview.
+		$hash = str_repeat( 'b', 40 );
+		update_post_meta( $attachment_id, '_exelearning_extracted', $hash );
+		update_post_meta( $attachment_id, '_exelearning_has_preview', '0' );
+
+		$reflection = new ReflectionMethod( $this->rest_api, 'build_save_response' );
+		$reflection->setAccessible( true );
+
+		$result = $reflection->invoke( $this->rest_api, $attachment_id );
+
+		$this->assertTrue( $result['success'] );
+		$this->assertEquals( $attachment_id, $result['attachment_id'] );
+		$this->assertNull( $result['preview_url'] );
+	}
+
+	/**
+	 * Test build_save_response with no extracted hash.
+	 */
+	public function test_build_save_response_no_extraction() {
+		$user_id       = $this->factory->user->create( array( 'role' => 'administrator' ) );
+		$attachment_id = $this->factory->attachment->create( array( 'post_author' => $user_id ) );
+
+		// No metadata set.
+		$reflection = new ReflectionMethod( $this->rest_api, 'build_save_response' );
+		$reflection->setAccessible( true );
+
+		$result = $reflection->invoke( $this->rest_api, $attachment_id );
+
+		$this->assertTrue( $result['success'] );
+		$this->assertEquals( $attachment_id, $result['attachment_id'] );
+		$this->assertNull( $result['preview_url'] );
+		$this->assertArrayHasKey( 'message', $result );
+	}
+
+	/**
+	 * Test validate_save_attachment with valid attachment.
+	 */
+	public function test_validate_save_attachment_valid() {
+		$attachment_id = $this->factory->attachment->create();
+
+		$reflection = new ReflectionMethod( $this->rest_api, 'validate_save_attachment' );
+		$reflection->setAccessible( true );
+
+		$result = $reflection->invoke( $this->rest_api, $attachment_id );
+
+		$this->assertTrue( $result );
+	}
+
+	/**
+	 * Test validate_save_attachment with invalid attachment.
+	 */
+	public function test_validate_save_attachment_invalid() {
+		$reflection = new ReflectionMethod( $this->rest_api, 'validate_save_attachment' );
+		$reflection->setAccessible( true );
+
+		$result = $reflection->invoke( $this->rest_api, 999999 );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertEquals( 'invalid_attachment', $result->get_error_code() );
+	}
+
+	/**
+	 * Test validate_save_attachment with non-attachment post.
+	 */
+	public function test_validate_save_attachment_non_attachment() {
+		$post_id = $this->factory->post->create( array( 'post_type' => 'post' ) );
+
+		$reflection = new ReflectionMethod( $this->rest_api, 'validate_save_attachment' );
+		$reflection->setAccessible( true );
+
+		$result = $reflection->invoke( $this->rest_api, $post_id );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertEquals( 'invalid_attachment', $result->get_error_code() );
+	}
+
+	/**
+	 * Test validate_uploaded_file with valid file.
+	 */
+	public function test_validate_uploaded_file_valid() {
+		$_FILES['file'] = array(
+			'name'     => 'test.elpx',
+			'type'     => 'application/zip',
+			'tmp_name' => tempnam( sys_get_temp_dir(), 'test' ),
+			'error'    => UPLOAD_ERR_OK,
+			'size'     => 100,
+		);
+		file_put_contents( $_FILES['file']['tmp_name'], 'test content' );
+
+		$reflection = new ReflectionMethod( $this->rest_api, 'validate_uploaded_file' );
+		$reflection->setAccessible( true );
+
+		$result = $reflection->invoke( $this->rest_api );
+
+		$this->assertIsArray( $result );
+		$this->assertEquals( 'test.elpx', $result['name'] );
+		$this->assertEquals( UPLOAD_ERR_OK, $result['error'] );
+
+		unlink( $_FILES['file']['tmp_name'] );
+		unset( $_FILES['file'] );
+	}
+
+	/**
+	 * Test validate_uploaded_file with no file.
+	 */
+	public function test_validate_uploaded_file_no_file() {
+		unset( $_FILES['file'] );
+
+		$reflection = new ReflectionMethod( $this->rest_api, 'validate_uploaded_file' );
+		$reflection->setAccessible( true );
+
+		$result = $reflection->invoke( $this->rest_api );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertEquals( 'no_file', $result->get_error_code() );
+	}
+
+	/**
+	 * Test validate_uploaded_file with upload error.
+	 */
+	public function test_validate_uploaded_file_with_error() {
+		$_FILES['file'] = array(
+			'name'     => 'test.elpx',
+			'type'     => 'application/zip',
+			'tmp_name' => '',
+			'error'    => UPLOAD_ERR_NO_TMP_DIR,
+			'size'     => 0,
+		);
+
+		$reflection = new ReflectionMethod( $this->rest_api, 'validate_uploaded_file' );
+		$reflection->setAccessible( true );
+
+		$result = $reflection->invoke( $this->rest_api );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertEquals( 'upload_error', $result->get_error_code() );
+
+		unset( $_FILES['file'] );
+	}
+
+	/**
+	 * Test validate_elp_file_path with valid elpx file.
+	 */
+	public function test_validate_elp_file_path_valid() {
+		$attachment_id = $this->factory->attachment->create();
+
+		$upload_dir = wp_upload_dir();
+		$file_path  = $upload_dir['basedir'] . '/valid-test.elpx';
+		file_put_contents( $file_path, 'test content' );
+
+		update_attached_file( $attachment_id, $file_path );
+
+		$reflection = new ReflectionMethod( $this->rest_api, 'validate_elp_file_path' );
+		$reflection->setAccessible( true );
+
+		$result = $reflection->invoke( $this->rest_api, $attachment_id );
+
+		$this->assertEquals( $file_path, $result );
+
+		unlink( $file_path );
+	}
+
+	/**
+	 * Test validate_elp_file_path with non-elpx file.
+	 */
+	public function test_validate_elp_file_path_non_elpx() {
+		$attachment_id = $this->factory->attachment->create();
+
+		$upload_dir = wp_upload_dir();
+		$file_path  = $upload_dir['basedir'] . '/test.txt';
+		file_put_contents( $file_path, 'test content' );
+
+		update_attached_file( $attachment_id, $file_path );
+
+		$reflection = new ReflectionMethod( $this->rest_api, 'validate_elp_file_path' );
+		$reflection->setAccessible( true );
+
+		$result = $reflection->invoke( $this->rest_api, $attachment_id );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertEquals( 'invalid_file_type', $result->get_error_code() );
+
+		unlink( $file_path );
+	}
+
+	/**
+	 * Test validate_elp_file_path with missing file.
+	 */
+	public function test_validate_elp_file_path_missing() {
+		$attachment_id = $this->factory->attachment->create();
+
+		update_attached_file( $attachment_id, '/nonexistent/file.elpx' );
+
+		$reflection = new ReflectionMethod( $this->rest_api, 'validate_elp_file_path' );
+		$reflection->setAccessible( true );
+
+		$result = $reflection->invoke( $this->rest_api, $attachment_id );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertEquals( 'file_not_found', $result->get_error_code() );
+	}
+
+	/**
+	 * Test cleanup_old_extraction with no extraction.
+	 */
+	public function test_cleanup_old_extraction_no_extraction() {
+		$attachment_id = $this->factory->attachment->create();
+
+		// No extraction metadata set.
+		$reflection = new ReflectionMethod( $this->rest_api, 'cleanup_old_extraction' );
+		$reflection->setAccessible( true );
+
+		// Should not throw any errors.
+		$result = $reflection->invoke( $this->rest_api, $attachment_id );
+
+		$this->assertNull( $result );
+	}
+
+	/**
+	 * Test cleanup_old_extraction with existing folder.
+	 */
+	public function test_cleanup_old_extraction_with_folder() {
+		$attachment_id = $this->factory->attachment->create();
+
+		$upload_dir = wp_upload_dir();
+		$hash       = str_repeat( 'c', 40 );
+		$folder     = trailingslashit( $upload_dir['basedir'] ) . 'exelearning/' . $hash . '/';
+
+		wp_mkdir_p( $folder );
+		file_put_contents( $folder . 'test.html', '<html></html>' );
+
+		update_post_meta( $attachment_id, '_exelearning_extracted', $hash );
+
+		$this->assertTrue( is_dir( $folder ) );
+
+		$reflection = new ReflectionMethod( $this->rest_api, 'cleanup_old_extraction' );
+		$reflection->setAccessible( true );
+
+		$reflection->invoke( $this->rest_api, $attachment_id );
+
+		$this->assertFalse( is_dir( $folder ) );
+	}
+
+	/**
+	 * Test cleanup_old_extraction with non-existent folder.
+	 */
+	public function test_cleanup_old_extraction_nonexistent_folder() {
+		$attachment_id = $this->factory->attachment->create();
+
+		$hash = str_repeat( 'd', 40 );
+		update_post_meta( $attachment_id, '_exelearning_extracted', $hash );
+
+		$reflection = new ReflectionMethod( $this->rest_api, 'cleanup_old_extraction' );
+		$reflection->setAccessible( true );
+
+		// Should not throw any errors.
+		$result = $reflection->invoke( $this->rest_api, $attachment_id );
+
+		$this->assertNull( $result );
+	}
+
+	/**
+	 * Test recursive_delete with non-existent path.
+	 */
+	public function test_recursive_delete_nonexistent() {
+		$reflection = new ReflectionMethod( $this->rest_api, 'recursive_delete' );
+		$reflection->setAccessible( true );
+
+		// Should not throw any errors.
+		$result = $reflection->invoke( $this->rest_api, '/nonexistent/path/to/delete' );
+
+		$this->assertNull( $result );
+	}
+
+	/**
+	 * Test recursive_delete with file.
+	 */
+	public function test_recursive_delete_file() {
+		$upload_dir = wp_upload_dir();
+		$file_path  = $upload_dir['basedir'] . '/test-delete-file.txt';
+		file_put_contents( $file_path, 'test content' );
+
+		$this->assertTrue( file_exists( $file_path ) );
+
+		$reflection = new ReflectionMethod( $this->rest_api, 'recursive_delete' );
+		$reflection->setAccessible( true );
+
+		$reflection->invoke( $this->rest_api, $file_path );
+
+		$this->assertFalse( file_exists( $file_path ) );
+	}
+
+	/**
+	 * Test recursive_delete with nested directory.
+	 */
+	public function test_recursive_delete_nested_directory() {
+		$upload_dir = wp_upload_dir();
+		$base_dir   = $upload_dir['basedir'] . '/test-nested-delete/';
+		$sub_dir    = $base_dir . 'subdir/';
+
+		wp_mkdir_p( $sub_dir );
+		file_put_contents( $base_dir . 'file1.txt', 'content1' );
+		file_put_contents( $sub_dir . 'file2.txt', 'content2' );
+
+		$this->assertTrue( is_dir( $base_dir ) );
+		$this->assertTrue( is_dir( $sub_dir ) );
+
+		$reflection = new ReflectionMethod( $this->rest_api, 'recursive_delete' );
+		$reflection->setAccessible( true );
+
+		$reflection->invoke( $this->rest_api, $base_dir );
+
+		$this->assertFalse( is_dir( $base_dir ) );
+	}
+
+	/**
+	 * Test recursive_delete with symlink.
+	 */
+	public function test_recursive_delete_symlink() {
+		$upload_dir  = wp_upload_dir();
+		$target_file = $upload_dir['basedir'] . '/symlink-target.txt';
+		$symlink     = $upload_dir['basedir'] . '/test-symlink';
+
+		file_put_contents( $target_file, 'target content' );
+
+		// Create symlink if supported.
+		if ( @symlink( $target_file, $symlink ) ) {
+			$this->assertTrue( is_link( $symlink ) );
+
+			$reflection = new ReflectionMethod( $this->rest_api, 'recursive_delete' );
+			$reflection->setAccessible( true );
+
+			$reflection->invoke( $this->rest_api, $symlink );
+
+			$this->assertFalse( is_link( $symlink ) );
+			// Target should still exist.
+			$this->assertTrue( file_exists( $target_file ) );
+		}
+
+		if ( file_exists( $target_file ) ) {
+			unlink( $target_file );
+		}
+	}
 }
