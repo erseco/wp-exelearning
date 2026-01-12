@@ -274,69 +274,26 @@ class ExeLearning_REST_API {
 	public function save_elp_file( $request ) {
 		$attachment_id = $request->get_param( 'id' );
 
-		// Verify the attachment exists.
-		$attachment = get_post( $attachment_id );
-		if ( ! $attachment || 'attachment' !== $attachment->post_type ) {
-			return new WP_Error(
-				'invalid_attachment',
-				__( 'Invalid attachment ID.', 'exelearning' ),
-				array( 'status' => 404 )
-			);
+		// Validate attachment.
+		$validation = $this->validate_save_attachment( $attachment_id );
+		if ( is_wp_error( $validation ) ) {
+			return $validation;
 		}
 
-		// Verify file upload.
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- REST API authentication handled by permission_callback.
-		if ( empty( $_FILES['file'] ) ) {
-			return new WP_Error(
-				'no_file',
-				__( 'No file uploaded.', 'exelearning' ),
-				array( 'status' => 400 )
-			);
+		// Validate uploaded file.
+		$uploaded_file = $this->validate_uploaded_file();
+		if ( is_wp_error( $uploaded_file ) ) {
+			return $uploaded_file;
 		}
 
-		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput, WordPress.Security.NonceVerification.Missing -- REST API authentication handled by permission_callback.
-		$uploaded_file = $_FILES['file'];
-
-		// Verify upload was successful.
-		if ( UPLOAD_ERR_OK !== $uploaded_file['error'] ) {
-			return new WP_Error(
-				'upload_error',
-				__( 'File upload failed.', 'exelearning' ),
-				array( 'status' => 500 )
-			);
-		}
-
-		// Get current file path.
-		$old_file_path = get_attached_file( $attachment_id );
-
-		if ( ! $old_file_path || ! file_exists( $old_file_path ) ) {
-			return new WP_Error(
-				'file_not_found',
-				__( 'Original file not found.', 'exelearning' ),
-				array( 'status' => 404 )
-			);
-		}
-
-		// Verify this is an ELPX file.
-		$ext = strtolower( pathinfo( $old_file_path, PATHINFO_EXTENSION ) );
-		if ( 'elpx' !== $ext ) {
-			return new WP_Error(
-				'invalid_file_type',
-				__( 'This is not an eXeLearning file (.elpx).', 'exelearning' ),
-				array( 'status' => 400 )
-			);
+		// Validate file path and type.
+		$old_file_path = $this->validate_elp_file_path( $attachment_id );
+		if ( is_wp_error( $old_file_path ) ) {
+			return $old_file_path;
 		}
 
 		// Delete old extracted folder if exists.
-		$old_extracted = get_post_meta( $attachment_id, '_exelearning_extracted', true );
-		if ( $old_extracted ) {
-			$upload_dir = wp_upload_dir();
-			$old_folder = trailingslashit( $upload_dir['basedir'] ) . 'exelearning/' . $old_extracted . '/';
-
-			if ( is_dir( $old_folder ) ) {
-				$this->recursive_delete( $old_folder );
-			}
-		}
+		$this->cleanup_old_extraction( $attachment_id );
 
 		// Replace the file.
 		if ( ! move_uploaded_file( $uploaded_file['tmp_name'], $old_file_path ) ) {
@@ -349,7 +306,6 @@ class ExeLearning_REST_API {
 
 		// Re-process the ELP file (extract and update metadata).
 		$result = $this->reprocess_elp_file( $attachment_id, $old_file_path );
-
 		if ( is_wp_error( $result ) ) {
 			return $result;
 		}
@@ -363,7 +319,111 @@ class ExeLearning_REST_API {
 			)
 		);
 
-		// Get the new preview URL.
+		return rest_ensure_response( $this->build_save_response( $attachment_id ) );
+	}
+
+	/**
+	 * Validate attachment exists and is valid.
+	 *
+	 * @param int $attachment_id Attachment ID.
+	 * @return true|WP_Error True if valid, WP_Error otherwise.
+	 */
+	private function validate_save_attachment( $attachment_id ) {
+		$attachment = get_post( $attachment_id );
+		if ( ! $attachment || 'attachment' !== $attachment->post_type ) {
+			return new WP_Error(
+				'invalid_attachment',
+				__( 'Invalid attachment ID.', 'exelearning' ),
+				array( 'status' => 404 )
+			);
+		}
+		return true;
+	}
+
+	/**
+	 * Validate uploaded file from request.
+	 *
+	 * @return array|WP_Error Uploaded file array or WP_Error.
+	 */
+	private function validate_uploaded_file() {
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- REST API authentication handled by permission_callback.
+		if ( empty( $_FILES['file'] ) ) {
+			return new WP_Error(
+				'no_file',
+				__( 'No file uploaded.', 'exelearning' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput, WordPress.Security.NonceVerification.Missing -- REST API authentication handled by permission_callback.
+		$uploaded_file = $_FILES['file'];
+
+		if ( UPLOAD_ERR_OK !== $uploaded_file['error'] ) {
+			return new WP_Error(
+				'upload_error',
+				__( 'File upload failed.', 'exelearning' ),
+				array( 'status' => 500 )
+			);
+		}
+
+		return $uploaded_file;
+	}
+
+	/**
+	 * Validate ELP file path and extension.
+	 *
+	 * @param int $attachment_id Attachment ID.
+	 * @return string|WP_Error File path or WP_Error.
+	 */
+	private function validate_elp_file_path( $attachment_id ) {
+		$file_path = get_attached_file( $attachment_id );
+
+		if ( ! $file_path || ! file_exists( $file_path ) ) {
+			return new WP_Error(
+				'file_not_found',
+				__( 'Original file not found.', 'exelearning' ),
+				array( 'status' => 404 )
+			);
+		}
+
+		$ext = strtolower( pathinfo( $file_path, PATHINFO_EXTENSION ) );
+		if ( 'elpx' !== $ext ) {
+			return new WP_Error(
+				'invalid_file_type',
+				__( 'This is not an eXeLearning file (.elpx).', 'exelearning' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		return $file_path;
+	}
+
+	/**
+	 * Clean up old extracted folder for an attachment.
+	 *
+	 * @param int $attachment_id Attachment ID.
+	 */
+	private function cleanup_old_extraction( $attachment_id ) {
+		$old_extracted = get_post_meta( $attachment_id, '_exelearning_extracted', true );
+		if ( ! $old_extracted ) {
+			return;
+		}
+
+		$upload_dir = wp_upload_dir();
+		$old_folder = trailingslashit( $upload_dir['basedir'] ) . 'exelearning/' . $old_extracted . '/';
+
+		if ( is_dir( $old_folder ) ) {
+			$this->recursive_delete( $old_folder );
+		}
+	}
+
+	/**
+	 * Build success response for save operation.
+	 *
+	 * @param int $attachment_id Attachment ID.
+	 * @return array Response data.
+	 */
+	private function build_save_response( $attachment_id ) {
 		$extracted_hash = get_post_meta( $attachment_id, '_exelearning_extracted', true );
 		$has_preview    = get_post_meta( $attachment_id, '_exelearning_has_preview', true );
 		$preview_url    = null;
@@ -372,13 +432,11 @@ class ExeLearning_REST_API {
 			$preview_url = ExeLearning_Content_Proxy::get_proxy_url( $extracted_hash );
 		}
 
-		return rest_ensure_response(
-			array(
-				'success'       => true,
-				'message'       => __( 'File saved successfully.', 'exelearning' ),
-				'attachment_id' => $attachment_id,
-				'preview_url'   => $preview_url,
-			)
+		return array(
+			'success'       => true,
+			'message'       => __( 'File saved successfully.', 'exelearning' ),
+			'attachment_id' => $attachment_id,
+			'preview_url'   => $preview_url,
 		);
 	}
 
