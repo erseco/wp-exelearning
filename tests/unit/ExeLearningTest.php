@@ -96,7 +96,7 @@ class ExeLearningTest extends WP_UnitTestCase {
 		$property = new ReflectionProperty( ExeLearning::class, 'i18n' );
 		$property->setAccessible( true );
 
-		$this->assertInstanceOf( ExeLearning_i18n::class, $property->getValue( $this->plugin ) );
+		$this->assertInstanceOf( ExeLearning_I18n::class, $property->getValue( $this->plugin ) );
 	}
 
 	/**

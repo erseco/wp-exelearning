@@ -1,6 +1,6 @@
 <?php
 /**
- * Tests for ExeLearning_i18n class.
+ * Tests for ExeLearning_I18n class.
  *
  * @package Exelearning
  */
@@ -8,14 +8,14 @@
 /**
  * Class I18nTest.
  *
- * @covers ExeLearning_i18n
+ * @covers ExeLearning_I18n
  */
 class I18nTest extends WP_UnitTestCase {
 
 	/**
 	 * Test instance.
 	 *
-	 * @var ExeLearning_i18n
+	 * @var ExeLearning_I18n
 	 */
 	private $i18n;
 
@@ -24,7 +24,7 @@ class I18nTest extends WP_UnitTestCase {
 	 */
 	public function set_up() {
 		parent::set_up();
-		$this->i18n = new ExeLearning_i18n();
+		$this->i18n = new ExeLearning_I18n();
 	}
 
 	/**

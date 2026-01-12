@@ -70,7 +70,7 @@ class ExeLearning {
 	/**
 	 * Instance of internationalization handler.
 	 *
-	 * @var ExeLearning_i18n
+	 * @var ExeLearning_I18n
 	 */
 	private $i18n;
 
@@ -153,7 +153,7 @@ class ExeLearning {
 		$this->mime_types         = new ExeLearning_Mime_Types();
 		$this->shortcodes         = new ExeLearning_Shortcodes();
 		$this->media_library      = new ExeLearning_Media_Library();
-		$this->i18n               = new ExeLearning_i18n();
+		$this->i18n               = new ExeLearning_I18n();
 		$this->admin_settings     = new ExeLearning_Admin_Settings();
 		$this->admin_upload       = new ExeLearning_Admin_Upload();
 		$this->elp_upload_handler = new ExeLearning_Elp_Upload_Handler();

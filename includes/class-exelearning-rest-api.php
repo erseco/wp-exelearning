@@ -165,10 +165,10 @@ class ExeLearning_REST_API {
 	/**
 	 * Create new ELP file from editor.
 	 *
-	 * @param WP_REST_Request $request Request object.
+	 * @param WP_REST_Request $request Request object (unused, required by REST API).
 	 * @return WP_REST_Response|WP_Error Response object.
 	 */
-	public function create_elp_file( $request ) {
+	public function create_elp_file( $request ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- Required by WordPress REST API.
 		// Verify file upload.
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- REST API authentication handled by permission_callback.
 		if ( empty( $_FILES['file'] ) ) {

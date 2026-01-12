@@ -1,6 +1,6 @@
 <?php
 /**
- * eXeLearning ELP File Service.
+ * ELP File Service for eXeLearning.
  *
  * This service validates and converts .elp files using the ELPParser library.
  *
@@ -80,7 +80,7 @@ class ExeLearning_Elp_File_Service {
 		$data = $parser->toArray();
 
 		// Example: adjust keys or structure if needed.
-		// $data = $this->adjust_data_to_v3( $data );
+		// Placeholder: $data = $this->adjust_data_to_v3( $data ).
 
 		return $data;
 	}

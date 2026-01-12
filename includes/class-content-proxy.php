@@ -139,7 +139,7 @@ class ExeLearning_Content_Proxy {
 		$this->send_headers( $mime_type, $file_size );
 
 		// Output file content.
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_readfile -- Direct output needed for streaming file content.
 		readfile( $full_path );
 		exit;
 	}
