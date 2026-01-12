@@ -178,13 +178,25 @@ msgid_plural "eXeLearning <span class=\"count\">(%s)</span>"
 msgstr[0] ""
 msgstr[1] ""
 
-msgid "eXeLearning Content Preview"
+msgid "eXeLearning Info"
 msgstr ""
 
-msgid "eXeLearning Metadata"
+msgid "Version:"
 msgstr ""
 
-msgid "Open in new tab"
+msgid "source file"
+msgstr ""
+
+msgid "exported"
+msgstr ""
+
+msgid "License:"
+msgstr ""
+
+msgid "Language:"
+msgstr ""
+
+msgid "Type:"
 msgstr ""
 
 msgid "No preview available"
@@ -193,10 +205,16 @@ msgstr ""
 msgid "This is an eXeLearning v2 source file (.elp). To view the content, open it in eXeLearning and export it as HTML."
 msgstr ""
 
-msgid "License:"
+msgid "Preview in new tab"
 msgstr ""
 
-msgid "Language:"
+msgid "eXeLearning Content Preview"
+msgstr ""
+
+msgid "eXeLearning Metadata"
+msgstr ""
+
+msgid "Open in new tab"
 msgstr ""
 
 msgid "Resource Type:"
@@ -221,4 +239,31 @@ msgid "Select eXeLearning File"
 msgstr ""
 
 msgid "Use this file"
+msgstr ""
+
+msgid "eXeLearning Content"
+msgstr ""
+
+msgid "Upload or select a .elpx file from your media library"
+msgstr ""
+
+msgid "Upload .elpx File"
+msgstr ""
+
+msgid "Media Library"
+msgstr ""
+
+msgid "Height (px)"
+msgstr ""
+
+msgid "Change file"
+msgstr ""
+
+msgid "Remove"
+msgstr ""
+
+msgid "Change"
+msgstr ""
+
+msgid "This is an eXeLearning v2 source file. The content will be displayed on the frontend if exported HTML is available."
 msgstr ""

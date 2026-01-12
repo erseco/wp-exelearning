@@ -49,6 +49,12 @@ class ExeLearning_Elp_Upload_Block {
 			true
 		);
 
+		wp_set_script_translations(
+			'exelearning-elp-block',
+			'exelearning',
+			plugin_dir_path( __DIR__ ) . 'languages'
+		);
+
 		wp_enqueue_style(
 			'exelearning-block-editor',
 			plugins_url( '../assets/css/exelearning-admin.css', __FILE__ ),

@@ -542,4 +542,82 @@ class MediaLibraryTest extends WP_UnitTestCase {
 		$this->assertStringContainsString( '</ul>', $output );
 		$this->assertStringContainsString( '<li>', $output );
 	}
+
+	/**
+	 * Test enqueue_media_modal_scripts localizes translation strings.
+	 */
+	public function test_enqueue_media_modal_scripts_localizes_strings() {
+		global $wp_scripts;
+
+		wp_dequeue_script( 'exelearning-media-modal' );
+		wp_deregister_script( 'exelearning-media-modal' );
+		wp_dequeue_style( 'exelearning-media-library' );
+
+		$this->media_library->enqueue_media_modal_scripts( 'upload.php' );
+
+		// Verify script is enqueued.
+		$this->assertTrue( wp_script_is( 'exelearning-media-modal', 'enqueued' ) );
+
+		// Check if the script has localized data.
+		$script = $wp_scripts->registered['exelearning-media-modal'];
+		$this->assertNotEmpty( $script->extra );
+	}
+
+	/**
+	 * Test enqueue_media_modal_scripts has correct localized keys.
+	 */
+	public function test_enqueue_media_modal_scripts_has_localized_keys() {
+		global $wp_scripts;
+
+		wp_dequeue_script( 'exelearning-media-modal' );
+		wp_deregister_script( 'exelearning-media-modal' );
+		wp_dequeue_style( 'exelearning-media-library' );
+
+		$this->media_library->enqueue_media_modal_scripts( 'upload.php' );
+
+		// Get the localized data.
+		$script = $wp_scripts->registered['exelearning-media-modal'];
+
+		// The extra['data'] contains the wp_localize_script output.
+		$this->assertArrayHasKey( 'data', $script->extra );
+
+		// Verify that exelearningMediaStrings is in the localized data.
+		$data = $script->extra['data'];
+		$this->assertStringContainsString( 'exelearningMediaStrings', $data );
+	}
+
+	/**
+	 * Test enqueue_media_modal_scripts includes all translation strings.
+	 */
+	public function test_enqueue_media_modal_scripts_includes_all_strings() {
+		global $wp_scripts;
+
+		wp_dequeue_script( 'exelearning-media-modal' );
+		wp_deregister_script( 'exelearning-media-modal' );
+		wp_dequeue_style( 'exelearning-media-library' );
+
+		$this->media_library->enqueue_media_modal_scripts( 'upload.php' );
+
+		$script = $wp_scripts->registered['exelearning-media-modal'];
+		$data   = $script->extra['data'];
+
+		// Verify all expected keys are present in the localized data.
+		$expected_keys = array(
+			'info',
+			'version',
+			'sourceFile',
+			'exported',
+			'license',
+			'language',
+			'type',
+			'noPreview',
+			'noPreviewDesc',
+			'previewNewTab',
+			'editInExe',
+		);
+
+		foreach ( $expected_keys as $key ) {
+			$this->assertStringContainsString( '"' . $key . '"', $data );
+		}
+	}
 }

@@ -52,6 +52,24 @@ class ExeLearning_Media_Library {
 				true
 			);
 
+			wp_localize_script(
+				'exelearning-media-modal',
+				'exelearningMediaStrings',
+				array(
+					'info'          => __( 'eXeLearning Info', 'exelearning' ),
+					'version'       => __( 'Version:', 'exelearning' ),
+					'sourceFile'    => '(' . __( 'source file', 'exelearning' ) . ')',
+					'exported'      => '(' . __( 'exported', 'exelearning' ) . ')',
+					'license'       => __( 'License:', 'exelearning' ),
+					'language'      => __( 'Language:', 'exelearning' ),
+					'type'          => __( 'Type:', 'exelearning' ),
+					'noPreview'     => __( 'No preview available', 'exelearning' ),
+					'noPreviewDesc' => __( 'This is an eXeLearning v2 source file (.elp). To view the content, open it in eXeLearning and export it as HTML.', 'exelearning' ),
+					'previewNewTab' => __( 'Preview in new tab', 'exelearning' ),
+					'editInExe'     => __( 'Edit in eXeLearning', 'exelearning' ),
+				)
+			);
+
 			wp_enqueue_style(
 				'exelearning-media-library',
 				plugins_url( '../../assets/css/exelearning-admin.css', __FILE__ ),
