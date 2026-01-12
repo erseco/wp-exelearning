@@ -29,6 +29,31 @@ class ExeLearning_REST_API {
 	public function register_routes() {
 		$namespace = 'exelearning/v1';
 
+		// Content proxy endpoint for secure file delivery.
+		register_rest_route(
+			$namespace,
+			'/content/(?P<hash>[a-f0-9]{40})(?:/(?P<file>.*))?',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'proxy_content' ),
+				'permission_callback' => '__return_true',
+				'args'                => array(
+					'hash' => array(
+						'required'          => true,
+						'type'              => 'string',
+						'validate_callback' => function ( $param ) {
+							return preg_match( '/^[a-f0-9]{40}$/i', $param );
+						},
+					),
+					'file' => array(
+						'required' => false,
+						'type'     => 'string',
+						'default'  => 'index.html',
+					),
+				),
+			)
+		);
+
 		// Save modified ELP file.
 		register_rest_route(
 			$namespace,
@@ -75,6 +100,17 @@ class ExeLearning_REST_API {
 				'permission_callback' => array( $this, 'check_upload_permission' ),
 			)
 		);
+	}
+
+	/**
+	 * Proxy content from extracted eXeLearning files.
+	 *
+	 * @param WP_REST_Request $request REST request object.
+	 * @return WP_REST_Response|WP_Error Response or error.
+	 */
+	public function proxy_content( $request ) {
+		$proxy = new ExeLearning_Content_Proxy();
+		return $proxy->serve_content( $request );
 	}
 
 	/**
@@ -329,8 +365,7 @@ class ExeLearning_REST_API {
 		$preview_url    = null;
 
 		if ( $extracted_hash && '1' === $has_preview ) {
-			$upload_dir  = wp_upload_dir();
-			$preview_url = $upload_dir['baseurl'] . '/exelearning/' . $extracted_hash . '/index.html';
+			$preview_url = ExeLearning_Content_Proxy::get_proxy_url( $extracted_hash );
 		}
 
 		return rest_ensure_response(
@@ -400,8 +435,7 @@ class ExeLearning_REST_API {
 
 		// Add preview URL if available.
 		if ( $extracted_hash && '1' === $has_preview ) {
-			$upload_dir                  = wp_upload_dir();
-			$response_data['previewUrl'] = $upload_dir['baseurl'] . '/exelearning/' . $extracted_hash . '/index.html';
+			$response_data['previewUrl'] = ExeLearning_Content_Proxy::get_proxy_url( $extracted_hash );
 		}
 
 		return rest_ensure_response( $response_data );

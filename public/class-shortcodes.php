@@ -72,9 +72,8 @@ class ExeLearning_Shortcodes {
 			return $this->render_no_preview( $title, $file_url );
 		}
 
-		// Build preview URL.
-		$upload_dir  = wp_upload_dir();
-		$preview_url = $upload_dir['baseurl'] . '/exelearning/' . $extracted_dir . '/index.html';
+		// Build preview URL using secure proxy.
+		$preview_url = ExeLearning_Content_Proxy::get_proxy_url( $extracted_dir );
 
 		return $this->render_preview( $title, $preview_url, $height, $file_url );
 	}
@@ -153,6 +152,8 @@ class ExeLearning_Shortcodes {
                     title="%s"
                     loading="lazy"
                     allow="fullscreen"
+                    sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"
+                    referrerpolicy="no-referrer"
                 ></iframe>
             </div>
             <script>

@@ -127,8 +127,8 @@ class ExeLearning_Elp_Upload_Block {
 			return '<div class="exelearning-error">' . esc_html__( 'Error: eXeLearning content not found', 'exelearning' ) . '</div>';
 		}
 
-		$upload_dir  = wp_upload_dir();
-		$preview_url = esc_url( $upload_dir['baseurl'] . '/exelearning/' . $extracted_dir . '/index.html' );
+		// Build preview URL using secure proxy.
+		$preview_url = esc_url( ExeLearning_Content_Proxy::get_proxy_url( $extracted_dir ) );
 
 		// If no preview available, show a link to download the file.
 		if ( '1' !== $has_preview ) {
@@ -159,6 +159,8 @@ class ExeLearning_Elp_Upload_Block {
                     style="width: 100%%; height: %dpx; border: 1px solid #ddd; border-radius: 4px;"
                     title="%s"
                     loading="lazy"
+                    sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"
+                    referrerpolicy="no-referrer"
                 ></iframe>
             </div>',
 			esc_attr( implode( ' ', $wrapper_classes ) ),
