@@ -529,6 +529,7 @@ class ExeLearning_REST_API {
 			foreach ( $files as $file ) {
 				$this->recursive_delete( $dir . DIRECTORY_SEPARATOR . $file );
 			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Direct filesystem access needed for cleanup.
 			rmdir( $dir );
 		}
 	}

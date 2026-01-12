@@ -45,7 +45,7 @@ class ExeLearning_Editor {
 		// Suppress error display for this request to prevent output corruption.
 		// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.PHP.IniSet.display_errors_Disallowed -- Required to prevent output corruption in standalone editor page.
 		@ini_set( 'display_errors', '0' );
-		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.runtime_configuration_error_reporting, WordPress.PHP.NoSilencedErrors.Discouraged
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.runtime_configuration_error_reporting, WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.PHP.DevelopmentFunctions.prevent_path_disclosure_error_reporting
 		@error_reporting( 0 );
 
 		// Start output buffering to capture any warnings/notices.

@@ -77,8 +77,8 @@ class ExeLearning_Elp_Upload_Handler {
 			$has_preview = file_exists( $destination . 'index.html' );
 
 			$post_data = array(
-				'post_excerpt' => $parser->getTitle(),     // Title va al caption
-				'post_content' => $parser->getDescription(), // Description al content
+				'post_excerpt' => $parser->getTitle(),       // Title goes to caption.
+				'post_content' => $parser->getDescription(), // Description goes to content.
 			);
 
 			// Store metadata in a transient for later use.
@@ -110,7 +110,7 @@ class ExeLearning_Elp_Upload_Handler {
 		}
 
 		// Optionally, remove the original .elp file.
-		// @unlink( $file );
+		// Example: unlink( $file ).
 
 		return $upload;
 	}
@@ -168,6 +168,7 @@ class ExeLearning_Elp_Upload_Handler {
 			foreach ( $files as $file ) {
 				$this->exelearning_recursive_delete( $dir . DIRECTORY_SEPARATOR . $file );
 			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Direct filesystem access needed for cleanup.
 			rmdir( $dir );
 		}
 	}
@@ -204,7 +205,7 @@ class ExeLearning_Elp_Upload_Handler {
 			return;
 		}
 
-		$htaccess_content = <<<HTACCESS
+		$htaccess_content = <<<'HTACCESS'
 # Security: Block direct access to eXeLearning extracted content
 # All content must be served through the secure proxy controller
 

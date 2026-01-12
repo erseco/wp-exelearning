@@ -73,6 +73,7 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 				'post_type'      => 'attachment',
 				'posts_per_page' => -1,
 				'post_mime_type' => 'application/zip',
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Required to filter eXeLearning attachments.
 				'meta_query'     => array(
 					array(
 						'key'     => '_wp_attachment_metadata',
