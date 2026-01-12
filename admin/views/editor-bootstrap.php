@@ -53,8 +53,8 @@ $rest_url = rest_url( 'exelearning/v1' );
 $nonce    = wp_create_nonce( 'wp_rest' );
 
 // Get locale (ensure it's never null).
-$wp_locale    = get_locale();
-$locale_short = $wp_locale ? substr( $wp_locale, 0, 2 ) : 'en';
+$site_locale  = get_locale();
+$locale_short = $site_locale ? substr( $site_locale, 0, 2 ) : 'en';
 
 // User data (ensure values are never null).
 $user_data = wp_get_current_user();

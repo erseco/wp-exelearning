@@ -1,6 +1,6 @@
 <?php
 /**
- * eXeLearning Editor integration class.
+ * Editor integration class for eXeLearning.
  *
  * Handles the fullscreen editor modal for editing .elp files.
  *

@@ -50,7 +50,7 @@ class ExeLearning_Mime_Types {
 	 * @param string $real_mime Real mime type of the file.
 	 * @return array Modified file data.
 	 */
-	public function fix_elpx_filetype( $data, $file, $filename, $mimes, $real_mime = null ) {
+	public function fix_elpx_filetype( $data, $file, $filename, $mimes, $real_mime = null ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- Required by WordPress filter API.
 		// If the extension is .elpx, ensure it's properly recognized.
 		$ext = strtolower( pathinfo( $filename, PATHINFO_EXTENSION ) );
 

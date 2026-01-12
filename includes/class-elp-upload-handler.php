@@ -68,7 +68,7 @@ class ExeLearning_Elp_Upload_Handler {
 		// Create security .htaccess to block direct access.
 		$this->create_security_htaccess();
 
-		// Parse and validate the file
+		// Parse and validate the file.
 		try {
 			$parser = new Exelearning\ELPParser( $file );
 			$parser->extract( $destination );

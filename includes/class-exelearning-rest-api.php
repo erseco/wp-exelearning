@@ -170,6 +170,7 @@ class ExeLearning_REST_API {
 	 */
 	public function create_elp_file( $request ) {
 		// Verify file upload.
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- REST API authentication handled by permission_callback.
 		if ( empty( $_FILES['file'] ) ) {
 			return new WP_Error(
 				'no_file',
@@ -178,7 +179,8 @@ class ExeLearning_REST_API {
 			);
 		}
 
-		$uploaded_file = $_FILES['file']; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput, WordPress.Security.NonceVerification.Missing -- REST API authentication handled by permission_callback.
+		$uploaded_file = $_FILES['file'];
 
 		// Verify upload was successful.
 		if ( UPLOAD_ERR_OK !== $uploaded_file['error'] ) {
@@ -283,6 +285,7 @@ class ExeLearning_REST_API {
 		}
 
 		// Verify file upload.
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- REST API authentication handled by permission_callback.
 		if ( empty( $_FILES['file'] ) ) {
 			return new WP_Error(
 				'no_file',
@@ -291,7 +294,8 @@ class ExeLearning_REST_API {
 			);
 		}
 
-		$uploaded_file = $_FILES['file']; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput, WordPress.Security.NonceVerification.Missing -- REST API authentication handled by permission_callback.
+		$uploaded_file = $_FILES['file'];
 
 		// Verify upload was successful.
 		if ( UPLOAD_ERR_OK !== $uploaded_file['error'] ) {

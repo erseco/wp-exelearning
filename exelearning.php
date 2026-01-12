@@ -1,6 +1,6 @@
 <?php
 /**
- * eXeLearning WordPress Plugin.
+ * Plugin for eXeLearning WordPress integration.
  *
  * @link https://github.com/exelearning/wp-exelearning
  * @package Exelearning
