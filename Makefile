@@ -259,13 +259,13 @@ install-phpcs: check-docker start-if-not-running
 	fi
 
 
-# Check code style with PHP Code Sniffer inside the container
-lint: install-phpcs
-	npx wp-env run cli phpcs --standard=wp-content/plugins/exelearning/.phpcs.xml.dist wp-content/plugins/exelearning
+# Check code style with PHP Code Sniffer (uses same setup as CI)
+lint:
+	./vendor/bin/phpcs --standard=.phpcs.xml.dist .
 
-# Automatically fix code style with PHP Code Beautifier inside the container
-fix: install-phpcs
-	npx wp-env run cli phpcbf --standard=wp-content/plugins/exelearning/.phpcs.xml.dist wp-content/plugins/exelearning
+# Automatically fix code style with PHP Code Beautifier (uses same setup as CI)
+fix:
+	./vendor/bin/phpcbf --standard=.phpcs.xml.dist . || true
 
 # Run PHP Mess Detector ignoring vendor and node_modules
 phpmd:
