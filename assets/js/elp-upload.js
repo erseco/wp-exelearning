@@ -2,6 +2,7 @@
 ( function( wp ) {
     var el = wp.element.createElement;
     var Fragment = wp.element.Fragment;
+    var __ = wp.i18n.__;
     var registerBlockType = wp.blocks.registerBlockType;
     var MediaUpload = wp.blockEditor.MediaUpload;
     var MediaUploadCheck = wp.blockEditor.MediaUploadCheck;
@@ -81,7 +82,7 @@
                         attachmentId: media.id,
                         url: media.url,
                         previewUrl: exeData.preview_url || '',
-                        title: media.title || media.filename || 'eXeLearning Content',
+                        title: media.title || media.filename || __( 'eXeLearning Content', 'exelearning' ),
                         hasPreview: exeData.has_preview || false,
                     });
                 } else {
@@ -115,20 +116,20 @@
                         render: function( obj ) {
                             return el( Placeholder, {
                                     icon: 'media-default',
-                                    label: 'eXeLearning Content',
-                                    instructions: 'Upload or select a .elpx file from your media library',
+                                    label: __( 'eXeLearning Content', 'exelearning' ),
+                                    instructions: __( 'Upload or select a .elpx file from your media library', 'exelearning' ),
                                     className: 'exelearning-upload-placeholder'
                                 },
                                 el( 'div', { className: 'components-placeholder__controls' },
                                     el( Button, {
                                         isPrimary: true,
                                         onClick: obj.open
-                                    }, 'Upload .elpx File' ),
+                                    }, __( 'Upload .elpx File', 'exelearning' ) ),
                                     el( Button, {
                                         isSecondary: true,
                                         onClick: obj.open,
                                         style: { marginLeft: '10px' }
-                                    }, 'Media Library' )
+                                    }, __( 'Media Library', 'exelearning' ) )
                                 )
                             );
                         }
@@ -140,9 +141,9 @@
             return el( Fragment, null,
                 // Inspector Controls (sidebar)
                 el( InspectorControls, null,
-                    el( PanelBody, { title: 'Settings', initialOpen: true },
+                    el( PanelBody, { title: __( 'Settings', 'exelearning' ), initialOpen: true },
                         el( RangeControl, {
-                            label: 'Height (px)',
+                            label: __( 'Height (px)', 'exelearning' ),
                             value: attributes.height,
                             onChange: function( value ) {
                                 setAttributes( { height: value } );
@@ -155,7 +156,7 @@
                             isPrimary: true,
                             onClick: onEditInExeLearning,
                             style: { marginTop: '10px', width: '100%', justifyContent: 'center' }
-                        }, 'Edit in eXeLearning' )
+                        }, __( 'Edit in eXeLearning', 'exelearning' ) )
                     )
                 ),
                 // Block Controls (toolbar)
@@ -163,7 +164,7 @@
                     el( ToolbarGroup, null,
                         el( ToolbarButton, {
                             icon: 'edit',
-                            label: 'Edit in eXeLearning',
+                            label: __( 'Edit in eXeLearning', 'exelearning' ),
                             onClick: onEditInExeLearning
                         }),
                         el( MediaUpload, {
@@ -173,14 +174,14 @@
                             render: function( obj ) {
                                 return el( ToolbarButton, {
                                     icon: 'update',
-                                    label: 'Change file',
+                                    label: __( 'Change file', 'exelearning' ),
                                     onClick: obj.open
                                 });
                             }
                         }),
                         el( ToolbarButton, {
                             icon: 'trash',
-                            label: 'Remove',
+                            label: __( 'Remove', 'exelearning' ),
                             onClick: onRemoveFile
                         })
                     )
@@ -204,7 +205,7 @@
                                 className: 'dashicons dashicons-media-default',
                                 style: { fontSize: '20px' }
                             }),
-                            el( 'span', { style: { fontWeight: '600' } }, attributes.title || 'eXeLearning Content' )
+                            el( 'span', { style: { fontWeight: '600' } }, attributes.title || __( 'eXeLearning Content', 'exelearning' ) )
                         ),
                         el( 'div', { style: { display: 'flex', gap: '5px' } },
                             el( Button, {
@@ -212,7 +213,7 @@
                                 isPrimary: true,
                                 onClick: onEditInExeLearning,
                                 style: { background: '#2271b1' }
-                            }, 'Edit in eXeLearning' ),
+                            }, __( 'Edit in eXeLearning', 'exelearning' ) ),
                             el( MediaUpload, {
                                 onSelect: onSelectFile,
                                 allowedTypes: [ 'application/zip' ],
@@ -222,14 +223,14 @@
                                         isSmall: true,
                                         onClick: obj.open,
                                         style: { color: '#fff' }
-                                    }, 'Change' );
+                                    }, __( 'Change', 'exelearning' ) );
                                 }
                             }),
                             el( Button, {
                                 isSmall: true,
                                 isDestructive: true,
                                 onClick: onRemoveFile,
-                            }, 'Remove' )
+                            }, __( 'Remove', 'exelearning' ) )
                         )
                     ),
                     // Content area
@@ -260,7 +261,7 @@
                                     borderRadius: '0 0 4px 4px',
                                     background: '#fff',
                                 },
-                                title: attributes.title || 'eXeLearning Content',
+                                title: attributes.title || __( 'eXeLearning Content', 'exelearning' ),
                             })
                         )
                         : el( 'div', {
@@ -273,9 +274,9 @@
                                 textAlign: 'center',
                             }
                         },
-                            el( 'p', { style: { margin: '0 0 10px', fontWeight: '600' } }, 'No preview available' ),
+                            el( 'p', { style: { margin: '0 0 10px', fontWeight: '600' } }, __( 'No preview available', 'exelearning' ) ),
                             el( 'p', { style: { margin: '0', fontSize: '13px', color: '#666' } },
-                                'This is an eXeLearning v2 source file. The content will be displayed on the frontend if exported HTML is available.'
+                                __( 'This is an eXeLearning v2 source file. The content will be displayed on the frontend if exported HTML is available.', 'exelearning' )
                             )
                         )
                 )

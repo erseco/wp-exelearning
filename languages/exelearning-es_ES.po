@@ -223,3 +223,48 @@ msgstr "Descargar archivo fuente"
 
 msgid "View fullscreen"
 msgstr "Ver a pantalla completa"
+
+msgid "eXeLearning Info"
+msgstr "Información de eXeLearning"
+
+msgid "Version:"
+msgstr "Versión:"
+
+msgid "Type:"
+msgstr "Tipo:"
+
+msgid "Preview in new tab"
+msgstr "Vista previa en nueva pestaña"
+
+msgid "eXeLearning Content"
+msgstr "Contenido eXeLearning"
+
+msgid "Upload or select a .elpx file from your media library"
+msgstr "Sube o selecciona un archivo .elpx de tu biblioteca de medios"
+
+msgid "Upload .elpx File"
+msgstr "Subir archivo .elpx"
+
+msgid "Media Library"
+msgstr "Biblioteca de medios"
+
+msgid "Height (px)"
+msgstr "Altura (px)"
+
+msgid "Change file"
+msgstr "Cambiar archivo"
+
+msgid "Remove"
+msgstr "Eliminar"
+
+msgid "Change"
+msgstr "Cambiar"
+
+msgid "This is an eXeLearning v2 source file. The content will be displayed on the frontend if exported HTML is available."
+msgstr "Este es un archivo fuente de eXeLearning v2. El contenido se mostrará en el frontend si hay HTML exportado disponible."
+
+msgid "source file"
+msgstr "archivo fuente"
+
+msgid "exported"
+msgstr "exportado"
