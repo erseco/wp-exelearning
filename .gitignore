@@ -61,3 +61,4 @@ test-results/*
 # But allow .zip files inside dist/static/bundles (needed for export)
 !dist/static/bundles/**/*.zip
 !dist/static/bundles/*.zip
+composer.phar

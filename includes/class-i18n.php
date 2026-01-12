@@ -12,11 +12,11 @@ if ( ! defined( 'WPINC' ) ) {
 }
 
 /**
- * Class ExeLearning_i18n.
+ * Class ExeLearning_I18n.
  *
  * Manages loading of plugin text domain.
  */
-class ExeLearning_i18n {
+class ExeLearning_I18n {
 
 	/**
 	 * Loads the plugin text domain for translation.

@@ -25,7 +25,7 @@ class ExeLearning_Elp_Upload_Handler {
 		add_filter( 'wp_handle_upload', array( $this, 'process_elp_upload' ) );
 		add_action( 'delete_attachment', array( $this, 'exelearning_delete_extracted_folder' ) );
 
-		add_action( 'add_attachment', array( $this, 'save_elp_metadata' ) ); // Nuevo hook para guardar metadatos
+		add_action( 'add_attachment', array( $this, 'save_elp_metadata' ) );
 	}
 
 	/**
@@ -65,7 +65,10 @@ class ExeLearning_Elp_Upload_Handler {
 			return new WP_Error( 'mkdir_failed', 'Failed to create directory for extracted files.' );
 		}
 
-		// Parse and validate the file
+		// Create security .htaccess to block direct access.
+		$this->create_security_htaccess();
+
+		// Parse and validate the file.
 		try {
 			$parser = new Exelearning\ELPParser( $file );
 			$parser->extract( $destination );
@@ -74,11 +77,11 @@ class ExeLearning_Elp_Upload_Handler {
 			$has_preview = file_exists( $destination . 'index.html' );
 
 			$post_data = array(
-				'post_excerpt' => $parser->getTitle(),     // Title va al caption
-				'post_content' => $parser->getDescription(), // Description al content
+				'post_excerpt' => $parser->getTitle(),       // Title goes to caption.
+				'post_content' => $parser->getDescription(), // Description goes to content.
 			);
 
-			// Guardar metadatos en un transitorio
+			// Store metadata in a transient for later use.
 			$metadata = array(
 				'_exelearning_title'         => $parser->getTitle(),
 				'_exelearning_description'   => $parser->getDescription(),
@@ -107,13 +110,13 @@ class ExeLearning_Elp_Upload_Handler {
 		}
 
 		// Optionally, remove the original .elp file.
-		// @unlink( $file );
+		// Example: unlink( $file ).
 
 		return $upload;
 	}
 
 	/**
-	 * Guarda los metadatos del .elp en el attachment.
+	 * Saves ELP metadata to the attachment.
 	 *
 	 * @param int $attachment_id Attachment ID.
 	 */
@@ -132,7 +135,7 @@ class ExeLearning_Elp_Upload_Handler {
 		$data          = get_transient( $transient_key );
 
 		if ( $data ) {
-			// Actualizar los campos principales del attachment
+			// Update main attachment fields.
 			wp_update_post(
 				array_merge(
 					array( 'ID' => $attachment_id ),
@@ -140,7 +143,7 @@ class ExeLearning_Elp_Upload_Handler {
 				)
 			);
 
-			// Guardar los metadatos adicionales
+			// Save additional metadata.
 			foreach ( $data['metadata'] as $key => $value ) {
 				update_post_meta( $attachment_id, $key, $value );
 			}
@@ -165,6 +168,7 @@ class ExeLearning_Elp_Upload_Handler {
 			foreach ( $files as $file ) {
 				$this->exelearning_recursive_delete( $dir . DIRECTORY_SEPARATOR . $file );
 			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Direct filesystem access needed for cleanup.
 			rmdir( $dir );
 		}
 	}
@@ -185,5 +189,45 @@ class ExeLearning_Elp_Upload_Handler {
 				$this->exelearning_recursive_delete( $full_path );
 			}
 		}
+	}
+
+	/**
+	 * Creates a security .htaccess file to block direct access to extracted content.
+	 *
+	 * All content must be served through the secure proxy controller.
+	 */
+	private function create_security_htaccess() {
+		$upload_dir    = wp_upload_dir();
+		$htaccess_path = trailingslashit( $upload_dir['basedir'] ) . 'exelearning/.htaccess';
+
+		// Only create if it doesn't exist.
+		if ( file_exists( $htaccess_path ) ) {
+			return;
+		}
+
+		$htaccess_content = <<<'HTACCESS'
+# Security: Block direct access to eXeLearning extracted content
+# All content must be served through the secure proxy controller
+
+# Deny all direct access
+<IfModule mod_authz_core.c>
+    # Apache 2.4+
+    Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+    # Apache 2.2
+    Order deny,allow
+    Deny from all
+</IfModule>
+
+# Alternative: return 403 for all requests
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^ - [F,L]
+</IfModule>
+HTACCESS;
+
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+		file_put_contents( $htaccess_path, $htaccess_content );
 	}
 }

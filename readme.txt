@@ -2,7 +2,7 @@
 Contributors: intef
 Tags: elearning, education, elp, exelearning, learning
 Requires at least: 6.1
-Tested up to: 6.4
+Tested up to: 6.7
 Stable tag: 0.0.0
 Requires PHP: 8.0
 License: GPLv3 or later

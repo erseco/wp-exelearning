@@ -1,12 +1,12 @@
 jQuery( document ).ready( function( $ ) {
 
-    // Función para reemplazar el thumbnail con un iframe de previsualización
+    // Function to replace thumbnail with a preview iframe
     function replaceElpThumbnail() {
         $( '.attachment-preview.type-application' ).each( function() {
             var $preview = $( this );
             var $thumbnail = $preview.find( '.thumbnail' );
 
-            // Verificar si ya fue procesado
+            // Check if already processed
             if ( $thumbnail.hasClass( 'exelearning-preview-added' ) || $thumbnail.hasClass( 'exelearning-no-preview' ) ) {
                 return;
             }
@@ -37,10 +37,10 @@ jQuery( document ).ready( function( $ ) {
                 return;
             }
 
-            // Marcar como procesado
+            // Mark as processed
             $thumbnail.addClass( 'exelearning-preview-added' );
 
-            // Reemplazar el contenido del thumbnail con un iframe escalado (zoom out)
+            // Replace thumbnail content with a scaled iframe (zoom out)
             // 4:3 aspect ratio screenshot-like thumbnail
             var thumbW = 120;
             var thumbH = 90;
@@ -64,12 +64,14 @@ jQuery( document ).ready( function( $ ) {
                     'pointer-events: none; ' +
                     'transform: scale(' + thumbScale + '); ' +
                     'transform-origin: 0 0;" ' +
-                'scrolling="no"></iframe>'
+                'scrolling="no" ' +
+                'sandbox="allow-scripts allow-same-origin" ' +
+                'referrerpolicy="no-referrer"></iframe>'
             );
         });
     }
 
-    // Función para añadir previsualización en el panel de detalles del attachment
+    // Function to add preview in the attachment details panel
     function addElpPreviewToDetails() {
         var $detailsThumbnail = $( '.attachment-details .thumbnail' );
 
@@ -134,7 +136,7 @@ jQuery( document ).ready( function( $ ) {
         // Marcar como procesado
         $detailsThumbnail.addClass( 'exelearning-details-preview-added' );
 
-        // Reemplazar la imagen con un iframe escalado (zoom out)
+        // Replace image with a scaled iframe (zoom out)
         // Container 4:3 aspect ratio for proper preview
         var containerWidth = 320;
         var containerHeight = 240;
@@ -169,7 +171,9 @@ jQuery( document ).ready( function( $ ) {
                         'transform: scale(' + scale + '); ' +
                         'transform-origin: 0 0; ' +
                         'pointer-events: none;" ' +
-                    'scrolling="no"></iframe>' +
+                    'scrolling="no" ' +
+                    'sandbox="allow-scripts allow-same-origin" ' +
+                    'referrerpolicy="no-referrer"></iframe>' +
             '</div>'
         );
 
@@ -197,7 +201,7 @@ jQuery( document ).ready( function( $ ) {
             $insertPoint = $previewLink;
         }
 
-        // Añadir metadatos at the end (after buttons)
+        // Add metadata at the end (after buttons)
         if ( metaHtml ) {
             var $meta = $( metaHtml );
             $insertPoint.after( $meta );
@@ -372,7 +376,7 @@ jQuery( document ).ready( function( $ ) {
         $actions.prepend( $editButton );
     }
 
-    // Observar cambios en el DOM para detectar cuando se abren modales
+    // Observe DOM changes to detect when modals are opened
     var observer = new MutationObserver( function( mutations ) {
         replaceElpThumbnail();
         addElpPreviewToDetails();
@@ -384,7 +388,7 @@ jQuery( document ).ready( function( $ ) {
         subtree: true
     });
 
-    // Ejecutar también cuando el modal se abre
+    // Also run when the modal opens
     if ( wp.media ) {
         wp.media.view.Modal.prototype.on( 'open', function() {
             setTimeout( function() {

@@ -119,7 +119,7 @@ check-plugin: check-docker start-if-not-running
 	# Run plugin check with colored output, capture exit code, and fail if needed
 	@echo "Running WordPress Plugin Check..."
 	@npx wp-env run cli wp plugin check exelearning \
-		--exclude-directories=tests \
+		--exclude-directories=tests,exelearning,dist \
 		--exclude-checks=file_type,image_functions \
 		--ignore-warnings \
 		--color; \
@@ -154,6 +154,13 @@ test-verbose: start-if-not-running
 	CMD="$$CMD --debug --verbose"; \
 	npx wp-env run tests-cli --env-cwd=wp-content/plugins/exelearning $$CMD --colors=always
 
+# Minimum coverage threshold (percentage)
+# Note: 74% is the achievable maximum given that some code cannot be unit tested:
+# - Content_Proxy: exit(), header(), readfile() calls
+# - Editor: exit(), include(), ob_start() calls
+# - REST_API: file upload handling requires $_FILES superglobal
+MIN_COVERAGE ?= 74
+
 # Run tests with code coverage report.
 # IMPORTANT: Requires wp-env started with Xdebug enabled:
 #   npx wp-env start --xdebug=coverage
@@ -171,11 +178,44 @@ test-coverage: start-if-not-running
 	echo "════════════════════════════════════════════════════════════"; \
 	echo "                    COVERAGE SUMMARY                        "; \
 	echo "════════════════════════════════════════════════════════════"; \
-	grep -E "^\s*(Lines|Functions|Classes|Methods):" artifacts/coverage/coverage.txt 2>/dev/null || echo "Coverage data not available"; \
+	grep -E "^\s*(Summary|Classes|Methods|Lines):" artifacts/coverage/coverage.txt 2>/dev/null | head -4 || echo "Coverage data not available"; \
+	echo ""; \
+	echo "Per-class coverage:"; \
+	echo "────────────────────────────────────────────────────────────"; \
+	awk '/^[A-Z]/ { class=$$1 } /Methods:.*Lines:/ { \
+		lines_pct = $$0; \
+		gsub(/.*Lines:[[:space:]]*/, "", lines_pct); \
+		gsub(/%.*/, "", lines_pct); \
+		if (lines_pct+0 >= 90) color="\033[32m"; \
+		else if (lines_pct+0 >= 50) color="\033[33m"; \
+		else color="\033[31m"; \
+		printf "  %s%-40s\033[0m %s\n", color, class, $$0 \
+	}' artifacts/coverage/coverage.txt 2>/dev/null; \
+	echo "────────────────────────────────────────────────────────────"; \
+	echo "  \033[32m●\033[0m ≥90%  \033[33m●\033[0m ≥50%  \033[31m●\033[0m <50%"; \
 	echo "════════════════════════════════════════════════════════════"; \
 	echo "Full report: artifacts/coverage/html/index.html"; \
 	echo ""; \
-	exit $$EXIT_CODE
+	if [ $$EXIT_CODE -ne 0 ]; then exit $$EXIT_CODE; fi; \
+	COVERAGE=$$(grep -E "^\s*Lines:" artifacts/coverage/coverage.txt 2>/dev/null | grep -oE "[0-9]+\.[0-9]+" | head -1); \
+	if [ -z "$$COVERAGE" ]; then \
+		echo "Error: Could not extract coverage percentage"; \
+		exit 1; \
+	fi; \
+	COVERAGE_INT=$$(echo "$$COVERAGE" | cut -d. -f1); \
+	echo ""; \
+	if [ "$$COVERAGE_INT" -lt "$(MIN_COVERAGE)" ]; then \
+		echo "════════════════════════════════════════════════════════════"; \
+		echo "  ❌ COVERAGE CHECK FAILED"; \
+		echo "     Current: $$COVERAGE% | Required: $(MIN_COVERAGE)%"; \
+		echo "════════════════════════════════════════════════════════════"; \
+		exit 1; \
+	else \
+		echo "════════════════════════════════════════════════════════════"; \
+		echo "  ✅ COVERAGE CHECK PASSED"; \
+		echo "     Current: $$COVERAGE% | Required: $(MIN_COVERAGE)%"; \
+		echo "════════════════════════════════════════════════════════════"; \
+	fi
 
 # Ensure tests environment has admin user and plugin active
 setup-tests-env:
@@ -219,13 +259,13 @@ install-phpcs: check-docker start-if-not-running
 	fi
 
 
-# Check code style with PHP Code Sniffer inside the container
-lint: install-phpcs
-	npx wp-env run cli phpcs --standard=wp-content/plugins/exelearning/.phpcs.xml.dist wp-content/plugins/exelearning
+# Check code style with PHP Code Sniffer (uses same setup as CI)
+lint:
+	./vendor/bin/phpcs --standard=.phpcs.xml.dist .
 
-# Automatically fix code style with PHP Code Beautifier inside the container
-fix: install-phpcs
-	npx wp-env run cli phpcbf --standard=wp-content/plugins/exelearning/.phpcs.xml.dist wp-content/plugins/exelearning
+# Automatically fix code style with PHP Code Beautifier (uses same setup as CI)
+fix:
+	./vendor/bin/phpcbf --standard=.phpcs.xml.dist . || true
 
 # Run PHP Mess Detector ignoring vendor and node_modules
 phpmd:

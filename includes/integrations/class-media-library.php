@@ -66,10 +66,10 @@ class ExeLearning_Media_Library {
 	 *
 	 * @param array   $response The attachment response array.
 	 * @param WP_Post $post     The attachment post object.
-	 * @param array   $meta     The attachment metadata (unused).
+	 * @param array   $meta     The attachment metadata (unused, required by WordPress filter API).
 	 * @return array Modified response array.
 	 */
-	public function add_elp_metadata_to_js( $response, $post, $meta ) {
+	public function add_elp_metadata_to_js( $response, $post, $meta ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- Required by WordPress filter API.
 		unset( $meta ); // Unused parameter.
 
 		// Early return if post is not valid.
@@ -93,8 +93,7 @@ class ExeLearning_Media_Library {
 
 			// Only include preview_url if the file has index.html (version 3 files).
 			if ( '1' === $has_preview ) {
-				$upload_dir                             = wp_upload_dir();
-				$response['exelearning']['preview_url'] = $upload_dir['baseurl'] . '/exelearning/' . $extracted_hash . '/index.html';
+				$response['exelearning']['preview_url'] = ExeLearning_Content_Proxy::get_proxy_url( $extracted_hash );
 			}
 		}
 
@@ -149,11 +148,10 @@ class ExeLearning_Media_Library {
 
 		if ( $directory ) {
 			if ( '1' === $has_preview ) {
-				$upload_dir  = wp_upload_dir();
-				$preview_url = $upload_dir['baseurl'] . '/exelearning/' . $directory . '/index.html';
+				$preview_url = ExeLearning_Content_Proxy::get_proxy_url( $directory );
 
 				echo '<div style="width: 100%; height: 600px; overflow: auto; margin-bottom: 15px;">';
-				echo '<iframe src="' . esc_url( $preview_url ) . '" style="width: 100%; height: 100%; border: none;"></iframe>';
+				echo '<iframe src="' . esc_url( $preview_url ) . '" style="width: 100%; height: 100%; border: none;" sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox" referrerpolicy="no-referrer"></iframe>';
 				echo '</div>';
 				echo '<p><a href="' . esc_url( $preview_url ) . '" target="_blank" rel="noopener noreferrer">' . esc_html__( 'Open in new tab', 'exelearning' ) . '</a></p>';
 			} else {

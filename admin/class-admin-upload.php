@@ -42,7 +42,7 @@ class ExeLearning_Admin_Upload {
 		}
 
 		// Check for file upload errors.
-		if ( ! isset( $_FILES['exelearning_file'] ) || UPLOAD_ERR_OK !== $_FILES['exelearning_file']['error'] ) {
+		if ( ! isset( $_FILES['exelearning_file'], $_FILES['exelearning_file']['error'] ) || UPLOAD_ERR_OK !== $_FILES['exelearning_file']['error'] ) {
 			wp_safe_redirect( add_query_arg( 'message', 'upload_error', wp_get_referer() ) );
 			exit;
 		}

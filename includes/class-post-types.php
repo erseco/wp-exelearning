@@ -35,6 +35,6 @@ class ExeLearning_Post_Types {
 		// - _exelearning_license
 		// - _exelearning_language
 		// - _exelearning_resource_type
-		// - _exelearning_extracted (hash to extracted folder)
+		// - _exelearning_extracted (hash to extracted folder).
 	}
 }

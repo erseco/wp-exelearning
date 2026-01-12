@@ -23,7 +23,7 @@ class ExeLearning_Activator {
 	 */
 	public static function activate() {
 		// Activation code goes here.
-		// For instance, flush rewrite rules if needed:
-		// flush_rewrite_rules();
+		// For instance, flush rewrite rules if needed.
+		// Example: flush_rewrite_rules().
 	}
 }

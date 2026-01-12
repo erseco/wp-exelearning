@@ -1,6 +1,6 @@
 <?php
 /**
- * eXeLearning WordPress Plugin.
+ * Plugin for eXeLearning WordPress integration.
  *
  * @link https://github.com/exelearning/wp-exelearning
  * @package Exelearning
@@ -62,6 +62,7 @@ require_once EXELEARNING_PLUGIN_DIR . 'includes/integrations/class-media-library
 // Editor classes.
 require_once EXELEARNING_PLUGIN_DIR . 'includes/class-exelearning-editor.php';
 require_once EXELEARNING_PLUGIN_DIR . 'includes/class-exelearning-rest-api.php';
+require_once EXELEARNING_PLUGIN_DIR . 'includes/class-content-proxy.php';
 
 // Include the ELPParser library and the ELP File Service.
 require_once EXELEARNING_PLUGIN_DIR . 'includes/vendor/exelearning/elp-parser/src/ElpParser.php';
