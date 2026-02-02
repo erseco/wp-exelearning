@@ -268,3 +268,11 @@ msgstr "archivo fuente"
 
 msgid "exported"
 msgstr "exportado"
+
+#. translators: %1$s: line break, %2$s/%3$s: link tags, %4$s/%5$s: code tags
+#, php-format
+msgid "eXeLearning editor not found. You appear to have cloned this repository directly. Please either: %1$s1. Download the plugin from %2$sGitHub Releases%3$s, or %1$s2. Build the editor with: %4$smake build-editor%5$s"
+msgstr "Editor de eXeLearning no encontrado. Parece que has clonado este repositorio directamente. Por favor: %1$s1. Descarga el plugin desde %2$sGitHub Releases%3$s, o %1$s2. Compila el editor con: %4$smake build-editor%5$s"
+
+msgid "eXeLearning editor files are missing. Please reinstall the plugin from the official release."
+msgstr "Faltan los archivos del editor de eXeLearning. Por favor, reinstala el plugin desde la versión oficial."
