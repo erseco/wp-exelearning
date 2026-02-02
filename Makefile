@@ -51,6 +51,7 @@ build-editor-no-update: check-bun
 	@echo "Building eXeLearning static editor (without submodule update)..."
 	cd exelearning && bun install && bun run build:static
 	rm -rf dist/static
+	mkdir -p dist
 	cp -r exelearning/dist/static dist/static
 	@echo "Static editor built at dist/static/"
 
