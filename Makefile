@@ -39,6 +39,7 @@ build-editor: check-bun update-submodule
 	cd exelearning && bun install && bun run build:static
 	@echo "Copying static build to plugin dist/static..."
 	rm -rf dist/static
+	mkdir -p dist
 	cp -r exelearning/dist/static dist/static
 	@echo ""
 	@echo "============================================"
