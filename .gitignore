@@ -55,10 +55,6 @@ public/style/workarea/*.css.map
 test-results/
 test-results/*
 
-# Built static editor - NOT ignored, needed for WordPress Playground
-# dist/static/
-
-# But allow .zip files inside dist/static/bundles (needed for export)
-!dist/static/bundles/**/*.zip
-!dist/static/bundles/*.zip
+# Built static editor - download from releases or build with `make build-editor`
+dist/static/
 composer.phar

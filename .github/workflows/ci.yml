@@ -39,26 +39,63 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
+        with:
+          submodules: recursive
 
-      # === BLUEPRINT / PLAYGROUND SETUP (runs first, no dependencies) ===
-      - name: Set branch name for blueprint URL
+      # === BUILD STATIC EDITOR FOR PLAYGROUND ===
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Build static editor
+        run: make build-editor-no-update
+
+      - name: Create plugin ZIP for Playground
         run: |
-          if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
-            echo "BRANCH_NAME=${GITHUB_HEAD_REF}" >> $GITHUB_ENV
-          else
-            echo "BRANCH_NAME=${GITHUB_REF_NAME}" >> $GITHUB_ENV
-          fi
+          zip -r plugin-with-editor.zip . \
+            -x ".git/*" \
+            -x "exelearning/.git/*" \
+            -x "node_modules/*" \
+            -x "exelearning/node_modules/*" \
+            -x "vendor/*" \
+            -x "*.log"
 
-      - name: Patch and encode blueprint
-        run: |
-          sed -i "s|refs/heads/main.zip|refs/heads/${BRANCH_NAME}.zip|g" blueprint.json
-          echo "BASE64_BLUEPRINT=$(base64 -w 0 blueprint.json)" >> $GITHUB_ENV
+      - name: Upload plugin artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: plugin-with-editor
+          path: plugin-with-editor.zip
+          retention-days: 7
 
+      # === BLUEPRINT / PLAYGROUND SETUP ===
       - name: Create Playground deployment
         uses: actions/github-script@v8
         with:
           script: |
-            const playgroundUrl = `https://playground.wordpress.net/#${process.env.BASE64_BLUEPRINT}`;
+            // Get the artifact download URL via nightly.link
+            const artifactUrl = `https://nightly.link/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}/plugin-with-editor.zip`;
+
+            // Create blueprint with artifact
+            const blueprint = {
+              landingPage: "/wp-admin/upload.php",
+              preferredVersions: { php: "8.3", wp: "latest" },
+              steps: [
+                {
+                  step: "installPlugin",
+                  pluginData: {
+                    resource: "url",
+                    url: artifactUrl
+                  }
+                },
+                {
+                  step: "login",
+                  username: "admin",
+                  password: "password"
+                }
+              ]
+            };
+
+            const encodedBlueprint = Buffer.from(JSON.stringify(blueprint)).toString('base64');
+            const playgroundUrl = `https://playground.wordpress.net/#${encodedBlueprint}`;
 
             // Add to summary
             core.summary.addLink('Test in WP Playground', playgroundUrl);

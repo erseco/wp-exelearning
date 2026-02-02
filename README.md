@@ -28,9 +28,23 @@ Try eXeLearning instantly in your browser using WordPress Playground! Note that 
 
 ## Installation
 
+### From Releases (Recommended)
+
 1. **Download the latest release** from the [GitHub Releases page](https://github.com/erseco/wp-exelearning/releases).
-2. Upload the downloaded ZIP file to your WordPress site via **Plugins > Add New > Upload Plugin**.
-3. Activate the plugin through the 'Plugins' menu in WordPress.
+2. Upload the downloaded ZIP file via **Plugins > Add New > Upload Plugin**.
+3. Activate the plugin.
+
+### From Source (Development)
+
+If you clone the repository directly, you must build the eXeLearning editor:
+
+```bash
+git clone --recursive https://github.com/erseco/wp-exelearning.git
+cd wp-exelearning
+make build-editor
+```
+
+> **Important:** Cloning the repository without building the editor will show version `0.0.0` and the editor will not work. Always download from [Releases](https://github.com/erseco/wp-exelearning/releases) for production use.
 
 ## Usage
 

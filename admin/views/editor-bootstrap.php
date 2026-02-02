@@ -64,10 +64,29 @@ $user_id   = $user_data->ID ? $user_data->ID : 0;
 // Check if static editor exists.
 $static_index = EXELEARNING_PLUGIN_DIR . 'dist/static/index.html';
 if ( ! file_exists( $static_index ) ) {
+	$is_dev_install = ( '0.0.0' === EXELEARNING_VERSION );
+
+	if ( $is_dev_install ) {
+		$message = sprintf(
+			/* translators: %1$s: line break, %2$s/%3$s: link tags, %4$s/%5$s: code tags */
+			__( 'eXeLearning editor not found. You appear to have cloned this repository directly. Please either: %1$s1. Download the plugin from %2$sGitHub Releases%3$s, or %1$s2. Build the editor with: %4$smake build-editor%5$s', 'exelearning' ),
+			'<br>',
+			'<a href="https://github.com/erseco/wp-exelearning/releases">',
+			'</a>',
+			'<code>',
+			'</code>'
+		);
+	} else {
+		$message = __( 'eXeLearning editor files are missing. Please reinstall the plugin from the official release.', 'exelearning' );
+	}
+
 	wp_die(
-		esc_html__( 'eXeLearning static editor not found. Please run "make build-editor" in the plugin directory.', 'exelearning' ),
+		wp_kses_post( $message ),
 		esc_html__( 'Editor Missing', 'exelearning' ),
-		array( 'response' => 500 )
+		array(
+			'response'  => 500,
+			'back_link' => true,
+		)
 	);
 }
 

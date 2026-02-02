@@ -18,8 +18,9 @@ check-bun:
 # Update submodule to correct branch
 update-submodule:
 	@echo "Updating eXeLearning submodule..."
-	git submodule update --init --remote exelearning
-	cd exelearning && git checkout release/3.1-embedable-version-refactor
+	git submodule update --init exelearning
+	cd exelearning && git fetch origin main && git checkout origin/main
+	@echo "Submodule updated to main branch."
 
 # Build static version of eXeLearning editor
 build-editor: check-bun update-submodule
