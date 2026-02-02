@@ -136,22 +136,159 @@ $wp_config_script = sprintf(
         window.__EXE_STATIC_MODE__ = true;
         window.__EXE_WP_MODE__ = true;
 
-        // Disable Service Worker in WordPress mode to prevent path conflicts
-        // and caching issues (especially in WordPress Playground)
+        // ============================================================
+        // FIX 1: Set basePath for ResourceFetcher BEFORE app loads
+        // ============================================================
+        // The ResourceFetcher constructs URLs using window.eXeLearning.config.basePath
+        // In WordPress, the auto-detected basePath is wrong (/wp-admin/admin.php)
+        // We need to force it to the actual editor location
+        window.__EXE_FORCE_BASE_PATH__ = window.__WP_EXE_CONFIG__.editorBaseUrl;
+
+        // Intercept when the app sets eXeLearning.config and fix basePath
+        (function() {
+            var _eXeLearning = null;
+            Object.defineProperty(window, "eXeLearning", {
+                configurable: true,
+                enumerable: true,
+                get: function() { return _eXeLearning; },
+                set: function(val) {
+                    _eXeLearning = val;
+                    // When app sets eXeLearning object, watch for config changes
+                    if (val && typeof val === "object") {
+                        var _config = val.config;
+                        Object.defineProperty(val, "config", {
+                            configurable: true,
+                            enumerable: true,
+                            get: function() { return _config; },
+                            set: function(configVal) {
+                                _config = configVal;
+                                // Fix basePath whenever config is set
+                                if (_config && typeof _config === "object") {
+                                    var correctBasePath = window.__WP_EXE_CONFIG__.editorBaseUrl;
+                                    if (_config.basePath !== correctBasePath) {
+                                        console.log("[WP Mode] Fixing basePath:", _config.basePath, "->", correctBasePath);
+                                        _config.basePath = correctBasePath;
+                                    }
+                                }
+                            }
+                        });
+                        // Also fix if config already exists
+                        if (_config && typeof _config === "object") {
+                            var correctBasePath = window.__WP_EXE_CONFIG__.editorBaseUrl;
+                            if (_config.basePath !== correctBasePath) {
+                                console.log("[WP Mode] Fixing existing basePath:", _config.basePath, "->", correctBasePath);
+                                _config.basePath = correctBasePath;
+                            }
+                        }
+                    }
+                }
+            });
+        })();
+
+        // ============================================================
+        // FIX 2: Service Worker handling for Preview Panel
+        // ============================================================
+        // The preview panel needs SW to serve generated HTML, but WordPress
+        // paths cause scope issues. We use two strategies:
+        // A) Override SW register to use correct scope/URL
+        // B) Force blob URL fallback if SW still does not work
         if ("serviceWorker" in navigator) {
-            // Prevent new service worker registrations
-            navigator.serviceWorker.register = function() {
-                console.log("[WP Mode] Service worker registration disabled");
-                return Promise.resolve({ scope: "" });
+            // Store original register function
+            var originalRegister = navigator.serviceWorker.register.bind(navigator.serviceWorker);
+
+            // Override to fix the scope for WordPress
+            navigator.serviceWorker.register = function(scriptURL, options) {
+                options = options || {};
+                var baseUrl = window.__WP_EXE_CONFIG__.editorBaseUrl;
+                var fixedScriptURL = scriptURL;
+
+                // If relative path, make it absolute to the editor base
+                if (typeof scriptURL === "string") {
+                    if (scriptURL.startsWith("./")) {
+                        fixedScriptURL = baseUrl + "/" + scriptURL.substring(2);
+                    } else if (scriptURL.startsWith("/") && !scriptURL.startsWith(baseUrl)) {
+                        // Relative to root but not our base - fix it
+                        fixedScriptURL = baseUrl + scriptURL;
+                    } else if (!scriptURL.startsWith("http") && !scriptURL.startsWith("/")) {
+                        // Plain relative path
+                        fixedScriptURL = baseUrl + "/" + scriptURL;
+                    }
+                }
+
+                // Force scope to editor base URL
+                var fixedOptions = Object.assign({}, options, {
+                    scope: baseUrl + "/"
+                });
+
+                console.log("[WP Mode] SW register:", fixedScriptURL, "scope:", fixedOptions.scope);
+                return originalRegister(fixedScriptURL, fixedOptions).catch(function(error) {
+                    // If SW registration fails (scope issues), log and continue
+                    // The preview panel has a blob URL fallback
+                    console.warn("[WP Mode] SW registration failed, preview will use blob fallback:", error.message);
+                    // Return a mock ServiceWorkerRegistration object with required methods
+                    return Promise.resolve({
+                        scope: baseUrl + "/",
+                        active: null,
+                        installing: null,
+                        waiting: null,
+                        navigationPreload: { enable: function() {}, disable: function() {}, setHeaderValue: function() {}, getState: function() { return Promise.resolve(); } },
+                        onupdatefound: null,
+                        addEventListener: function() {},
+                        removeEventListener: function() {},
+                        dispatchEvent: function() { return false; },
+                        update: function() { return Promise.resolve(); },
+                        unregister: function() { return Promise.resolve(true); },
+                        showNotification: function() { return Promise.resolve(); },
+                        getNotifications: function() { return Promise.resolve([]); }
+                    });
+                });
             };
-            // Unregister any existing service workers
+
+            // Unregister any existing service workers from wrong scopes
             navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                var editorBase = window.__WP_EXE_CONFIG__.editorBaseUrl;
                 registrations.forEach(function(registration) {
-                    registration.unregister();
-                    console.log("[WP Mode] Service worker unregistered");
+                    // Only unregister SWs that are NOT for our editor
+                    if (!registration.scope.includes("/dist/static/")) {
+                        registration.unregister();
+                        console.log("[WP Mode] Unregistered SW from wrong scope:", registration.scope);
+                    }
                 });
             });
         }
+
+        // FIX 2B: Force preview panel to use blob URL fallback
+        // This ensures preview works even if SW fails
+        window.__EXE_PREVIEW_USE_BLOB__ = true;
+
+        // Patch preview panel after app loads to force blob fallback
+        document.addEventListener("DOMContentLoaded", function() {
+            var attempts = 0;
+            var maxAttempts = 60; // Try for 30 seconds
+            var checkPreview = setInterval(function() {
+                attempts++;
+                try {
+                    // Try to find the preview panel and override its SW check
+                    var app = window.eXeLearning && window.eXeLearning.app;
+                    var workarea = app && app.workarea;
+                    var previewPanel = workarea && workarea.previewPanel;
+
+                    if (previewPanel && typeof previewPanel.isServiceWorkerPreviewAvailable === "function") {
+                        // Override to always return false, forcing blob URL fallback
+                        previewPanel.isServiceWorkerPreviewAvailable = function() {
+                            return false;
+                        };
+                        console.log("[WP Mode] Preview panel patched to use blob URL fallback");
+                        clearInterval(checkPreview);
+                    } else if (attempts >= maxAttempts) {
+                        console.log("[WP Mode] Preview panel not found after timeout, may use SW if available");
+                        clearInterval(checkPreview);
+                    }
+                } catch (e) {
+                    // Ignore errors during detection
+                }
+            }, 500);
+        });
 
         // Workaround for WordPress Playground: Handle 404 errors for CSS/JS files gracefully
         // Playground sometimes fails to serve deeply nested static files from plugins

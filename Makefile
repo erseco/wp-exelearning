@@ -15,9 +15,20 @@ check-bun:
 		exit 1; \
 	}
 
-# Update submodule to correct branch
+# Initialize submodule if not already initialized (does not change branch if already present)
 update-submodule:
-	@echo "Updating eXeLearning submodule..."
+	@if [ ! -f exelearning/package.json ]; then \
+		echo "Initializing eXeLearning submodule..."; \
+		git submodule update --init exelearning; \
+		cd exelearning && git fetch origin main && git checkout origin/main; \
+		echo "Submodule initialized to main branch."; \
+	else \
+		echo "Submodule already initialized, skipping update (use 'make force-update-submodule' to force)."; \
+	fi
+
+# Force update submodule to main branch (use when you want to explicitly update)
+force-update-submodule:
+	@echo "Force updating eXeLearning submodule to origin/main..."
 	git submodule update --init exelearning
 	cd exelearning && git fetch origin main && git checkout origin/main
 	@echo "Submodule updated to main branch."
@@ -352,7 +363,8 @@ help:
 	@echo "eXeLearning Static Editor:"
 	@echo "  build-editor       - Build static eXeLearning editor from submodule"
 	@echo "  build-editor-no-update - Build without updating submodule (for CI/CD)"
-	@echo "  update-submodule   - Update eXeLearning submodule to correct branch"
+	@echo "  update-submodule   - Initialize submodule if not present (safe, does not change existing branch)"
+	@echo "  force-update-submodule - Force update submodule to origin/main"
 	@echo "  clean-editor       - Remove static editor build and node_modules"
 	@echo ""
 	@echo "General:"

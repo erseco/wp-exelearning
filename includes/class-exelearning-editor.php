@@ -148,8 +148,8 @@ class ExeLearning_Editor {
 	 * @param string $hook Current admin page hook.
 	 */
 	public function enqueue_editor_scripts( $hook ) {
-		// Only load on media pages and post edit screens.
-		$allowed_hooks = array( 'upload.php', 'post.php', 'post-new.php', 'media.php' );
+		// Only load on media pages, post edit screens, and site editor.
+		$allowed_hooks = array( 'upload.php', 'post.php', 'post-new.php', 'media.php', 'site-editor.php' );
 
 		if ( ! in_array( $hook, $allowed_hooks, true ) && ! did_action( 'wp_enqueue_media' ) ) {
 			return;
@@ -218,8 +218,9 @@ class ExeLearning_Editor {
 	public function render_editor_modal_container() {
 		$screen = get_current_screen();
 
-		// Only on relevant screens.
-		if ( ! $screen || ! in_array( $screen->base, array( 'upload', 'post', 'attachment' ), true ) ) {
+		// Only on relevant screens (media library, post editor, site editor).
+		$allowed_screens = array( 'upload', 'post', 'attachment', 'site-editor' );
+		if ( ! $screen || ! in_array( $screen->base, $allowed_screens, true ) ) {
 			return;
 		}
 		?>
