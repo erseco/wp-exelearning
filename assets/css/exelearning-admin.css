@@ -37,23 +37,82 @@
     opacity: 1;
 }
 
-/* Media Library - eXeLearning preview styles */
-.attachment-preview .thumbnail.exelearning-preview-added {
-    padding: 0;
-    background: #fff;
+/* Media Library Grid View - eXeLearning preview styles */
+/* Force 4:3 aspect ratio for thumbnails in the grid view */
+.attachment.exelearning-attachment .attachment-preview {
+    padding-bottom: 75% !important; /* 4:3 aspect ratio */
+    height: 0 !important;
+    position: relative !important;
+    overflow: hidden !important;
 }
 
-.attachment-preview .thumbnail.exelearning-preview-added iframe {
-    display: block;
+.attachment.exelearning-attachment .attachment-preview .thumbnail {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    padding: 0 !important;
+    background: #fff !important;
+    overflow: hidden !important;
+}
+
+.attachment.exelearning-attachment .attachment-preview .thumbnail .exelearning-preview-wrapper {
+    position: absolute;
+    top: 0;
+    left: 0;
     width: 100%;
     height: 100%;
-    min-height: 150px;
+    overflow: hidden;
+    background: #f5f5f5;
+    border-radius: 2px;
+}
+
+.attachment.exelearning-attachment .attachment-preview .thumbnail .exelearning-preview-wrapper iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
     border: none;
     pointer-events: none;
-    transform: scale(0.5);
-    transform-origin: top left;
-    width: 200%;
-    height: 200%;
+    /* Scale is set inline by JavaScript */
+}
+
+/* Hide the default icon for ELP files */
+.attachment.exelearning-attachment .attachment-preview .thumbnail .centered {
+    display: none !important;
+}
+
+/* Version badge styling */
+.attachment.exelearning-attachment .exelearning-version-badge {
+    position: absolute !important;
+    bottom: 5px !important;
+    left: 5px !important;
+    background: #0073aa !important;
+    color: #fff !important;
+    padding: 2px 6px !important;
+    border-radius: 3px !important;
+    font-size: 10px !important;
+    z-index: 10 !important;
+}
+
+/* Filename overlay on preview thumbnail */
+.attachment.exelearning-attachment .exelearning-filename-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+    color: #fff;
+    font-size: 11px;
+    padding: 15px 8px 6px 8px;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    z-index: 10;
+    line-height: 1.3;
 }
 
 /* Details panel preview */
@@ -61,12 +120,11 @@
     text-align: center;
 }
 
-.attachment-details .thumbnail.exelearning-details-preview-added iframe {
-    width: 100%;
-    min-height: 300px;
+.attachment-details .thumbnail.exelearning-details-preview-added .exelearning-preview-container {
+    background: #f5f5f5;
     border: 1px solid #ddd;
     border-radius: 4px;
-    background: #fff;
+    overflow: hidden;
 }
 
 .exelearning-preview-actions {

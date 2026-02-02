@@ -1,13 +1,18 @@
+/* eXeLearning Media Modal - Updated 2026-02-02 22:50 */
 jQuery( document ).ready( function( $ ) {
 
     // Localized strings from PHP (via wp_localize_script)
     var strings = window.exelearningMediaStrings || {};
+
+    // Cache buster to avoid stale iframe content
+    var cacheBuster = Date.now();
 
     // Function to replace thumbnail with a preview iframe
     function replaceElpThumbnail() {
         $( '.attachment-preview.type-application' ).each( function() {
             var $preview = $( this );
             var $thumbnail = $preview.find( '.thumbnail' );
+            var $attachment = $preview.closest( '.attachment' );
 
             // Check if already processed
             if ( $thumbnail.hasClass( 'exelearning-preview-added' ) || $thumbnail.hasClass( 'exelearning-no-preview' ) ) {
@@ -15,7 +20,7 @@ jQuery( document ).ready( function( $ ) {
             }
 
             // Buscar el modelo del attachment
-            var attachmentId = $preview.closest( '.attachment' ).data( 'id' );
+            var attachmentId = $attachment.data( 'id' );
             if ( ! attachmentId ) {
                 return;
             }
@@ -27,13 +32,16 @@ jQuery( document ).ready( function( $ ) {
 
             var metadata = attachment.get( 'exelearning' );
 
+            // Add class to parent for CSS targeting
+            $attachment.addClass( 'exelearning-attachment' );
+
             // Check if this file has a preview (version 3 files with index.html)
             if ( ! metadata.has_preview || ! metadata.preview_url ) {
                 // Mark as processed but show version info instead
                 $thumbnail.addClass( 'exelearning-no-preview' );
                 var versionText = metadata.version === 2 ? 'v2 (source)' : 'v' + metadata.version;
                 $thumbnail.find( '.centered' ).after(
-                    '<div class="exelearning-version-badge" style="position: absolute; bottom: 5px; left: 5px; background: #0073aa; color: #fff; padding: 2px 6px; border-radius: 3px; font-size: 10px;">' +
+                    '<div class="exelearning-version-badge">' +
                     'eXe ' + versionText +
                     '</div>'
                 );
@@ -43,34 +51,39 @@ jQuery( document ).ready( function( $ ) {
             // Mark as processed
             $thumbnail.addClass( 'exelearning-preview-added' );
 
-            // Replace thumbnail content with a scaled iframe (zoom out)
-            // 4:3 aspect ratio screenshot-like thumbnail
-            var thumbW = 120;
-            var thumbH = 90;
-            var iframeW = 1200;
-            var iframeH = 900;
-            var thumbScale = thumbW / iframeW;
+            // Get filename for overlay
+            var filename = attachment.get( 'filename' ) || attachment.get( 'title' ) || '';
 
-            $thumbnail.css({
-                'overflow': 'hidden',
-                'position': 'relative',
-                'width': thumbW + 'px',
-                'height': thumbH + 'px',
-                'max-width': thumbW + 'px',
-                'max-height': thumbH + 'px'
-            }).html(
-                '<iframe src="' + metadata.preview_url + '" ' +
-                'style="' +
-                    'width: ' + iframeW + 'px; ' +
-                    'height: ' + iframeH + 'px; ' +
-                    'border: none; ' +
-                    'pointer-events: none; ' +
-                    'transform: scale(' + thumbScale + '); ' +
-                    'transform-origin: 0 0;" ' +
-                'scrolling="no" ' +
-                'sandbox="allow-scripts allow-same-origin" ' +
-                'referrerpolicy="no-referrer"></iframe>'
-            );
+            // Wait for the thumbnail to get its proper size from CSS (4:3 aspect ratio)
+            // Then calculate scale based on actual container size
+            setTimeout( function() {
+                var containerWidth = $thumbnail.width() || 200;
+                var containerHeight = $thumbnail.height() || 150;
+
+                // Iframe renders at full size, then scaled down
+                var iframeW = 1200;
+                var iframeH = 900;
+                var scale = Math.min( containerWidth / iframeW, containerHeight / iframeH );
+
+                // Create wrapper div with iframe and filename overlay
+                // Add cache buster to prevent stale content
+                var iframeSrc = metadata.preview_url + ( metadata.preview_url.indexOf( '?' ) > -1 ? '&' : '?' ) + '_cb=' + cacheBuster;
+
+                $thumbnail.html(
+                    '<div class="exelearning-preview-wrapper">' +
+                        '<iframe src="' + iframeSrc + '" ' +
+                        'style="' +
+                            'width: ' + iframeW + 'px; ' +
+                            'height: ' + iframeH + 'px; ' +
+                            'transform: scale(' + scale + '); ' +
+                            'transform-origin: 0 0;" ' +
+                        'scrolling="no" ' +
+                        'sandbox="allow-scripts allow-same-origin" ' +
+                        'referrerpolicy="no-referrer"></iframe>' +
+                    '</div>' +
+                    '<div class="exelearning-filename-overlay">' + filename + '</div>'
+                );
+            }, 50 );
         });
     }
 
@@ -87,13 +100,49 @@ jQuery( document ).ready( function( $ ) {
             return;
         }
 
-        // Obtener el attachment actual
+        // Try multiple ways to get the attachment
+        var attachment = null;
+        var attachmentId = null;
+
+        // Method 1: Try from selection
         var selection = wp.media.frame && wp.media.frame.state() && wp.media.frame.state().get( 'selection' );
-        if ( ! selection ) {
+        if ( selection && selection.first() ) {
+            attachment = selection.first();
+            attachmentId = attachment.get( 'id' );
+        }
+
+        // Method 2: Try from URL parameter 'item'
+        if ( ! attachmentId ) {
+            var urlParams = new URLSearchParams( window.location.search );
+            attachmentId = urlParams.get( 'item' );
+        }
+
+        // Method 3: Try from data attribute on details wrapper
+        if ( ! attachmentId ) {
+            var $wrapper = $detailsThumbnail.closest( '.attachment-details' );
+            if ( $wrapper.length > 0 && $wrapper.data( 'id' ) ) {
+                attachmentId = $wrapper.data( 'id' );
+            }
+        }
+
+        if ( ! attachmentId ) {
             return;
         }
 
-        var attachment = selection.first();
+        // Get attachment from wp.media if not already have it
+        if ( ! attachment || ! attachment.get( 'exelearning' ) ) {
+            attachment = wp.media.attachment( parseInt( attachmentId, 10 ) );
+
+            // If attachment data not loaded yet, fetch it
+            if ( ! attachment.get( 'id' ) ) {
+                attachment.fetch().done( function() {
+                    // Re-run after fetch completes
+                    setTimeout( addElpPreviewToDetails, 100 );
+                });
+                return;
+            }
+        }
+
         if ( ! attachment || ! attachment.get( 'exelearning' ) ) {
             return;
         }
@@ -157,6 +206,9 @@ jQuery( document ).ready( function( $ ) {
             'margin-bottom': '15px'
         });
 
+        // Add cache buster to prevent stale content
+        var detailsIframeSrc = metadata.preview_url + ( metadata.preview_url.indexOf( '?' ) > -1 ? '&' : '?' ) + '_cb=' + cacheBuster;
+
         $detailsThumbnail.html(
             '<div class="exelearning-preview-container" style="' +
                 'width: ' + containerWidth + 'px; ' +
@@ -166,7 +218,7 @@ jQuery( document ).ready( function( $ ) {
                 'border-radius: 4px; ' +
                 'background: #f5f5f5; ' +
                 'position: relative;">' +
-                '<iframe src="' + metadata.preview_url + '" ' +
+                '<iframe src="' + detailsIframeSrc + '" ' +
                     'style="' +
                         'width: ' + iframeWidth + 'px; ' +
                         'height: ' + iframeHeight + 'px; ' +
@@ -379,11 +431,16 @@ jQuery( document ).ready( function( $ ) {
         $actions.prepend( $editButton );
     }
 
-    // Observe DOM changes to detect when modals are opened
-    var observer = new MutationObserver( function( mutations ) {
+    // Run all update functions
+    function runAllUpdates() {
         replaceElpThumbnail();
         addElpPreviewToDetails();
         addEditButtonToAttachmentInfo();
+    }
+
+    // Observe DOM changes to detect when attachments are added
+    var observer = new MutationObserver( function() {
+        runAllUpdates();
     });
 
     observer.observe( document.body, {
@@ -394,16 +451,13 @@ jQuery( document ).ready( function( $ ) {
     // Also run when the modal opens
     if ( wp.media ) {
         wp.media.view.Modal.prototype.on( 'open', function() {
-            setTimeout( function() {
-                replaceElpThumbnail();
-                addElpPreviewToDetails();
-                addEditButtonToAttachmentInfo();
-            }, 100 );
+            setTimeout( runAllUpdates, 100 );
         });
     }
 
-    // Run on page load for the attachment edit page (upload.php with item parameter)
-    setTimeout( function() {
-        addEditButtonToAttachmentInfo();
-    }, 500 );
+    // Run on page load with multiple delays to catch async-loaded content
+    runAllUpdates();
+    setTimeout( runAllUpdates, 300 );
+    setTimeout( runAllUpdates, 800 );
+    setTimeout( runAllUpdates, 1500 );
 });

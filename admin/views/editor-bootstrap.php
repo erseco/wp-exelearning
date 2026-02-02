@@ -257,32 +257,89 @@ $wp_config_script = sprintf(
             });
         }
 
-        // FIX 2B: Force preview panel to use blob URL fallback
-        // This ensures preview works even if SW fails
-        window.__EXE_PREVIEW_USE_BLOB__ = true;
-
-        // Patch preview panel after app loads to force blob fallback
+        // FIX 2B: Override PreviewPanel.refresh() to use blob URL directly
+        // The original refresh() calls waitForPreviewServiceWorker() which throws
+        // "Service Worker not available" before our other patches can take effect.
+        // Solution: Replace refresh() entirely with a blob URL implementation.
         document.addEventListener("DOMContentLoaded", function() {
             var attempts = 0;
             var maxAttempts = 60; // Try for 30 seconds
-            var checkPreview = setInterval(function() {
+
+            var patchPreview = setInterval(function() {
                 attempts++;
                 try {
-                    // Try to find the preview panel and override its SW check
                     var app = window.eXeLearning && window.eXeLearning.app;
                     var workarea = app && app.workarea;
                     var previewPanel = workarea && workarea.previewPanel;
 
-                    if (previewPanel && typeof previewPanel.isServiceWorkerPreviewAvailable === "function") {
-                        // Override to always return false, forcing blob URL fallback
-                        previewPanel.isServiceWorkerPreviewAvailable = function() {
-                            return false;
+                    if (previewPanel && typeof previewPanel.refresh === "function") {
+                        // Store original for potential fallback
+                        var originalRefresh = previewPanel.refresh.bind(previewPanel);
+
+                        // Replace refresh() with blob URL implementation
+                        previewPanel.refresh = async function() {
+                            if (this.isLoading) return;
+                            this.isLoading = true;
+
+                            // Show loading state if method exists
+                            if (typeof this.showLoadingState === "function") {
+                                this.showLoadingState();
+                            }
+
+                            try {
+                                // Check if SharedExporters is available
+                                if (typeof window.SharedExporters === "undefined" ||
+                                    typeof window.SharedExporters.generatePreviewForSW !== "function") {
+                                    throw new Error("SharedExporters not available");
+                                }
+
+                                // Generate preview HTML using SharedExporters
+                                var html = await window.SharedExporters.generatePreviewForSW(
+                                    app.ode,
+                                    app.getCurrentPageId(),
+                                    { mode: "preview" }
+                                );
+
+                                // Use blob URL to display preview in iframe
+                                if (typeof this.injectHtmlToIframe === "function") {
+                                    this.injectHtmlToIframe(html);
+                                } else {
+                                    // Fallback: create blob URL manually
+                                    var blob = new Blob([html], { type: "text/html" });
+                                    var blobUrl = URL.createObjectURL(blob);
+                                    var iframe = this.iframe || this.element.querySelector("iframe");
+                                    if (iframe) {
+                                        // Revoke previous blob URL if exists
+                                        if (this._lastBlobUrl) {
+                                            URL.revokeObjectURL(this._lastBlobUrl);
+                                        }
+                                        this._lastBlobUrl = blobUrl;
+                                        iframe.src = blobUrl;
+                                    }
+                                }
+
+                                console.log("[WP Mode] Preview generated via blob URL");
+
+                            } catch (error) {
+                                console.error("[WP Mode] Preview error:", error);
+                                // Show error if method exists
+                                if (typeof this.showError === "function") {
+                                    this.showError(error.message);
+                                }
+                            } finally {
+                                this.isLoading = false;
+                                // Hide loading state if method exists
+                                if (typeof this.hideLoadingState === "function") {
+                                    this.hideLoadingState();
+                                }
+                            }
                         };
-                        console.log("[WP Mode] Preview panel patched to use blob URL fallback");
-                        clearInterval(checkPreview);
+
+                        console.log("[WP Mode] PreviewPanel.refresh() patched for blob URL fallback");
+                        clearInterval(patchPreview);
                     } else if (attempts >= maxAttempts) {
-                        console.log("[WP Mode] Preview panel not found after timeout, may use SW if available");
-                        clearInterval(checkPreview);
+                        console.warn("[WP Mode] Could not patch PreviewPanel after timeout");
+                        clearInterval(patchPreview);
                     }
                 } catch (e) {
                     // Ignore errors during detection
