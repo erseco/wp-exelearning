@@ -53,11 +53,24 @@ jobs:
         run: |
           zip -r plugin-with-editor.zip . \
             -x ".git/*" \
-            -x "exelearning/.git/*" \
+            -x ".github/*" \
+            -x "exelearning/*" \
+            -x "tests/*" \
             -x "node_modules/*" \
-            -x "exelearning/node_modules/*" \
             -x "vendor/*" \
-            -x "*.log"
+            -x "artifacts/*" \
+            -x "docs/*" \
+            -x "*.log" \
+            -x "*.md" \
+            -x "Makefile" \
+            -x "composer.*" \
+            -x "package*.json" \
+            -x "phpunit.xml.dist" \
+            -x "phpmd.*" \
+            -x ".phpcs.xml.dist" \
+            -x "playwright.config.ts" \
+            -x "*.po" \
+            -x "*.pot"
 
       - name: Upload plugin artifact
         uses: actions/upload-artifact@v4
