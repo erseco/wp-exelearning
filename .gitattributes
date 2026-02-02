@@ -44,36 +44,5 @@ sonar-project.properties                                   export-ignore
 test.php                                                   export-ignore
 tests/                                                     export-ignore
 
-# eXeLearning source files (keep only exelearning/public/)
-exelearning/.github/                                       export-ignore
-exelearning/.vscode/                                       export-ignore
-exelearning/assets/                                        export-ignore
-exelearning/config/                                        export-ignore
-exelearning/data/                                          export-ignore
-exelearning/dist/                                          export-ignore
-exelearning/docker/                                        export-ignore
-exelearning/migrations/                                    export-ignore
-exelearning/src/                                           export-ignore
-exelearning/symfony_legacy/                                export-ignore
-exelearning/templates/                                     export-ignore
-exelearning/test/                                          export-ignore
-exelearning/translations/                                  export-ignore
-exelearning/var/                                           export-ignore
-exelearning/views/                                         export-ignore
-exelearning/*.json                                         export-ignore
-exelearning/*.md                                           export-ignore
-exelearning/*.js                                           export-ignore
-exelearning/*.ts                                           export-ignore
-exelearning/*.lock                                         export-ignore
-exelearning/*.xml                                          export-ignore
-exelearning/*.yml                                          export-ignore
-exelearning/*.yaml                                         export-ignore
-exelearning/Makefile                                       export-ignore
-exelearning/Dockerfile                                     export-ignore
-exelearning/.env*                                          export-ignore
-exelearning/.gitignore                                     export-ignore
-exelearning/.gitattributes                                 export-ignore
-exelearning/.eslint*                                       export-ignore
-exelearning/.prettier*                                     export-ignore
-exelearning/.editor*                                       export-ignore
-exelearning/LICENSE*                                       export-ignore
+# eXeLearning submodule (built editor is in dist/static/)
+exelearning/                                               export-ignore

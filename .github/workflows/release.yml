@@ -31,9 +31,14 @@ jobs:
       - name: Create package
         run: make package VERSION=${RELEASE_TAG}
 
+      - name: Create latest package (without version number)
+        run: cp exelearning-${RELEASE_TAG}.zip exelearning.zip
+
       - name: Upload ZIP to release
         uses: softprops/action-gh-release@v2
         with:
-          files: exelearning-${{ env.RELEASE_TAG }}.zip
+          files: |
+            exelearning-${{ env.RELEASE_TAG }}.zip
+            exelearning.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

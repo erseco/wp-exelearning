@@ -16,7 +16,7 @@
       "step": "installPlugin",
       "pluginData": {
         "resource": "url",
-        "url": "https://github.com/erseco/wp-exelearning/archive/refs/heads/main.zip"
+        "url": "https://github.com/erseco/wp-exelearning/releases/latest/download/exelearning.zip"
       },
       "options": {
         "activate": true
