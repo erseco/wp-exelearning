@@ -155,7 +155,18 @@ class ExeLearning_Content_Proxy {
 		$real_path      = realpath( $full_path );
 		$real_base_path = realpath( $this->base_path . '/' . $hash );
 
-		if ( false === $real_path || false === $real_base_path || 0 !== strpos( $real_path, $real_base_path ) ) {
+		if ( false === $real_path || false === $real_base_path ) {
+			// realpath() may fail in virtual filesystems (e.g. WordPress Playground).
+			// Fall back to string-based check: verify the path has no traversal.
+			if ( false !== strpos( $file, '..' ) ) {
+				return new WP_Error(
+					'access_denied',
+					__( 'Access denied.', 'exelearning' ),
+					array( 'status' => 403 )
+				);
+			}
+			// sanitize_path() already rejected '..' components, and file_exists passed above.
+		} elseif ( 0 !== strpos( $real_path, $real_base_path ) ) {
 			return new WP_Error(
 				'access_denied',
 				__( 'Access denied.', 'exelearning' ),

@@ -1325,12 +1325,11 @@ class RestApiTest extends WP_UnitTestCase {
 		$request = new WP_REST_Request( 'POST', '/exelearning/v1/save/' . $attachment_id );
 		$request->set_param( 'id', $attachment_id );
 
-		// This will fail at move_uploaded_file, but cleanup should have run without error.
+		// copy() fallback succeeds, then reprocess fails because content is not a valid ZIP.
 		$result = $this->rest_api->save_elp_file( $request );
 
-		// Should proceed past cleanup (fails at move_uploaded_file).
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertEquals( 'move_failed', $result->get_error_code() );
+		$this->assertEquals( 'elp_not_zip', $result->get_error_code() );
 
 		unlink( $file_path );
 		unset( $_FILES['file'] );
@@ -1338,6 +1337,9 @@ class RestApiTest extends WP_UnitTestCase {
 
 	/**
 	 * Test save_elp_file cleanup with old extraction folder.
+	 *
+	 * Old extraction is only cleaned up after successful reprocessing.
+	 * With invalid content (not a real ZIP), reprocessing fails and old folder is preserved.
 	 */
 	public function test_save_elp_file_cleanup_with_old_extraction() {
 		$user_id       = $this->factory->user->create( array( 'role' => 'administrator' ) );
@@ -1374,9 +1376,12 @@ class RestApiTest extends WP_UnitTestCase {
 
 		$result = $this->rest_api->save_elp_file( $request );
 
-		// Old folder should be deleted.
-		$this->assertFalse( is_dir( $old_folder ) );
+		// Reprocessing fails (invalid ZIP), so old folder should be preserved.
+		$this->assertTrue( is_dir( $old_folder ) );
 
+		// Clean up test directory.
+		unlink( $old_folder . 'index.html' );
+		rmdir( $old_folder );
 		unlink( $file_path );
 		unset( $_FILES['file'] );
 	}
@@ -1411,11 +1416,11 @@ class RestApiTest extends WP_UnitTestCase {
 		$request = new WP_REST_Request( 'POST', '/exelearning/v1/save/' . $attachment_id );
 		$request->set_param( 'id', $attachment_id );
 
-		// Should proceed without error even if old folder doesn't exist.
+		// copy() fallback succeeds, then reprocess fails because content is not a valid ZIP.
 		$result = $this->rest_api->save_elp_file( $request );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertEquals( 'move_failed', $result->get_error_code() );
+		$this->assertEquals( 'elp_not_zip', $result->get_error_code() );
 
 		unlink( $file_path );
 		unset( $_FILES['file'] );

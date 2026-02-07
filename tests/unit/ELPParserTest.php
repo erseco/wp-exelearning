@@ -180,7 +180,7 @@ class ElpFileServiceParserTest extends WP_UnitTestCase {
 		$result  = $service->parse( self::$test_elp_v2 );
 
 		$this->assertWPError( $result );
-		$this->assertStringContainsString( 'older version', $result->get_error_message() );
+		$this->assertSame( 'elp_v2_not_supported', $result->get_error_code() );
 	}
 
 	/**

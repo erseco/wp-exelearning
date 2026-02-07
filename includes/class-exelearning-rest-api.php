@@ -292,22 +292,33 @@ class ExeLearning_REST_API {
 			return $old_file_path;
 		}
 
-		// Delete old extracted folder if exists.
-		$this->cleanup_old_extraction( $attachment_id );
+		// Save old extraction hash before it gets overwritten by reprocessing.
+		$old_hash = get_post_meta( $attachment_id, '_exelearning_extracted', true );
 
 		// Replace the file.
 		if ( ! move_uploaded_file( $uploaded_file['tmp_name'], $old_file_path ) ) {
-			return new WP_Error(
-				'move_failed',
-				__( 'Failed to save the file.', 'exelearning' ),
-				array( 'status' => 500 )
-			);
+			// Fallback for environments where move_uploaded_file fails (e.g. PHP-WASM).
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_copy, WordPress.PHP.NoSilencedErrors.Discouraged -- Fallback path; failure is handled explicitly.
+			if ( ! @copy( $uploaded_file['tmp_name'], $old_file_path ) ) {
+				return new WP_Error(
+					'move_failed',
+					__( 'Failed to save the file.', 'exelearning' ),
+					array( 'status' => 500 )
+				);
+			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink
+			unlink( $uploaded_file['tmp_name'] );
 		}
 
 		// Re-process the ELP file (extract and update metadata).
 		$result = $this->reprocess_elp_file( $attachment_id, $old_file_path );
 		if ( is_wp_error( $result ) ) {
 			return $result;
+		}
+
+		// Clean up old extraction only after new one succeeds.
+		if ( $old_hash ) {
+			$this->cleanup_extraction_by_hash( $old_hash );
 		}
 
 		// Update attachment modified date.
@@ -414,6 +425,27 @@ class ExeLearning_REST_API {
 
 		if ( is_dir( $old_folder ) ) {
 			$this->recursive_delete( $old_folder );
+		}
+	}
+
+	/**
+	 * Clean up extraction directory by hash.
+	 *
+	 * Unlike cleanup_old_extraction(), this takes a hash directly instead of
+	 * reading it from meta (which may already be updated to the new hash).
+	 *
+	 * @param string $hash Extraction hash to clean up.
+	 */
+	private function cleanup_extraction_by_hash( $hash ) {
+		if ( empty( $hash ) ) {
+			return;
+		}
+
+		$upload_dir = wp_upload_dir();
+		$folder     = trailingslashit( $upload_dir['basedir'] ) . 'exelearning/' . $hash . '/';
+
+		if ( is_dir( $folder ) ) {
+			$this->recursive_delete( $folder );
 		}
 	}
 
