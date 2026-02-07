@@ -234,6 +234,46 @@
             if ( updated && wp.data.select( 'core/editor' ) ) {
                 wp.data.dispatch( 'core/editor' ).savePost();
             }
+
+            // Fallback for environments where iframe src navigation fails (e.g. Playground).
+            if ( updated && previewUrl ) {
+                this.ensurePreviewLoaded( previewUrl );
+            }
+        },
+
+        /**
+         * Ensure preview iframe loaded content after src update.
+         *
+         * In some environments (e.g. WordPress Playground), iframe navigation via
+         * Service Worker may fail silently, resulting in an empty iframe even though
+         * fetch() of the same URL works. This detects empty iframes and injects
+         * content via srcdoc as a fallback.
+         *
+         * @param {string} previewUrl The preview URL to load.
+         */
+        ensurePreviewLoaded: function( previewUrl ) {
+            setTimeout( function() {
+                var iframes = document.querySelectorAll( '.exelearning-block-preview iframe' );
+                iframes.forEach( function( iframe ) {
+                    try {
+                        var doc = iframe.contentDocument;
+                        if ( ! doc || ! doc.body || doc.body.innerHTML.length === 0 ) {
+                            fetch( previewUrl, { credentials: 'same-origin' } )
+                                .then( function( response ) {
+                                    return response.ok ? response.text() : null;
+                                } )
+                                .then( function( html ) {
+                                    if ( html && html.length > 0 ) {
+                                        iframe.srcdoc = html;
+                                    }
+                                } )
+                                .catch( function() {} );
+                        }
+                    } catch ( e ) {
+                        // Cross-origin or other error, ignore.
+                    }
+                } );
+            }, 2000 );
         },
 
         /**
