@@ -1,0 +1,277 @@
+# Copyright (C) 2026 INTEF
+# This file is distributed under the GPL-3.0+.
+msgid ""
+msgstr ""
+"Project-Id-Version: eXeLearning 0.0.0\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/wp-exelearning\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"X-Generator: WP-CLI 2.12.0\n"
+"X-Domain: exelearning\n"
+
+#. Plugin Name of the plugin
+msgid "eXeLearning"
+msgstr ""
+
+#. Plugin URI of the plugin
+#. Author URI of the plugin
+msgid "https://github.com/exelearning/wp-exelearning"
+msgstr ""
+
+#. Description of the plugin
+msgid "Plugin to support eXeLearning .elp files in WordPress. Upload, manage and embed eXeLearning content."
+msgstr ""
+
+#. Author of the plugin
+msgid "INTEF"
+msgstr ""
+
+msgid "Settings"
+msgstr ""
+
+msgid "eXeLearning Settings"
+msgstr ""
+
+msgid "General Settings"
+msgstr ""
+
+msgid "Example Option"
+msgstr ""
+
+msgid "Invalid nonce."
+msgstr ""
+
+msgid "Insufficient permissions."
+msgstr ""
+
+#. translators: %1$s: line break, %2$s/%3$s: link tags, %4$s/%5$s: code tags
+#, php-format
+msgid "eXeLearning editor not found. You appear to have cloned this repository directly. Please either: %1$s1. Download the plugin from %2$sGitHub Releases%3$s, or %1$s2. Build the editor with: %4$smake build-editor%5$s"
+msgstr ""
+
+msgid "eXeLearning editor files are missing. Please reinstall the plugin from the official release."
+msgstr ""
+
+msgid "Editor Missing"
+msgstr ""
+
+msgid "Failed to load eXeLearning editor template."
+msgstr ""
+
+msgid "Template Error"
+msgstr ""
+
+msgid "Saving..."
+msgstr ""
+
+msgid "Saved to WordPress successfully"
+msgstr ""
+
+msgid "Save to WordPress"
+msgstr ""
+
+msgid "Loading project..."
+msgstr ""
+
+msgid "Error"
+msgstr ""
+
+msgid "Invalid content identifier."
+msgstr ""
+
+msgid "Invalid file path."
+msgstr ""
+
+msgid "File not found."
+msgstr ""
+
+msgid "Access denied."
+msgstr ""
+
+msgid "This file was created with an older version of eXeLearning and is not compatible. Please open it with eXeLearning 3.x and save it again."
+msgstr ""
+
+msgid "The file is not a valid eXeLearning file (.elpx)."
+msgstr ""
+
+msgid "Title"
+msgstr ""
+
+msgid "Date"
+msgstr ""
+
+msgid "Status"
+msgstr ""
+
+msgid "Edit"
+msgstr ""
+
+msgid "Delete"
+msgstr ""
+
+msgid "Error: eXeLearning content not found"
+msgstr ""
+
+msgid "This eXeLearning content is a source file and cannot be previewed directly."
+msgstr ""
+
+msgid "Download file"
+msgstr ""
+
+msgid "eXeLearning Editor"
+msgstr ""
+
+msgid "Security check failed."
+msgstr ""
+
+msgid "You do not have permission to access this page."
+msgstr ""
+
+msgid "No attachment specified."
+msgstr ""
+
+msgid "This file is not an eXeLearning file (.elpx)."
+msgstr ""
+
+msgid "You do not have permission to edit this file."
+msgstr ""
+
+msgid "Edit in eXeLearning"
+msgstr ""
+
+msgid "Close"
+msgstr ""
+
+msgid "Edit eXeLearning File"
+msgstr ""
+
+msgid "You do not have permission to read this file."
+msgstr ""
+
+msgid "No file uploaded."
+msgstr ""
+
+msgid "File upload failed."
+msgstr ""
+
+msgid "File created successfully."
+msgstr ""
+
+msgid "Failed to save the file."
+msgstr ""
+
+msgid "Invalid attachment ID."
+msgstr ""
+
+msgid "Original file not found."
+msgstr ""
+
+msgid "This is not an eXeLearning file (.elpx)."
+msgstr ""
+
+msgid "File saved successfully."
+msgstr ""
+
+msgid "Failed to create directory for extracted files."
+msgstr ""
+
+msgid "Manage eXeLearning Files"
+msgstr ""
+
+#. translators: %s: number of files
+#, php-format
+msgid "eXeLearning <span class=\"count\">(%s)</span>"
+msgid_plural "eXeLearning <span class=\"count\">(%s)</span>"
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "eXeLearning Info"
+msgstr ""
+
+msgid "Version:"
+msgstr ""
+
+msgid "source file"
+msgstr ""
+
+msgid "exported"
+msgstr ""
+
+msgid "License:"
+msgstr ""
+
+msgid "Language:"
+msgstr ""
+
+msgid "Type:"
+msgstr ""
+
+msgid "No preview available"
+msgstr ""
+
+msgid "This is an eXeLearning v2 source file (.elp). To view the content, open it in eXeLearning and export it as HTML."
+msgstr ""
+
+msgid "Preview in new tab"
+msgstr ""
+
+msgid "eXeLearning Content Preview"
+msgstr ""
+
+msgid "eXeLearning Metadata"
+msgstr ""
+
+msgid "Open in new tab"
+msgstr ""
+
+msgid "Resource Type:"
+msgstr ""
+
+msgid "Invalid eXeLearning file ID."
+msgstr ""
+
+msgid "eXeLearning file not found."
+msgstr ""
+
+msgid "This is a source file that cannot be previewed directly. Download it to open with eXeLearning."
+msgstr ""
+
+msgid "Download source file"
+msgstr ""
+
+msgid "View fullscreen"
+msgstr ""
+
+msgid "Select eXeLearning File"
+msgstr ""
+
+msgid "Use this file"
+msgstr ""
+
+msgid "eXeLearning Content"
+msgstr ""
+
+msgid "Upload or select a .elpx file from your media library"
+msgstr ""
+
+msgid "Upload .elpx File"
+msgstr ""
+
+msgid "Media Library"
+msgstr ""
+
+msgid "Height (px)"
+msgstr ""
+
+msgid "Change file"
+msgstr ""
+
+msgid "Remove"
+msgstr ""
+
+msgid "This is an eXeLearning v2 source file. The content will be displayed on the frontend if exported HTML is available."
+msgstr ""

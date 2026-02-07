@@ -1,0 +1,283 @@
+---
+name: CI
+
+on:
+  pull_request:
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.github/*.md'
+  push:
+    tags:
+      - '*'
+    branches:
+      - '*'
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.github/*.md'
+
+# Cancel previous runs on the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+  deployments: write
+  checks: write
+
+env:
+  COMPOSER_NO_INTERACTION: 1
+  COMPOSER_PROCESS_TIMEOUT: 0
+  COMPOSER_NO_AUDIT: 1
+
+jobs:
+  lint_and_test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      # === BUILD STATIC EDITOR FOR PLAYGROUND ===
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Build static editor
+        run: make build-editor-no-update
+
+      - name: Create plugin ZIP for Playground
+        run: |
+          # Create a temporary directory with the correct plugin folder name
+          mkdir -p /tmp/exelearning-build/exelearning
+
+          # Copy only production files
+          cp -r admin /tmp/exelearning-build/exelearning/
+          cp -r assets /tmp/exelearning-build/exelearning/
+          cp -r dist /tmp/exelearning-build/exelearning/
+          cp -r includes /tmp/exelearning-build/exelearning/
+          cp -r public /tmp/exelearning-build/exelearning/
+          cp -r languages/*.mo /tmp/exelearning-build/exelearning/languages/ 2>/dev/null || mkdir -p /tmp/exelearning-build/exelearning/languages
+          cp exelearning.php /tmp/exelearning-build/exelearning/
+          cp readme.txt /tmp/exelearning-build/exelearning/
+          cp uninstall.php /tmp/exelearning-build/exelearning/ 2>/dev/null || true
+          cp test-content.elpx /tmp/exelearning-build/exelearning/ 2>/dev/null || true
+
+          # Create ZIP with correct folder structure
+          cd /tmp/exelearning-build && zip -r $GITHUB_WORKSPACE/exelearning.zip exelearning
+
+      - name: Upload plugin artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: exelearning
+          path: exelearning.zip
+          retention-days: 7
+
+      # === BLUEPRINT / PLAYGROUND SETUP ===
+      - name: Create Playground deployment
+        uses: actions/github-script@v8
+        with:
+          script: |
+            // Get the artifact download URL via nightly.link
+            const artifactUrl = `https://nightly.link/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}/exelearning.zip`;
+
+            // Create blueprint with artifact
+            const blueprint = {
+              landingPage: "/wp-admin/upload.php",
+              preferredVersions: { php: "8.3", wp: "latest" },
+              steps: [
+                {
+                  step: "installPlugin",
+                  pluginData: {
+                    resource: "url",
+                    url: artifactUrl
+                  }
+                },
+                {
+                  step: "login",
+                  username: "admin",
+                  password: "password"
+                }
+              ]
+            };
+
+            const encodedBlueprint = Buffer.from(JSON.stringify(blueprint)).toString('base64');
+            const playgroundUrl = `https://playground.wordpress.net/#${encodedBlueprint}`;
+
+            // Add to summary
+            core.summary.addLink('Test in WP Playground', playgroundUrl);
+            await core.summary.write();
+
+            // Create check
+            await github.rest.checks.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: "Test on WP Playground",
+              head_sha: context.payload.pull_request?.head.sha || context.sha,
+              status: "completed",
+              conclusion: "neutral",
+              output: {
+                title: "Test in WP Playground",
+                summary: `[Open Playground](${playgroundUrl})`
+              }
+            });
+
+            // Create deployment
+            const deployment = await github.rest.repos.createDeployment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: context.payload.pull_request?.head.ref || context.ref,
+              required_contexts: [],
+              environment: "playground",
+              transient_environment: true,
+              auto_merge: false
+            });
+
+            if (deployment.data.id) {
+              await github.rest.repos.createDeploymentStatus({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                deployment_id: deployment.data.id,
+                state: "success",
+                environment_url: playgroundUrl
+              });
+            }
+
+      # === PHP SETUP ===
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, intl, curl, dom, json, pdo, mysql, xml, zip
+          tools: composer:v2
+          coverage: none
+
+      # === CACHING ===
+      - name: Get Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v5
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
+
+      - name: Cache npm dependencies
+        uses: actions/cache@v5
+        with:
+          path: ~/.npm
+          key: npm-${{ hashFiles('package-lock.json') }}
+          restore-keys: npm-
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v5
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ hashFiles('package-lock.json') }}
+
+      # === INSTALL DEPENDENCIES ===
+      - name: Install Composer dependencies
+        run: composer install --prefer-dist
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Install gettext
+        run: sudo apt-get install -y gettext
+
+      - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install chromium
+
+      - name: Install Playwright system deps
+        run: npx playwright install-deps chromium
+
+      # === LINT (fail fast before slow tests) ===
+      - name: Check untranslated strings
+        run: make check-untranslated
+
+      - name: Run code linting (PHPCS)
+        run: ./vendor/bin/phpcs --standard=.phpcs.xml.dist -q .
+
+      # === START ENVIRONMENT (with Xdebug for coverage) ===
+      - name: Start wp-env with coverage
+        run: npx wp-env start --xdebug=coverage
+
+      - name: Run plugin check
+        run: make check-plugin
+
+      # === TESTS WITH COVERAGE ===
+      - name: Run unit tests with coverage
+        run: make test-coverage
+
+      - name: Extract coverage percentage
+        id: coverage
+        if: always()
+        run: |
+          if [ -f artifacts/coverage/coverage.txt ]; then
+            COVERAGE=$(grep -oP 'Lines:\s+\K[\d.]+(?=%)' artifacts/coverage/coverage.txt | head -1 || echo "0")
+            echo "percentage=${COVERAGE}" >> $GITHUB_OUTPUT
+            # Determine badge color based on coverage
+            if (( $(echo "$COVERAGE >= 80" | bc -l) )); then
+              echo "color=brightgreen" >> $GITHUB_OUTPUT
+            elif (( $(echo "$COVERAGE >= 60" | bc -l) )); then
+              echo "color=yellow" >> $GITHUB_OUTPUT
+            elif (( $(echo "$COVERAGE >= 40" | bc -l) )); then
+              echo "color=orange" >> $GITHUB_OUTPUT
+            else
+              echo "color=red" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "percentage=0" >> $GITHUB_OUTPUT
+            echo "color=red" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Add coverage to job summary
+        if: always()
+        run: |
+          echo "## 📊 Code Coverage" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -f artifacts/coverage/coverage.txt ]; then
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            grep -E "^\s*(Lines|Functions|Classes|Methods):" artifacts/coverage/coverage.txt >> $GITHUB_STEP_SUMMARY || echo "No coverage data"
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ Coverage report not generated" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Run E2E tests
+        run: make test-e2e
+        env:
+          CI: true
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
+
+      # === ARTIFACTS ===
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: coverage-report
+          path: artifacts/coverage/html/
+          retention-days: 30
+
+      - name: Upload E2E artifacts on failure
+        uses: actions/upload-artifact@v6
+        if: failure()
+        with:
+          name: playwright-report
+          path: artifacts/
+          retention-days: 7
+
+      # === UPLOAD COVERAGE TO CODECOV ===
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: artifacts/coverage/clover.xml
+          fail_ci_if_error: false
