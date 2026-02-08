@@ -33,14 +33,13 @@ force-update-submodule:
 	cd exelearning && git fetch origin main && git checkout origin/main
 	@echo "Submodule updated to main branch."
 
+EDITOR_OUTPUT_DIR := $(CURDIR)/dist/static
+
 # Build static version of eXeLearning editor
 build-editor: check-bun update-submodule
 	@echo "Building eXeLearning static editor..."
-	cd exelearning && bun install && bun run build:static
-	@echo "Copying static build to plugin dist/static..."
-	rm -rf dist/static
-	mkdir -p dist
-	cp -r exelearning/dist/static dist/static
+	rm -rf $(EDITOR_OUTPUT_DIR)
+	cd exelearning && bun install && OUTPUT_DIR=$(EDITOR_OUTPUT_DIR) bun run build:static
 	@echo ""
 	@echo "============================================"
 	@echo "  Static editor built at dist/static/"
@@ -49,10 +48,8 @@ build-editor: check-bun update-submodule
 # Build editor without updating submodule (for CI/CD)
 build-editor-no-update: check-bun
 	@echo "Building eXeLearning static editor (without submodule update)..."
-	cd exelearning && bun install && bun run build:static
-	rm -rf dist/static
-	mkdir -p dist
-	cp -r exelearning/dist/static dist/static
+	rm -rf $(EDITOR_OUTPUT_DIR)
+	cd exelearning && bun install && OUTPUT_DIR=$(EDITOR_OUTPUT_DIR) bun run build:static
 	@echo "Static editor built at dist/static/"
 
 # Clean editor build
