@@ -152,7 +152,7 @@ $wp_config_script = sprintf(
         };
 
         // TODO: Remove when editor ResourceFetcher handles 404 gracefully.
-        // Patch fetch to handle CSS/idevices 404s without breaking.
+        // Patch fetch and jQuery AJAX to handle CSS/idevices 404s without breaking.
         (function() {
             var originalFetch = window.fetch;
             window.fetch = function(input, init) {
@@ -177,6 +177,42 @@ $wp_config_script = sprintf(
                     throw error;
                 });
             };
+
+            // Patch jQuery AJAX to handle 404s for CSS/idevice files (Playground compat).
+            var patchJQuery = function($) {
+                if (!$ || !$.ajaxPrefilter) return;
+                $.ajaxPrefilter(function(options, originalOptions, jqXHR) {
+                    var url = options.url || "";
+                    if (url.includes(".css") || url.includes("idevices")) {
+                        var origError = options.error;
+                        options.error = function(xhr, status, error) {
+                            if (xhr.status === 404) {
+                                console.warn("[WP Mode] jQuery 404 fallback:", url);
+                                if (options.success) {
+                                    options.success("/* empty fallback */", "success", xhr);
+                                }
+                                return;
+                            }
+                            if (origError) origError(xhr, status, error);
+                        };
+                    }
+                });
+            };
+            if (window.jQuery) {
+                patchJQuery(window.jQuery);
+            } else {
+                // jQuery may load after this script; patch when ready.
+                Object.defineProperty(window, "jQuery", {
+                    configurable: true,
+                    set: function(val) {
+                        Object.defineProperty(window, "jQuery", {
+                            configurable: true, writable: true, enumerable: true, value: val
+                        });
+                        patchJQuery(val);
+                    },
+                    get: function() { return undefined; }
+                });
+            }
         })();
     </script>
     <script src="%s/js/wp-exe-bridge.js"></script>
