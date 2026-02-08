@@ -179,23 +179,33 @@ $wp_config_script = sprintf(
             };
 
             // Patch jQuery AJAX to handle 404s for CSS/idevice files (Playground compat).
+            // Uses ajaxTransport to intercept at the XHR level and report 200 to jQuery,
+            // so the deferred/promise resolves instead of rejecting.
             var patchJQuery = function($) {
-                if (!$ || !$.ajaxPrefilter) return;
-                $.ajaxPrefilter(function(options, originalOptions, jqXHR) {
+                if (!$ || !$.ajaxTransport) return;
+                $.ajaxTransport("+*", function(options) {
                     var url = options.url || "";
-                    if (url.includes(".css") || url.includes("idevices")) {
-                        var origError = options.error;
-                        options.error = function(xhr, status, error) {
-                            if (xhr.status === 404) {
-                                console.warn("[WP Mode] jQuery 404 fallback:", url);
-                                if (options.success) {
-                                    options.success("/* empty fallback */", "success", xhr);
+                    if (!(url.includes(".css") || url.includes("idevices"))) return;
+                    return {
+                        send: function(headers, completeCallback) {
+                            var xhr = new XMLHttpRequest();
+                            xhr.open(options.type || "GET", url, true);
+                            xhr.onload = function() {
+                                if (xhr.status >= 200 && xhr.status < 300) {
+                                    completeCallback(xhr.status, xhr.statusText, { text: xhr.responseText });
+                                } else {
+                                    console.warn("[WP Mode] jQuery 404 fallback:", url);
+                                    completeCallback(200, "OK", { text: "/* empty fallback */" });
                                 }
-                                return;
-                            }
-                            if (origError) origError(xhr, status, error);
-                        };
-                    }
+                            };
+                            xhr.onerror = function() {
+                                console.warn("[WP Mode] jQuery error fallback:", url);
+                                completeCallback(200, "OK", { text: "/* empty fallback */" });
+                            };
+                            xhr.send();
+                        },
+                        abort: function() {}
+                    };
                 });
             };
             if (window.jQuery) {
