@@ -188,50 +188,119 @@ $wp_config_script = sprintf(
         // ============================================================
         // FIX 2: Service Worker handling for Preview Panel
         // ============================================================
-        // The preview panel needs SW to serve generated HTML, but WordPress
-        // paths cause scope issues. We use two strategies:
-        // A) Override SW register to use correct scope/URL
-        // B) Force blob URL fallback if SW still does not work
+        // The preview panel needs a SW to serve generated HTML at /viewer/*.
+        // In WordPress, SW registration often fails due to scope restrictions.
+        // We provide: (A) a mock SW that stores content in memory and speaks
+        // the MessageChannel protocol, and (B) a MutationObserver that
+        // intercepts iframe navigations to /viewer/* and serves blob URLs
+        // from the mock SW in-memory content store.
+
+        // Shared content store used by mock preview SW.
+        var __wpExePreviewContent = new Map();
+        var __wpExeContentReady = false;
+
         if ("serviceWorker" in navigator) {
-            // Store original register function
+            // Mock ServiceWorker that handles the preview-sw.js protocol.
+            var __wpExeMockSW = {
+                scriptURL: window.__WP_EXE_CONFIG__.editorBaseUrl + "/preview-sw.js",
+                state: "activated",
+                onstatechange: null,
+                onerror: null,
+                addEventListener: function(type, fn) {
+                    if (type === "statechange" && typeof fn === "function") {
+                        try { fn({ target: __wpExeMockSW }); } catch(e) {}
+                    }
+                },
+                removeEventListener: function() {},
+                dispatchEvent: function() { return false; },
+                postMessage: function(message, transferables) {
+                    if (!message || !message.type) return;
+                    var port = (transferables && transferables[0]) || null;
+                    var data = message.data || {};
+                    switch (message.type) {
+                        case "SET_CONTENT":
+                            __wpExePreviewContent.clear();
+                            // Real SW uses data.files as an Object { path: buffer }.
+                            if (data.files && typeof data.files === "object") {
+                                Object.keys(data.files).forEach(function(path) {
+                                    __wpExePreviewContent.set(path, data.files[path]);
+                                });
+                            }
+                            __wpExeContentReady = __wpExePreviewContent.size > 0;
+                            if (port && typeof port.postMessage === "function") {
+                                port.postMessage({ type: "CONTENT_READY", fileCount: __wpExePreviewContent.size });
+                            }
+                            break;
+                        case "VERIFY_READY":
+                            if (port && typeof port.postMessage === "function") {
+                                port.postMessage({ type: "READY_VERIFIED", ready: __wpExeContentReady && __wpExePreviewContent.size > 0, fileCount: __wpExePreviewContent.size });
+                            }
+                            break;
+                        case "GET_STATUS":
+                            if (port && typeof port.postMessage === "function") {
+                                port.postMessage({ type: "STATUS", ready: __wpExeContentReady, fileCount: __wpExePreviewContent.size });
+                            }
+                            break;
+                        case "UPDATE_FILES":
+                            if (data.files && typeof data.files === "object") {
+                                Object.keys(data.files).forEach(function(path) {
+                                    if (data.files[path] === null) {
+                                        __wpExePreviewContent.delete(path);
+                                    } else {
+                                        __wpExePreviewContent.set(path, data.files[path]);
+                                    }
+                                });
+                            }
+                            if (port && typeof port.postMessage === "function") {
+                                port.postMessage({ type: "FILES_UPDATED", fileCount: __wpExePreviewContent.size });
+                            }
+                            break;
+                        case "CLEAR_CONTENT":
+                            __wpExePreviewContent.clear();
+                            __wpExeContentReady = false;
+                            if (port && typeof port.postMessage === "function") {
+                                port.postMessage({ type: "CONTENT_CLEARED" });
+                            }
+                            break;
+                    }
+                }
+            };
+
+            // Store original register function.
             var originalRegister = navigator.serviceWorker.register.bind(navigator.serviceWorker);
 
-            // Override to fix the scope for WordPress
+            // Override to fix the scope for WordPress.
             navigator.serviceWorker.register = function(scriptURL, options) {
                 options = options || {};
                 var baseUrl = window.__WP_EXE_CONFIG__.editorBaseUrl;
                 var fixedScriptURL = scriptURL;
 
-                // If relative path, make it absolute to the editor base
+                // If relative path, make it absolute to the editor base.
                 if (typeof scriptURL === "string") {
                     if (scriptURL.startsWith("./")) {
                         fixedScriptURL = baseUrl + "/" + scriptURL.substring(2);
                     } else if (scriptURL.startsWith("/") && !scriptURL.startsWith(baseUrl)) {
-                        // Relative to root but not our base - fix it
                         fixedScriptURL = baseUrl + scriptURL;
                     } else if (!scriptURL.startsWith("http") && !scriptURL.startsWith("/")) {
-                        // Plain relative path
                         fixedScriptURL = baseUrl + "/" + scriptURL;
                     }
                 }
 
-                // Force scope to editor base URL
                 var fixedOptions = Object.assign({}, options, {
                     scope: baseUrl + "/"
                 });
 
                 console.log("[WP Mode] SW register:", fixedScriptURL, "scope:", fixedOptions.scope);
                 return originalRegister(fixedScriptURL, fixedOptions).catch(function(error) {
-                    // If SW registration fails (scope issues), log and continue
-                    // The preview panel has a blob URL fallback
-                    console.warn("[WP Mode] SW registration failed, preview will use blob fallback:", error.message);
-                    // Return a mock ServiceWorkerRegistration object with required methods
+                    console.warn("[WP Mode] SW registration failed, using mock preview SW:", error.message);
+                    // Return mock registration with active mock SW so
+                    // waitForPreviewServiceWorker() resolves instead of throwing.
                     return Promise.resolve({
                         scope: baseUrl + "/",
-                        active: null,
+                        active: __wpExeMockSW,
                         installing: null,
                         waiting: null,
-                        navigationPreload: { enable: function() {}, disable: function() {}, setHeaderValue: function() {}, getState: function() { return Promise.resolve(); } },
+                        navigationPreload: { enable: function(){}, disable: function(){}, setHeaderValue: function(){}, getState: function(){ return Promise.resolve(); } },
                         onupdatefound: null,
                         addEventListener: function() {},
                         removeEventListener: function() {},
@@ -244,108 +313,120 @@ $wp_config_script = sprintf(
                 });
             };
 
-            // Unregister any existing service workers from wrong scopes
+            // Unregister any existing service workers from wrong scopes.
             navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                var editorBase = window.__WP_EXE_CONFIG__.editorBaseUrl;
                 registrations.forEach(function(registration) {
-                    // Only unregister SWs that are NOT for our editor
                     if (!registration.scope.includes("/dist/static/")) {
                         registration.unregister();
                         console.log("[WP Mode] Unregistered SW from wrong scope:", registration.scope);
                     }
                 });
             });
-        }
 
-        // FIX 2B: Override PreviewPanel.refresh() to use blob URL directly
-        // The original refresh() calls waitForPreviewServiceWorker() which throws
-        // "Service Worker not available" before our other patches can take effect.
-        // Solution: Replace refresh() entirely with a blob URL implementation.
-        document.addEventListener("DOMContentLoaded", function() {
-            var attempts = 0;
-            var maxAttempts = 60; // Try for 30 seconds
-
-            var patchPreview = setInterval(function() {
-                attempts++;
-                try {
-                    var app = window.eXeLearning && window.eXeLearning.app;
-                    var workarea = app && app.workarea;
-                    var previewPanel = workarea && workarea.previewPanel;
-
-                    if (previewPanel && typeof previewPanel.refresh === "function") {
-                        // Store original for potential fallback
-                        var originalRefresh = previewPanel.refresh.bind(previewPanel);
-
-                        // Replace refresh() with blob URL implementation
-                        previewPanel.refresh = async function() {
-                            if (this.isLoading) return;
-                            this.isLoading = true;
-
-                            // Show loading state if method exists
-                            if (typeof this.showLoadingState === "function") {
-                                this.showLoadingState();
-                            }
-
-                            try {
-                                // Check if SharedExporters is available
-                                if (typeof window.SharedExporters === "undefined" ||
-                                    typeof window.SharedExporters.generatePreviewForSW !== "function") {
-                                    throw new Error("SharedExporters not available");
-                                }
-
-                                // Generate preview HTML using SharedExporters
-                                var html = await window.SharedExporters.generatePreviewForSW(
-                                    app.ode,
-                                    app.getCurrentPageId(),
-                                    { mode: "preview" }
-                                );
-
-                                // Use blob URL to display preview in iframe
-                                if (typeof this.injectHtmlToIframe === "function") {
-                                    this.injectHtmlToIframe(html);
-                                } else {
-                                    // Fallback: create blob URL manually
-                                    var blob = new Blob([html], { type: "text/html" });
-                                    var blobUrl = URL.createObjectURL(blob);
-                                    var iframe = this.iframe || this.element.querySelector("iframe");
-                                    if (iframe) {
-                                        // Revoke previous blob URL if exists
-                                        if (this._lastBlobUrl) {
-                                            URL.revokeObjectURL(this._lastBlobUrl);
-                                        }
-                                        this._lastBlobUrl = blobUrl;
-                                        iframe.src = blobUrl;
-                                    }
-                                }
-
-                                console.log("[WP Mode] Preview generated via blob URL");
-
-                            } catch (error) {
-                                console.error("[WP Mode] Preview error:", error);
-                                // Show error if method exists
-                                if (typeof this.showError === "function") {
-                                    this.showError(error.message);
-                                }
-                            } finally {
-                                this.isLoading = false;
-                                // Hide loading state if method exists
-                                if (typeof this.hideLoadingState === "function") {
-                                    this.hideLoadingState();
-                                }
-                            }
-                        };
-
-                        console.log("[WP Mode] PreviewPanel.refresh() patched for blob URL fallback");
-                        clearInterval(patchPreview);
-                    } else if (attempts >= maxAttempts) {
-                        console.warn("[WP Mode] Could not patch PreviewPanel after timeout");
-                        clearInterval(patchPreview);
-                    }
-                } catch (e) {
-                    // Ignore errors during detection
+            // Helper: decode content from the mock SW store to string.
+            function __wpExeDecodeContent(content) {
+                if (typeof content === "string") return content;
+                if (content instanceof ArrayBuffer || content instanceof Uint8Array) {
+                    return new TextDecoder().decode(content);
                 }
-            }, 500);
-        });
+                return String(content);
+            }
+
+            // Inline CSS/JS resources into HTML so blob URLs are self-contained.
+            // Blob origins cannot resolve relative paths, so all sub-resources
+            // must be embedded directly in the HTML document.
+            function __wpExeInlineResources(html) {
+                // Inline <link rel="stylesheet" href="..."> as <style> blocks.
+                html = html.replace(
+                    /<link\s+[^>]*rel=["\']stylesheet["\'][^>]*href=["\']([^"\']+)["\'][^>]*\/?>/gi,
+                    function(match, href) {
+                        // Normalize path: strip leading ./ or /
+                        var cssPath = href.replace(/^\.\//, "").replace(/^\//, "");
+                        var cssContent = __wpExePreviewContent.get(cssPath);
+                        if (cssContent) {
+                            return "<style>" + __wpExeDecodeContent(cssContent) + "</style>";
+                        }
+                        return match;
+                    }
+                );
+                // Handle <link href="..." rel="stylesheet"> (href before rel).
+                html = html.replace(
+                    /<link\s+[^>]*href=["\']([^"\']+)["\'][^>]*rel=["\']stylesheet["\'][^>]*\/?>/gi,
+                    function(match, href) {
+                        var cssPath = href.replace(/^\.\//, "").replace(/^\//, "");
+                        var cssContent = __wpExePreviewContent.get(cssPath);
+                        if (cssContent) {
+                            return "<style>" + __wpExeDecodeContent(cssContent) + "</style>";
+                        }
+                        return match;
+                    }
+                );
+
+                // Inline external script tags as inline scripts.
+                html = html.replace(
+                    /<script\s+[^>]*src=["\']([^"\']+)["\'][^>]*><\/script>/gi,
+                    function(match, src) {
+                        var jsPath = src.replace(/^\.\//, "").replace(/^\//, "");
+                        var jsContent = __wpExePreviewContent.get(jsPath);
+                        if (jsContent) {
+                            return "<script>" + __wpExeDecodeContent(jsContent) + "<\/script>";
+                        }
+                        return match;
+                    }
+                );
+
+                // Inline <img src="..."> for images stored in the preview content map.
+                html = html.replace(
+                    /(<img\s+[^>]*src=["\'])([^"\']+)(["\'][^>]*\/?>)/gi,
+                    function(match, before, src, after) {
+                        var imgPath = src.replace(/^\.\//, "").replace(/^\//, "");
+                        var imgContent = __wpExePreviewContent.get(imgPath);
+                        if (imgContent && imgContent instanceof ArrayBuffer) {
+                            var ext = imgPath.split(".").pop().toLowerCase();
+                            var mime = { png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", gif: "image/gif", svg: "image/svg+xml", webp: "image/webp" }[ext] || "application/octet-stream";
+                            var bytes = new Uint8Array(imgContent);
+                            var binary = "";
+                            for (var i = 0; i < bytes.length; i++) { binary += String.fromCharCode(bytes[i]); }
+                            return before + "data:" + mime + ";base64," + btoa(binary) + after;
+                        }
+                        return match;
+                    }
+                );
+
+                return html;
+            }
+
+            // Intercept iframe navigations to /viewer/* URLs.
+            // When the real SW is unavailable, the preview panel sets
+            // iframe.src to /viewer/index.html which would 404. We catch
+            // that and serve a blob URL from the mock content store,
+            // with all CSS/JS/images inlined so the blob is self-contained.
+            new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.type !== "attributes" || mutation.attributeName !== "src") return;
+                    var el = mutation.target;
+                    if (el.tagName !== "IFRAME" || !el.src || !el.src.includes("/viewer/")) return;
+                    // Skip blob: URLs (our own output).
+                    if (el.src.startsWith("blob:")) return;
+
+                    var filePath = el.src.split("/viewer/").pop() || "index.html";
+                    filePath = filePath.split("?")[0].split("#")[0] || "index.html";
+
+                    var content = __wpExePreviewContent.get(filePath);
+                    if (content) {
+                        var text = __wpExeDecodeContent(content);
+                        // Inline all sub-resources so the blob URL is self-contained.
+                        text = __wpExeInlineResources(text);
+                        el.src = URL.createObjectURL(new Blob([text], { type: "text/html" }));
+                        console.log("[WP Mode] Preview served via blob URL for:", filePath, "(resources inlined)");
+                    }
+                });
+            }).observe(document.documentElement, {
+                attributes: true,
+                attributeFilter: ["src"],
+                subtree: true
+            });
+        }
 
         // Workaround for WordPress Playground: Handle 404 errors for CSS/JS files gracefully
         // Playground sometimes fails to serve deeply nested static files from plugins
