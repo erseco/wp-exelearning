@@ -336,7 +336,8 @@ $wp_config_script = sprintf(
             // Blob origins cannot resolve relative paths, so all sub-resources
             // must be embedded directly in the HTML document.
             function __wpExeInlineResources(html) {
-                // Inline <link rel="stylesheet" href="..."> as <style> blocks.
+                // Inline link rel=stylesheet as <style> blocks.
+                // phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedStylesheet -- JS regex pattern, not PHP.
                 html = html.replace(
                     /<link\s+[^>]*rel=["\']stylesheet["\'][^>]*href=["\']([^"\']+)["\'][^>]*\/?>/gi,
                     function(match, href) {
@@ -349,7 +350,8 @@ $wp_config_script = sprintf(
                         return match;
                     }
                 );
-                // Handle <link href="..." rel="stylesheet"> (href before rel).
+                // Handle link href before rel attribute order.
+                // phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedStylesheet -- JS regex pattern, not PHP.
                 html = html.replace(
                     /<link\s+[^>]*href=["\']([^"\']+)["\'][^>]*rel=["\']stylesheet["\'][^>]*\/?>/gi,
                     function(match, href) {
