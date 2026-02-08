@@ -20,12 +20,12 @@
 	console.log( '[WP-EXE Bridge] Initializing with config:', config );
 
 	/**
-	 * Wait for the eXeLearning app to be ready
+	 * Wait for the eXeLearning app to be ready (legacy fallback)
 	 *
 	 * @param {number} maxAttempts Maximum attempts before giving up
 	 * @return {Promise} Resolves with the app instance
 	 */
-	function waitForApp( maxAttempts = 100 ) {
+	function waitForAppLegacy( maxAttempts = 100 ) {
 		return new Promise( ( resolve, reject ) => {
 			let attempts = 0;
 			const check = () => {
@@ -36,35 +36,6 @@
 					setTimeout( check, 100 );
 				} else {
 					reject( new Error( 'App did not initialize' ) );
-				}
-			};
-			check();
-		} );
-	}
-
-	/**
-	 * Wait for YjsProjectBridge to be ready
-	 *
-	 * @param {number} maxAttempts Maximum attempts before giving up
-	 * @return {Promise} Resolves with the bridge instance or null
-	 */
-	function waitForBridge( maxAttempts = 100 ) {
-		return new Promise( ( resolve ) => {
-			let attempts = 0;
-			const check = () => {
-				attempts++;
-				// Try multiple locations for the bridge
-				const bridge = window.YjsModules?.getBridge?.()
-					|| window.eXeLearning?.app?.project?.bridge;
-
-				if ( bridge?.initialized || bridge?.structureBinding ) {
-					console.log( '[WP-EXE Bridge] Bridge found after', attempts, 'attempts' );
-					resolve( bridge );
-				} else if ( attempts < maxAttempts ) {
-					setTimeout( check, 200 );
-				} else {
-					console.warn( '[WP-EXE Bridge] Bridge timeout after', maxAttempts, 'attempts' );
-					resolve( null );
 				}
 			};
 			check();
@@ -109,20 +80,8 @@
 		try {
 			updateLoadScreen( 'Loading project from WordPress...' );
 
-			// Get the bridge
-			const bridge = await waitForBridge();
-			if ( ! bridge ) {
-				throw new Error( 'Project bridge not available' );
-			}
-
-			console.log( '[WP-EXE Bridge] Bridge obtained:', bridge );
-
-			// Always import from WordPress - it's the source of truth
-			// Don't check IndexedDB cache
-
 			// Fetch the ELP file
 			updateLoadScreen( 'Downloading file...' );
-			console.log( '[WP-EXE Bridge] Fetching file...' );
 			const response = await fetch( elpUrl );
 			if ( ! response.ok ) {
 				throw new Error( `HTTP ${ response.status }: ${ response.statusText }` );
@@ -134,42 +93,29 @@
 			const filename = elpUrl.split( '/' ).pop().split( '?' )[ 0 ] || 'project.elp';
 			const file = new File( [ blob ], filename, { type: 'application/zip' } );
 
-			// Import using YjsProjectBridge
+			// Import using the new API (importElpxFile) or legacy bridge
 			updateLoadScreen( 'Importing content...' );
-			console.log( '[WP-EXE Bridge] Calling importFromElpx...' );
-			await bridge.importFromElpx( file, {
-				clearExisting: true,
-				onProgress: ( progress ) => {
-					updateLoadScreen( progress.message || `Importing... ${ progress.percent }%` );
-				},
-			} );
+			const app = window.eXeLearning?.app;
+			if ( app?.project?.importElpxFile ) {
+				console.log( '[WP-EXE Bridge] Using app.project.importElpxFile...' );
+				await app.project.importElpxFile( file );
+			} else {
+				// Legacy fallback: use YjsProjectBridge directly
+				console.log( '[WP-EXE Bridge] Using legacy bridge.importFromElpx...' );
+				const bridge = window.YjsModules?.getBridge?.()
+					|| app?.project?.bridge;
+				if ( ! bridge ) {
+					throw new Error( 'Project bridge not available' );
+				}
+				await bridge.importFromElpx( file, {
+					clearExisting: true,
+					onProgress: ( progress ) => {
+						updateLoadScreen( progress.message || `Importing... ${ progress.percent }%` );
+					},
+				} );
+			}
 
 			console.log( '[WP-EXE Bridge] ELP imported successfully' );
-
-			// Navigate to first page (optional - don't fail if API not available)
-			setTimeout( () => {
-				try {
-					// Try different methods to navigate to first page
-					if ( typeof bridge.structureBinding?.getNavigationArray === 'function' ) {
-						const navArray = bridge.structureBinding.getNavigationArray();
-						if ( navArray?.length > 0 ) {
-							const firstPage = navArray.get( 0 );
-							const pageId = firstPage?.get( 'id' ) || firstPage?.get( 'pageId' );
-							if ( pageId && window.eXeLearning?.app?.navigation ) {
-								window.eXeLearning.app.navigation.goTo( pageId );
-							}
-						}
-					} else if ( window.eXeLearning?.app?.project?.nodes ) {
-						// Alternative: use project nodes
-						const nodes = window.eXeLearning.app.project.nodes;
-						if ( nodes?.length > 0 && window.eXeLearning.app.navigation ) {
-							window.eXeLearning.app.navigation.goTo( nodes[ 0 ].id );
-						}
-					}
-				} catch ( navError ) {
-					console.warn( '[WP-EXE Bridge] Auto-navigation skipped:', navError.message );
-				}
-			}, 500 );
 		} catch ( error ) {
 			console.error( '[WP-EXE Bridge] Import failed:', error );
 			updateLoadScreen( 'Error loading project' );
@@ -194,18 +140,23 @@
 		try {
 			console.log( '[WP-EXE Bridge] Starting save...' );
 
-			// Get the bridge
-			const bridge = window.YjsModules?.getBridge?.()
-				|| window.eXeLearning?.app?.project?.bridge;
-
-			if ( ! bridge ) {
-				throw new Error( 'Project bridge not available' );
-			}
-
-			// Export using SharedExporters (same as bridge.exportToElpx but we get the blob)
+			// Export using new API (quickExport) or legacy SharedExporters
 			let blob;
-			if ( window.SharedExporters?.createExporter ) {
-				console.log( '[WP-EXE Bridge] Using SharedExporters...' );
+			if ( window.SharedExporters?.quickExport ) {
+				console.log( '[WP-EXE Bridge] Using SharedExporters.quickExport...' );
+				const result = await window.SharedExporters.quickExport( 'elpx' );
+				if ( ! result.success || ! result.data ) {
+					throw new Error( 'Export failed' );
+				}
+				blob = new Blob( [ result.data ], { type: 'application/zip' } );
+			} else if ( window.SharedExporters?.createExporter ) {
+				// Legacy fallback: use createExporter
+				console.log( '[WP-EXE Bridge] Using SharedExporters.createExporter...' );
+				const bridge = window.YjsModules?.getBridge?.()
+					|| window.eXeLearning?.app?.project?.bridge;
+				if ( ! bridge ) {
+					throw new Error( 'Project bridge not available' );
+				}
 				const exporter = window.SharedExporters.createExporter(
 					'elpx',
 					bridge.documentManager,
@@ -218,12 +169,6 @@
 					throw new Error( 'Export failed' );
 				}
 				blob = new Blob( [ result.data ], { type: 'application/zip' } );
-			} else if ( window.ElpxExporter ) {
-				// Fallback to global ElpxExporter
-				console.log( '[WP-EXE Bridge] Using global ElpxExporter...' );
-				const exporter = new window.ElpxExporter( bridge.documentManager, bridge.assetCache );
-				const arrayBuffer = await exporter.exportToArrayBuffer();
-				blob = new Blob( [ arrayBuffer ], { type: 'application/zip' } );
 			} else {
 				throw new Error( 'No exporter available' );
 			}
@@ -289,7 +234,6 @@
 	 * @param {string} message Message to display
 	 */
 	function showNotification( type, message ) {
-		// Fallback to custom notification (always use this for reliability)
 		const existing = document.getElementById( 'wp-exe-notification' );
 		if ( existing ) {
 			existing.remove();
@@ -313,14 +257,14 @@
 	async function init() {
 		try {
 			console.log( '[WP-EXE Bridge] Starting initialization...' );
-			console.log( '[WP-EXE Bridge] Config:', config );
-			console.log( '[WP-EXE Bridge] elpUrl:', config.elpUrl );
 
-			// Wait for app initialization
-			await waitForApp();
+			// Wait for app initialization using the new ready promise or legacy polling
+			if ( window.eXeLearning?.ready ) {
+				await window.eXeLearning.ready;
+			} else {
+				await waitForAppLegacy();
+			}
 			console.log( '[WP-EXE Bridge] App initialized' );
-			console.log( '[WP-EXE Bridge] eXeLearning.app:', window.eXeLearning?.app );
-			console.log( '[WP-EXE Bridge] YjsModules:', window.YjsModules );
 
 			// Import ELP if URL provided
 			if ( config.elpUrl ) {
