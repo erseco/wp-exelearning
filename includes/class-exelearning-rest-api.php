@@ -306,6 +306,18 @@ class ExeLearning_REST_API {
 					array( 'status' => 500 )
 				);
 			}
+
+			// Verify size after copy to detect truncation (e.g. PHP-WASM disk limits).
+			$copied_size   = filesize( $old_file_path );
+			$expected_size = $uploaded_file['size'];
+			if ( false === $copied_size || absint( $copied_size ) !== absint( $expected_size ) ) {
+				return new WP_Error(
+					'copy_truncated',
+					__( 'File copy appears truncated.', 'exelearning' ),
+					array( 'status' => 500 )
+				);
+			}
+
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink
 			unlink( $uploaded_file['tmp_name'] );
 		}

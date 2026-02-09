@@ -1313,14 +1313,16 @@ class RestApiTest extends WP_UnitTestCase {
 		// Ensure no old extraction exists.
 		delete_post_meta( $attachment_id, '_exelearning_extracted' );
 
+		$tmp_file       = tempnam( sys_get_temp_dir(), 'test' );
+		$test_content   = 'test content';
+		file_put_contents( $tmp_file, $test_content );
 		$_FILES['file'] = array(
 			'name'     => 'test.elpx',
 			'type'     => 'application/zip',
-			'tmp_name' => tempnam( sys_get_temp_dir(), 'test' ),
+			'tmp_name' => $tmp_file,
 			'error'    => UPLOAD_ERR_OK,
-			'size'     => 100,
+			'size'     => strlen( $test_content ),
 		);
-		file_put_contents( $_FILES['file']['tmp_name'], 'test content' );
 
 		$request = new WP_REST_Request( 'POST', '/exelearning/v1/save/' . $attachment_id );
 		$request->set_param( 'id', $attachment_id );
@@ -1404,14 +1406,16 @@ class RestApiTest extends WP_UnitTestCase {
 		$old_hash = str_repeat( 'd', 40 );
 		update_post_meta( $attachment_id, '_exelearning_extracted', $old_hash );
 
+		$tmp_file       = tempnam( sys_get_temp_dir(), 'test' );
+		$test_content   = 'test content';
+		file_put_contents( $tmp_file, $test_content );
 		$_FILES['file'] = array(
 			'name'     => 'test.elpx',
 			'type'     => 'application/zip',
-			'tmp_name' => tempnam( sys_get_temp_dir(), 'test' ),
+			'tmp_name' => $tmp_file,
 			'error'    => UPLOAD_ERR_OK,
-			'size'     => 100,
+			'size'     => strlen( $test_content ),
 		);
-		file_put_contents( $_FILES['file']['tmp_name'], 'test content' );
 
 		$request = new WP_REST_Request( 'POST', '/exelearning/v1/save/' . $attachment_id );
 		$request->set_param( 'id', $attachment_id );

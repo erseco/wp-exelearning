@@ -183,8 +183,21 @@ class ExeLearning_Elp_File_Service {
 			mkdir( $destination, 0755, true );
 		}
 
-		$zip->extractTo( $destination );
+		$expected_count = $zip->numFiles;
+		$result         = $zip->extractTo( $destination );
 		$zip->close();
+
+		if ( false === $result ) {
+			return new WP_Error( 'elp_extract_failed', 'Failed to extract ELP file contents.' );
+		}
+
+		// Verify extraction actually produced files (e.g. PHP-WASM disk issues).
+		if ( $expected_count > 0 ) {
+			$items = glob( $destination . '*' );
+			if ( empty( $items ) ) {
+				return new WP_Error( 'elp_extract_empty', 'ZIP extraction produced no files.' );
+			}
+		}
 
 		return true;
 	}
