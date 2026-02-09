@@ -117,28 +117,6 @@ $wp_config_script = sprintf(
 	'
     <!-- WordPress Integration Configuration -->
     <script>
-        // Unregister PWA Service Worker in embedded WordPress mode.
-        // The PWA SW caches static assets and can serve stale files (e.g. navigation icons).
-        // We keep preview-sw.js which handles the content preview iframe.
-        (function() {
-            if (!("serviceWorker" in navigator)) return;
-            navigator.serviceWorker.getRegistrations().then(function(regs) {
-                regs.forEach(function(reg) {
-                    var url = (reg.active && reg.active.scriptURL) || "";
-                    if (url.includes("service-worker.js") && !url.includes("preview-sw.js")) {
-                        reg.unregister();
-                    }
-                });
-            });
-            if (window.caches) {
-                caches.keys().then(function(keys) {
-                    keys.forEach(function(key) {
-                        if (key.startsWith("exelearning-static-")) caches.delete(key);
-                    });
-                });
-            }
-        })();
-
         // WordPress Integration Configuration
         window.__WP_EXE_CONFIG__ = {
             mode: "WordPress",
@@ -166,8 +144,6 @@ $wp_config_script = sprintf(
             basePath: window.__WP_EXE_CONFIG__.editorBaseUrl,
             parentOrigin: window.location.origin,
             trustedOrigins: [window.location.origin],
-            platform: "wordpress",
-            pluginVersion: %s,
             hideUI: {
                 fileMenu: true,
                 saveButton: true,
@@ -261,7 +237,6 @@ $wp_config_script = sprintf(
 	$user_id,
 	wp_json_encode( $editor_base_url ),
 	wp_json_encode( $i18n ),
-	wp_json_encode( EXELEARNING_VERSION ),
 	esc_url( $plugin_assets_url )
 );
 // phpcs:enable WordPress.WP.EnqueuedResources.NonEnqueuedScript

@@ -40,12 +40,6 @@ build-editor: check-bun update-submodule
 	@echo "Building eXeLearning static editor..."
 	rm -rf $(EDITOR_OUTPUT_DIR)
 	cd exelearning && bun install && OUTPUT_DIR=$(EDITOR_OUTPUT_DIR) bun run build:static
-	@# If the build script ignored OUTPUT_DIR, copy from submodule output.
-	@if [ ! -f "$(EDITOR_OUTPUT_DIR)/index.html" ] && [ -f "exelearning/dist/static/index.html" ]; then \
-		echo "Copying build output to dist/static/..."; \
-		mkdir -p $(EDITOR_OUTPUT_DIR); \
-		cp -R exelearning/dist/static/* $(EDITOR_OUTPUT_DIR)/; \
-	fi
 	@echo ""
 	@echo "============================================"
 	@echo "  Static editor built at dist/static/"
@@ -56,12 +50,6 @@ build-editor-no-update: check-bun
 	@echo "Building eXeLearning static editor (without submodule update)..."
 	rm -rf $(EDITOR_OUTPUT_DIR)
 	cd exelearning && bun install && OUTPUT_DIR=$(EDITOR_OUTPUT_DIR) bun run build:static
-	@# If the build script ignored OUTPUT_DIR, copy from submodule output.
-	@if [ ! -f "$(EDITOR_OUTPUT_DIR)/index.html" ] && [ -f "exelearning/dist/static/index.html" ]; then \
-		echo "Copying build output to dist/static/..."; \
-		mkdir -p $(EDITOR_OUTPUT_DIR); \
-		cp -R exelearning/dist/static/* $(EDITOR_OUTPUT_DIR)/; \
-	fi
 	@echo "Static editor built at dist/static/"
 
 # Clean editor build
