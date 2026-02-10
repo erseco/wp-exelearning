@@ -142,6 +142,7 @@ $wp_config_script = sprintf(
         // data attributes on <body> + CSS in main.scss.
         window.__EXE_EMBEDDING_CONFIG__ = {
             basePath: window.__WP_EXE_CONFIG__.editorBaseUrl,
+            initialProjectUrl: window.__WP_EXE_CONFIG__.elpUrl || null,
             parentOrigin: window.location.origin,
             trustedOrigins: [window.location.origin],
             hideUI: {
