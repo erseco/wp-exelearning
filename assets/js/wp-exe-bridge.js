@@ -54,13 +54,9 @@
 		let blob;
 		let filename = 'project.elpx';
 
-		if ( project && typeof project.exportToElpxBlob === 'function' ) {
-			blob = await project.exportToElpxBlob();
-			filename = project.getExportFilename?.() || filename;
-		} else if ( project?._yjsBridge?.exporter ) {
-			blob = await project._yjsBridge.exporter.exportToBlob();
-			filename = project._yjsBridge.exporter.buildFilename?.() || filename;
-		} else if (
+		// Prefer SharedExporters + Yjs bridge in embedded WP mode because it
+		// includes asset blobs from the active AssetManager reliably.
+		if (
 			window.SharedExporters?.createExporter &&
 			project?._yjsBridge?.documentManager
 		) {
@@ -79,6 +75,12 @@
 
 			blob = new Blob( [ result.data ], { type: 'application/zip' } );
 			filename = result.filename || filename;
+		} else if ( project && typeof project.exportToElpxBlob === 'function' ) {
+			blob = await project.exportToElpxBlob();
+			filename = project.getExportFilename?.() || filename;
+		} else if ( project?._yjsBridge?.exporter ) {
+			blob = await project._yjsBridge.exporter.exportToBlob();
+			filename = project._yjsBridge.exporter.buildFilename?.() || filename;
 		} else {
 			throw new Error( 'Export not available' );
 		}

@@ -276,3 +276,6 @@ msgstr "Este archivo fue creado con una versión anterior de eXeLearning y no es
 
 msgid "The file is not a valid eXeLearning file (.elpx)."
 msgstr "El archivo no es un archivo válido de eXeLearning (.elpx)."
+
+msgid "File copy appears truncated."
+msgstr "La copia del archivo parece estar truncada."
