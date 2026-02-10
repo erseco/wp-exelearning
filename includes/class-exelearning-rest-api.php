@@ -79,7 +79,7 @@ class ExeLearning_REST_API {
 			array(
 				'methods'             => 'GET',
 				'callback'            => array( $this, 'get_elp_data' ),
-				'permission_callback' => array( $this, 'check_read_permission' ),
+				'permission_callback' => array( $this, 'check_edit_permission' ),
 				'args'                => array(
 					'id' => array(
 						'required'          => true,

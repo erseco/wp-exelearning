@@ -23,9 +23,7 @@
 		isSaving: false,
 		editorOrigin: '*',
 		requestCounter: 0,
-		openRequestId: null,
 		exportRequestId: null,
-		openSent: false,
 
 		init: function() {
 			this.modal = $( '#exelearning-editor-modal' );
@@ -85,13 +83,6 @@
 			}
 		},
 
-		hasInitialProjectBootstrap: function() {
-			const iframeWindow = this.iframe[0]?.contentWindow;
-			const initialProjectUrl =
-				iframeWindow?.__EXE_EMBEDDING_CONFIG__?.initialProjectUrl || '';
-			return Boolean( initialProjectUrl );
-		},
-
 		bindEvents: function() {
 			const self = this;
 
@@ -133,12 +124,10 @@
 			}
 
 			this.currentAttachmentId = attachmentId;
-			this.openSent = false;
-			this.openRequestId = null;
 			this.exportRequestId = null;
 			this.editorOrigin = '*';
 
-			const freshUrl =
+			const baseEditorUrl =
 				exelearningEditorVars.editorPageUrl +
 				'&attachment_id=' + attachmentId +
 				'&_wpnonce=' + exelearningEditorVars.editorNonce;
@@ -146,12 +135,39 @@
 			if ( this.modal.length && this.iframe.length ) {
 				this.modal.show();
 				this.isOpen = true;
-				this.iframe.attr( 'src', freshUrl );
-				this.editorOrigin = this.getEditorOrigin();
 				$( 'body' ).addClass( 'exelearning-editor-open' );
 				this.saveBtn.prop( 'disabled', true );
+
+				const self = this;
+				( async function() {
+					let importUrl = '';
+					try {
+						const metaResponse = await fetch(
+							`${ exelearningEditorVars.restUrl }/elp-data/${ attachmentId }`,
+							{
+								headers: { 'X-WP-Nonce': exelearningEditorVars.nonce },
+								credentials: 'same-origin',
+							}
+						);
+						if ( metaResponse.ok ) {
+							const meta = await metaResponse.json();
+							if ( meta?.url ) {
+								importUrl = meta.url;
+							}
+						}
+					} catch ( metaError ) {
+						console.warn( 'ExeLearningEditor: Could not resolve import URL', metaError );
+					}
+
+					const freshUrl = importUrl
+						? `${ baseEditorUrl }&import=${ encodeURIComponent( importUrl ) }`
+						: baseEditorUrl;
+
+					self.iframe.attr( 'src', freshUrl );
+					self.editorOrigin = self.getEditorOrigin();
+				} )();
 			} else {
-				window.open( freshUrl, '_blank', 'width=900,height=700' );
+				window.open( baseEditorUrl, '_blank', 'width=900,height=700' );
 			}
 		},
 
@@ -160,59 +176,21 @@
 				return;
 			}
 
+			try {
+				const iframeWindow = this.iframe[0]?.contentWindow;
+				if ( iframeWindow ) {
+					iframeWindow.onbeforeunload = null;
+				}
+			} catch ( e ) {}
+
 			this.modal.hide();
 			this.isOpen = false;
 			this.iframe.attr( 'src', 'about:blank' );
 			$( 'body' ).removeClass( 'exelearning-editor-open' );
 			this.currentAttachmentId = null;
-			this.openSent = false;
-			this.openRequestId = null;
 			this.exportRequestId = null;
 			this.setSavingState( false );
 			this.refreshMediaLibrary();
-		},
-
-		openAttachmentInEditor: async function() {
-			if ( this.openSent || ! this.currentAttachmentId ) {
-				return;
-			}
-			this.openSent = true;
-
-			try {
-				const metaResponse = await fetch(
-					`${ exelearningEditorVars.restUrl }/elp-data/${ this.currentAttachmentId }`,
-					{
-						headers: { 'X-WP-Nonce': exelearningEditorVars.nonce },
-						credentials: 'same-origin',
-					}
-				);
-				if ( ! metaResponse.ok ) {
-					throw new Error( `Failed to get file metadata (${ metaResponse.status })` );
-				}
-				const meta = await metaResponse.json();
-				if ( ! meta?.url ) {
-					throw new Error( 'Missing file URL for attachment' );
-				}
-
-				const fileResponse = await fetch( meta.url, { credentials: 'same-origin' } );
-				if ( ! fileResponse.ok ) {
-					throw new Error( `Failed to download file (${ fileResponse.status })` );
-				}
-
-				const bytes = await fileResponse.arrayBuffer();
-				this.openRequestId = this.nextRequestId( 'open' );
-				this.postToEditor( {
-					type: 'OPEN_FILE',
-					requestId: this.openRequestId,
-					data: {
-						bytes,
-						filename: meta.filename || 'project.elpx',
-					},
-				} );
-			} catch ( error ) {
-				console.error( 'ExeLearningEditor: Failed to open project', error );
-				this.openSent = false;
-			}
 		},
 
 		requestSave: function() {
@@ -223,12 +201,8 @@
 			this.setSavingState( true );
 			this.exportRequestId = this.nextRequestId( 'export' );
 			this.postToEditor( {
-				type: 'REQUEST_EXPORT',
+				type: 'REQUEST_SAVE',
 				requestId: this.exportRequestId,
-				data: {
-					format: 'elpx',
-					filename: 'project.elpx',
-				},
 			} );
 		},
 
@@ -260,13 +234,6 @@
 							},
 						},
 					} );
-					if ( this.hasInitialProjectBootstrap() ) {
-						console.log(
-							'ExeLearningEditor: initialProjectUrl bootstrap detected, skipping OPEN_FILE fallback'
-						);
-					} else {
-						this.openAttachmentInEditor();
-					}
 					break;
 
 				case 'DOCUMENT_LOADED':
@@ -275,28 +242,17 @@
 					}
 					break;
 
-				case 'OPEN_FILE_SUCCESS':
-					if ( data.requestId === this.openRequestId && ! this.isSaving ) {
-						this.saveBtn.prop( 'disabled', false );
-					}
-					break;
-
-				case 'OPEN_FILE_ERROR':
-					if ( data.requestId === this.openRequestId ) {
-						console.error( 'ExeLearningEditor: OPEN_FILE_ERROR', data.error );
-						this.openSent = false;
-					}
-					break;
-
+				case 'SAVE_FILE':
 				case 'EXPORT_FILE':
 					if ( data.requestId === this.exportRequestId ) {
 						await this.handleExportFile( data );
 					}
 					break;
 
+				case 'REQUEST_SAVE_ERROR':
 				case 'REQUEST_EXPORT_ERROR':
 					if ( data.requestId === this.exportRequestId ) {
-						console.error( 'ExeLearningEditor: REQUEST_EXPORT_ERROR', data.error );
+						console.error( 'ExeLearningEditor: Save request error', data.error );
 						this.setSavingState( false );
 					}
 					break;
@@ -333,6 +289,10 @@
 				this.onSaveComplete( {
 					attachmentId: result.attachment_id || result.attachmentId || this.currentAttachmentId,
 					previewUrl: result.preview_url || result.previewUrl || null,
+				} );
+				this.postToEditor( {
+					type: 'WP_SAVE_CONFIRMED',
+					requestId: this.nextRequestId( 'wp-save-confirmed' ),
 				} );
 				this.close();
 			} catch ( error ) {

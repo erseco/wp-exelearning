@@ -155,10 +155,180 @@ $wp_config_script = sprintf(
         // TODO: Remove when editor ResourceFetcher handles 404 gracefully.
         // Patch fetch and jQuery AJAX to handle CSS/idevices 404s without breaking.
         (function() {
+            var editorBaseUrl = (window.__WP_EXE_CONFIG__ && window.__WP_EXE_CONFIG__.editorBaseUrl) || "";
+            var editorBasePathname = "";
+            var originalServiceWorker = navigator.serviceWorker || null;
+            var forceHideSelectors = [
+                "#dropdownFile",
+                "#head-top-save-button",
+                "#head-bottom-user-logged",
+                "#exe-concurrent-users",
+                "#mobile-navbar-button-save",
+                "#mobile-navbar-button-openuserodefiles"
+            ];
+
+            try {
+                editorBasePathname = editorBaseUrl ? new URL(editorBaseUrl, window.location.origin).pathname : "";
+            } catch (e) {
+                editorBasePathname = "";
+            }
+
+            function forceHideEmbeddedUi() {
+                for (var i = 0; i < forceHideSelectors.length; i += 1) {
+                    var nodes = document.querySelectorAll(forceHideSelectors[i]);
+                    for (var j = 0; j < nodes.length; j += 1) {
+                        nodes[j].style.setProperty("display", "none", "important");
+                        if (nodes[j].id === "dropdownFile") {
+                            var fileNavItem = nodes[j].closest("li.nav-item");
+                            if (fileNavItem) {
+                                fileNavItem.style.setProperty("display", "none", "important");
+                            }
+                            var fileMenu = document.querySelector("ul[aria-labelledby=\"dropdownFile\"]");
+                            if (fileMenu) {
+                                fileMenu.style.setProperty("display", "none", "important");
+                            }
+                        }
+                    }
+                }
+            }
+
+            function normalizePreviewIframeSrc(url) {
+                if (!url || !editorBaseUrl) {
+                    return url;
+                }
+
+                var baseNoSlash = editorBaseUrl.replace(/\/$/, "");
+                var raw = url;
+
+                try {
+                    if (raw.startsWith("http://") || raw.startsWith("https://")) {
+                        raw = new URL(raw).pathname;
+                    }
+                } catch (e) {}
+
+                if (raw.indexOf("/wp-admin/admin.php/viewer/") === 0) {
+                    return baseNoSlash + "/viewer/" + raw.substring("/wp-admin/admin.php/viewer/".length);
+                }
+                if (raw.indexOf("/viewer/") === 0) {
+                    return baseNoSlash + raw;
+                }
+                if (raw.indexOf("viewer/") === 0) {
+                    return baseNoSlash + "/" + raw;
+                }
+
+                return url;
+            }
+
+            function ensurePreviewIframeSrc() {
+                var previewIframe = document.getElementById("preview-iframe");
+                if (!previewIframe) {
+                    return;
+                }
+
+                var currentSrc = previewIframe.getAttribute("src") || previewIframe.src || "";
+                var fixedSrc = normalizePreviewIframeSrc(currentSrc);
+                if (fixedSrc && fixedSrc !== currentSrc) {
+                    previewIframe.setAttribute("src", fixedSrc);
+                }
+            }
+
+            if (document.readyState === "loading") {
+                document.addEventListener("DOMContentLoaded", forceHideEmbeddedUi);
+                document.addEventListener("DOMContentLoaded", ensurePreviewIframeSrc);
+            } else {
+                forceHideEmbeddedUi();
+                ensurePreviewIframeSrc();
+            }
+
+            var hideObserver = new MutationObserver(function() {
+                forceHideEmbeddedUi();
+                ensurePreviewIframeSrc();
+            });
+            hideObserver.observe(document.documentElement || document.body, {
+                childList: true,
+                subtree: true,
+                attributes: true,
+                attributeFilter: ["src"]
+            });
+
+            // Fix preview service worker paths in WP mode.
+            if (originalServiceWorker && editorBasePathname) {
+                var registerOriginal = originalServiceWorker.register.bind(originalServiceWorker);
+                var getRegistrationOriginal = originalServiceWorker.getRegistration.bind(originalServiceWorker);
+                var fixedSwPath = editorBasePathname.replace(/\/$/, "") + "/preview-sw.js";
+                var fixedScope = editorBasePathname.replace(/\/$/, "") + "/viewer/";
+
+                originalServiceWorker.register = function(scriptURL, options) {
+                    var nextScript = scriptURL;
+                    var nextOptions = options || {};
+                    if (typeof nextScript === "string" && nextScript.indexOf("preview-sw.js") !== -1) {
+                        nextScript = fixedSwPath;
+                        nextOptions = Object.assign({}, nextOptions, { scope: fixedScope });
+                    }
+                    return registerOriginal(nextScript, nextOptions);
+                };
+
+                originalServiceWorker.getRegistration = function(clientURL) {
+                    var nextClientUrl = clientURL;
+                    if (
+                        !nextClientUrl ||
+                        (typeof nextClientUrl === "string" && nextClientUrl.indexOf("/wp-admin/") === 0)
+                    ) {
+                        nextClientUrl = fixedScope;
+                    }
+                    return getRegistrationOriginal(nextClientUrl);
+                };
+            }
+
+            function normalizeEditorAssetUrl(url) {
+                if (!url || typeof url !== "string" || !editorBaseUrl) {
+                    return url;
+                }
+
+                if (
+                    url.startsWith("data:") ||
+                    url.startsWith("blob:") ||
+                    url.startsWith("http://") ||
+                    url.startsWith("https://")
+                ) {
+                    return url;
+                }
+
+                var baseNoSlash = editorBaseUrl.replace(/\/$/, "");
+                var wpAdminPrefix = "/wp-admin/admin.php/";
+                if (url.indexOf(wpAdminPrefix) === 0) {
+                    return baseNoSlash + "/" + url.substring(wpAdminPrefix.length);
+                }
+
+                var cleanUrl = url.replace(/^\.\//, "");
+                if (
+                    cleanUrl.startsWith("files/") ||
+                    cleanUrl.startsWith("libs/") ||
+                    cleanUrl.startsWith("app/") ||
+                    cleanUrl.startsWith("style/") ||
+                    cleanUrl.startsWith("images/") ||
+                    cleanUrl === "CHANGELOG.md" ||
+                    cleanUrl === "LICENSES.md" ||
+                    cleanUrl === "README.md"
+                ) {
+                    return baseNoSlash + "/" + cleanUrl;
+                }
+
+                return url;
+            }
+
             var originalFetch = window.fetch;
             window.fetch = function(input, init) {
                 var url = typeof input === "string" ? input : (input && input.url) || "";
-                return originalFetch.apply(this, arguments).then(function(response) {
+                var normalizedUrl = normalizeEditorAssetUrl(url);
+                var fetchInput = input;
+                if (typeof input === "string") {
+                    fetchInput = normalizedUrl;
+                } else if (input && input.url && normalizedUrl !== input.url) {
+                    fetchInput = new Request(normalizedUrl, input);
+                }
+
+                return originalFetch.call(this, fetchInput, init).then(function(response) {
                     if (!response.ok && (url.includes(".css") || url.includes("idevices"))) {
                         console.warn("[WP Mode] Fetch 404 fallback:", url);
                         return new Response("/* empty fallback */", {
@@ -186,11 +356,12 @@ $wp_config_script = sprintf(
                 if (!$ || !$.ajaxTransport) return;
                 $.ajaxTransport("+*", function(options) {
                     var url = options.url || "";
+                    var normalizedUrl = normalizeEditorAssetUrl(url);
                     if (!(url.includes(".css") || url.includes("idevices"))) return;
                     return {
                         send: function(headers, completeCallback) {
                             var xhr = new XMLHttpRequest();
-                            xhr.open(options.type || "GET", url, true);
+                            xhr.open(options.type || "GET", normalizedUrl, true);
                             xhr.onload = function() {
                                 if (xhr.status >= 200 && xhr.status < 300) {
                                     completeCallback(xhr.status, xhr.statusText, { text: xhr.responseText });
@@ -277,6 +448,16 @@ $page_styles = '
         }
         .wp-exe-notification--fade {
             opacity: 0;
+        }
+
+        /* Moodle-like embedded mode: hide File menu, top Save and user/profile menu. */
+        #dropdownFile,
+        #head-top-save-button,
+        #head-bottom-user-logged,
+        #exe-concurrent-users,
+        #mobile-navbar-button-save,
+        #mobile-navbar-button-openuserodefiles {
+            display: none !important;
         }
     </style>
 ';
