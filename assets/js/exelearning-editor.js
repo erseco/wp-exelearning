@@ -85,6 +85,13 @@
 			}
 		},
 
+		hasInitialProjectBootstrap: function() {
+			const iframeWindow = this.iframe[0]?.contentWindow;
+			const initialProjectUrl =
+				iframeWindow?.__EXE_EMBEDDING_CONFIG__?.initialProjectUrl || '';
+			return Boolean( initialProjectUrl );
+		},
+
 		bindEvents: function() {
 			const self = this;
 
@@ -253,7 +260,13 @@
 							},
 						},
 					} );
-					this.openAttachmentInEditor();
+					if ( this.hasInitialProjectBootstrap() ) {
+						console.log(
+							'ExeLearningEditor: initialProjectUrl bootstrap detected, skipping OPEN_FILE fallback'
+						);
+					} else {
+						this.openAttachmentInEditor();
+					}
 					break;
 
 				case 'DOCUMENT_LOADED':
