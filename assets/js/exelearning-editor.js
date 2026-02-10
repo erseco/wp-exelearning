@@ -1,349 +1,470 @@
 /**
  * eXeLearning Editor Handler
  *
- * Opens the editor page in a modal or new window for editing .elp files.
+ * Parent-side controller for the embedded editor modal.
+ * Uses EmbeddingBridge protocol only.
  */
 ( function( $ ) {
-    'use strict';
+	'use strict';
 
-    var ExeLearningEditor = {
-        modal: null,
-        iframe: null,
-        saveBtn: null,
-        currentAttachmentId: null,
-        isOpen: false,
-        isSaving: false,
+	const FORMAT_OPTIONS = [
+		{ value: 'elpx', label: 'ELPX (.elpx)' },
+		{ value: 'scorm12', label: 'SCORM 1.2 (.zip)' },
+		{ value: 'epub3', label: 'EPUB3 (.epub)' },
+	];
 
-        /**
-         * Initialize the editor.
-         */
-        init: function() {
-            this.modal = $( '#exelearning-editor-modal' );
-            this.iframe = $( '#exelearning-editor-iframe' );
-            this.saveBtn = $( '#exelearning-editor-save' );
-            this.bindEvents();
-        },
+	const ExeLearningEditor = {
+		modal: null,
+		iframe: null,
+		saveBtn: null,
+		formatSelect: null,
+		currentAttachmentId: null,
+		isOpen: false,
+		isSaving: false,
+		editorOrigin: '*',
+		requestCounter: 0,
+		openRequestId: null,
+		exportRequestId: null,
+		openSent: false,
 
-        /**
-         * Bind event handlers.
-         */
-        bindEvents: function() {
-            var self = this;
+		init: function() {
+			this.modal = $( '#exelearning-editor-modal' );
+			this.iframe = $( '#exelearning-editor-iframe' );
+			this.saveBtn = $( '#exelearning-editor-save' );
+			this.bindEvents();
+		},
 
-            // Save button in modal header.
-            $( '#exelearning-editor-save' ).on( 'click', function() {
-                self.requestSave();
-            });
+		insertFormatSelector: function() {
+			if ( this.formatSelect ) {
+				return;
+			}
+			const select = document.createElement( 'select' );
+			select.id = 'exelearning-editor-format';
+			select.className = 'regular-text';
+			select.style.maxWidth = '180px';
+			select.style.marginRight = '8px';
 
-            // Close button in modal.
-            $( '#exelearning-editor-close' ).on( 'click', function() {
-                self.close();
-            });
+			FORMAT_OPTIONS.forEach( ( option ) => {
+				const element = document.createElement( 'option' );
+				element.value = option.value;
+				element.textContent = option.label;
+				if ( option.value === 'elpx' ) {
+					element.selected = true;
+				}
+				select.appendChild( element );
+			} );
 
-            // Listen for messages from iframe/popup.
-            window.addEventListener( 'message', function( event ) {
-                self.handleMessage( event );
-            });
+			const closeBtn = document.getElementById( 'exelearning-editor-close' );
+			if ( closeBtn && closeBtn.parentNode ) {
+				closeBtn.parentNode.insertBefore( select, closeBtn );
+			}
+			this.formatSelect = $( select );
+		},
 
-            // Escape key to close.
-            $( document ).on( 'keydown', function( e ) {
-                if ( e.key === 'Escape' && self.isOpen ) {
-                    self.close();
-                }
-            });
-        },
+		nextRequestId: function( prefix ) {
+			this.requestCounter += 1;
+			return `${ prefix }-${ Date.now() }-${ this.requestCounter }`;
+		},
 
-        /**
-         * Request save from the iframe.
-         */
-        requestSave: function() {
-            if ( this.isSaving || ! this.iframe.length ) {
-                return;
-            }
+		getFormat: function() {
+			return 'elpx';
+		},
 
-            var iframeWindow = this.iframe[0].contentWindow;
-            if ( iframeWindow ) {
-                // Disable beforeunload to prevent "leave site?" dialog when closing after save.
-                try {
-                    iframeWindow.onbeforeunload = null;
-                    iframeWindow.addEventListener( 'beforeunload', function( e ) {
-                        e.stopImmediatePropagation();
-                        delete e.returnValue;
-                    }, true );
-                } catch ( e ) {
-                    // Cross-origin access may fail, ignore.
-                }
+		getEditorOrigin: function() {
+			try {
+				return new URL( this.iframe.attr( 'src' ), window.location.href ).origin;
+			} catch ( e ) {
+				return '*';
+			}
+		},
 
-                iframeWindow.postMessage( { type: 'exelearning-request-save' }, '*' );
-            }
-        },
+		postToEditor: function( message ) {
+			const iframeWindow = this.iframe[0]?.contentWindow;
+			if ( iframeWindow ) {
+				iframeWindow.postMessage( message, this.editorOrigin );
+			}
+		},
 
-        /**
-         * Set saving state and update button.
-         *
-         * @param {boolean} saving Whether save is in progress.
-         */
-        setSavingState: function( saving ) {
-            this.isSaving = saving;
-            if ( this.saveBtn.length ) {
-                this.saveBtn.prop( 'disabled', saving );
-                this.saveBtn.text( saving
-                    ? ( exelearningEditorVars.i18n?.saving || 'Saving...' )
-                    : ( exelearningEditorVars.i18n?.saveToWordPress || 'Save to WordPress' )
-                );
-            }
-        },
+		bindEvents: function() {
+			const self = this;
 
-        /**
-         * Open the editor page.
-         *
-         * @param {number} attachmentId The attachment ID.
-         * @param {string} editUrl The editor URL (optional, ignored - always use fresh nonce).
-         */
-        open: function( attachmentId, editUrl ) {
-            if ( ! attachmentId ) {
-                console.error( 'No attachment ID provided' );
-                return;
-            }
+			$( '#exelearning-editor-save' ).on( 'click', function() {
+				self.requestSave();
+			} );
 
-            this.currentAttachmentId = attachmentId;
+			$( '#exelearning-editor-close' ).on( 'click', function() {
+				self.close();
+			} );
 
-            // Always build a fresh URL with the current nonce to avoid stale nonce issues.
-            // The editUrl parameter is ignored to ensure we use the nonce from page load.
-            var freshUrl = exelearningEditorVars.editorPageUrl +
-                '&attachment_id=' + attachmentId +
-                '&_wpnonce=' + exelearningEditorVars.editorNonce;
+			window.addEventListener( 'message', function( event ) {
+				self.handleMessage( event );
+			} );
 
-            // Try to use modal if available, otherwise open in new window.
-            if ( this.modal.length && this.iframe.length ) {
-                this.modal.show();
-                this.isOpen = true;
-                this.iframe.attr( 'src', freshUrl );
-                $( 'body' ).addClass( 'exelearning-editor-open' );
-            } else {
-                // Open in new window.
-                window.open( freshUrl, '_blank', 'width=900,height=700' );
-            }
-        },
+			$( document ).on( 'keydown', function( e ) {
+				if ( e.key === 'Escape' && self.isOpen ) {
+					self.close();
+				}
+			} );
+		},
 
-        /**
-         * Close the editor modal.
-         */
-        close: function() {
-            if ( ! this.isOpen ) {
-                return;
-            }
+		setSavingState: function( saving ) {
+			this.isSaving = saving;
+			if ( this.saveBtn.length ) {
+				this.saveBtn.prop( 'disabled', saving );
+				this.saveBtn.text(
+					saving
+						? ( exelearningEditorVars.i18n?.saving || 'Saving...' )
+						: ( exelearningEditorVars.i18n?.saveToWordPress || 'Save to WordPress' )
+				);
+			}
+		},
 
-            // Hide modal.
-            this.modal.hide();
-            this.isOpen = false;
+		open: function( attachmentId ) {
+			if ( ! attachmentId ) {
+				console.error( 'No attachment ID provided' );
+				return;
+			}
 
-            // Clear iframe.
-            this.iframe.attr( 'src', 'about:blank' );
+			this.currentAttachmentId = attachmentId;
+			this.openSent = false;
+			this.openRequestId = null;
+			this.exportRequestId = null;
+			this.editorOrigin = '*';
 
-            // Remove body class.
-            $( 'body' ).removeClass( 'exelearning-editor-open' );
+			const freshUrl =
+				exelearningEditorVars.editorPageUrl +
+				'&attachment_id=' + attachmentId +
+				'&_wpnonce=' + exelearningEditorVars.editorNonce;
 
-            // Reset state.
-            this.currentAttachmentId = null;
+			if ( this.modal.length && this.iframe.length ) {
+				this.modal.show();
+				this.isOpen = true;
+				this.iframe.attr( 'src', freshUrl );
+				this.editorOrigin = this.getEditorOrigin();
+				$( 'body' ).addClass( 'exelearning-editor-open' );
+				this.saveBtn.prop( 'disabled', true );
+			} else {
+				window.open( freshUrl, '_blank', 'width=900,height=700' );
+			}
+		},
 
-            // Refresh media library if open.
-            this.refreshMediaLibrary();
-        },
+		close: function() {
+			if ( ! this.isOpen ) {
+				return;
+			}
 
-        /**
-         * Handle messages from iframe/popup.
-         *
-         * @param {MessageEvent} event The message event.
-         */
-        handleMessage: function( event ) {
-            var data = event.data;
+			this.modal.hide();
+			this.isOpen = false;
+			this.iframe.attr( 'src', 'about:blank' );
+			$( 'body' ).removeClass( 'exelearning-editor-open' );
+			this.currentAttachmentId = null;
+			this.openSent = false;
+			this.openRequestId = null;
+			this.exportRequestId = null;
+			this.setSavingState( false );
+			this.refreshMediaLibrary();
+		},
 
-            if ( ! data || ! data.type ) {
-                return;
-            }
+		openAttachmentInEditor: async function() {
+			if ( this.openSent || ! this.currentAttachmentId ) {
+				return;
+			}
+			this.openSent = true;
 
-            switch ( data.type ) {
-                case 'exelearning-bridge-ready':
-                    // Bridge is ready, can enable save button if needed.
-                    break;
+			try {
+				const metaResponse = await fetch(
+					`${ exelearningEditorVars.restUrl }/elp-data/${ this.currentAttachmentId }`,
+					{
+						headers: { 'X-WP-Nonce': exelearningEditorVars.nonce },
+						credentials: 'same-origin',
+					}
+				);
+				if ( ! metaResponse.ok ) {
+					throw new Error( `Failed to get file metadata (${ metaResponse.status })` );
+				}
+				const meta = await metaResponse.json();
+				if ( ! meta?.url ) {
+					throw new Error( 'Missing file URL for attachment' );
+				}
 
-                case 'exelearning-save-start':
-                    this.setSavingState( true );
-                    break;
+				const fileResponse = await fetch( meta.url, { credentials: 'same-origin' } );
+				if ( ! fileResponse.ok ) {
+					throw new Error( `Failed to download file (${ fileResponse.status })` );
+				}
 
-                case 'exelearning-save-complete':
-                    this.setSavingState( false );
-                    this.onSaveComplete( data );
-                    this.close();
-                    break;
+				const bytes = await fileResponse.arrayBuffer();
+				this.openRequestId = this.nextRequestId( 'open' );
+				this.postToEditor( {
+					type: 'OPEN_FILE',
+					requestId: this.openRequestId,
+					data: {
+						bytes,
+						filename: meta.filename || 'project.elpx',
+					},
+				} );
+			} catch ( error ) {
+				console.error( 'ExeLearningEditor: Failed to open project', error );
+				this.openSent = false;
+			}
+		},
 
-                case 'exelearning-save-error':
-                    this.setSavingState( false );
-                    break;
+		requestSave: function() {
+			if ( this.isSaving || ! this.iframe.length ) {
+				return;
+			}
 
-                case 'exelearning-close':
-                    this.close();
-                    break;
-            }
-        },
+			this.setSavingState( true );
+			this.exportRequestId = this.nextRequestId( 'export' );
+			this.postToEditor( {
+				type: 'REQUEST_EXPORT',
+				requestId: this.exportRequestId,
+				data: {
+					format: 'elpx',
+					filename: 'project.elpx',
+				},
+			} );
+		},
 
-        /**
-         * Handle save complete message.
-         *
-         * @param {object} data The message data.
-         */
-        onSaveComplete: function( data ) {
-            // Refresh the specific attachment to get updated metadata.
-            if ( data.attachmentId ) {
-                this.refreshAttachment( data.attachmentId, data.previewUrl );
-                this.updateBlockPreview( data.attachmentId, data.previewUrl );
-            }
-            // Refresh media library to show updated content.
-            this.refreshMediaLibrary();
-        },
+		handleMessage: async function( event ) {
+			const data = event.data;
+			const iframeWindow = this.iframe[0]?.contentWindow;
 
-        /**
-         * Update Gutenberg block preview URL after saving.
-         *
-         * @param {number} attachmentId The attachment ID.
-         * @param {string} previewUrl   The new preview URL.
-         */
-        updateBlockPreview: function( attachmentId, previewUrl ) {
-            if ( ! attachmentId || ! previewUrl || ! wp.data ) {
-                return;
-            }
+			if ( ! data || ! data.type || ! iframeWindow || event.source !== iframeWindow ) {
+				if ( data?.source === 'wp-exe-editor' && data.type === 'request-save' ) {
+					this.requestSave();
+				}
+				return;
+			}
 
-            var updated = false;
-            var blocks = wp.data.select( 'core/block-editor' ).getBlocks();
-            blocks.forEach( function( block ) {
-                if (
-                    block.name === 'exelearning/elp-upload' &&
-                    block.attributes.attachmentId === attachmentId
-                ) {
-                    wp.data.dispatch( 'core/block-editor' ).updateBlockAttributes(
-                        block.clientId,
-                        { previewUrl: previewUrl }
-                    );
-                    updated = true;
-                }
-            });
+			if ( this.editorOrigin !== '*' && event.origin !== this.editorOrigin ) {
+				return;
+			}
 
-            // Auto-save the post so the new previewUrl is persisted.
-            // Without this, reloading the page would load the old hash and cause a 404.
-            if ( updated && wp.data.select( 'core/editor' ) ) {
-                wp.data.dispatch( 'core/editor' ).savePost();
-            }
+			switch ( data.type ) {
+				case 'EXELEARNING_READY':
+					this.postToEditor( {
+						type: 'CONFIGURE',
+						requestId: this.nextRequestId( 'configure' ),
+						data: {
+							hideUI: {
+								fileMenu: true,
+								saveButton: true,
+								userMenu: true,
+							},
+						},
+					} );
+					this.openAttachmentInEditor();
+					break;
 
-            // Fallback for environments where iframe src navigation fails (e.g. Playground).
-            if ( updated && previewUrl ) {
-                this.ensurePreviewLoaded( previewUrl );
-            }
-        },
+				case 'DOCUMENT_LOADED':
+					if ( ! this.isSaving ) {
+						this.saveBtn.prop( 'disabled', false );
+					}
+					break;
 
-        /**
-         * Ensure preview iframe loaded content after src update.
-         *
-         * In some environments (e.g. WordPress Playground), iframe navigation via
-         * Service Worker may fail silently, resulting in an empty iframe even though
-         * fetch() of the same URL works. This detects empty iframes and injects
-         * content via srcdoc as a fallback.
-         *
-         * @param {string} previewUrl The preview URL to load.
-         */
-        ensurePreviewLoaded: function( previewUrl ) {
-            setTimeout( function() {
-                var iframes = document.querySelectorAll( '.exelearning-block-preview iframe' );
-                iframes.forEach( function( iframe ) {
-                    try {
-                        var doc = iframe.contentDocument;
-                        if ( ! doc || ! doc.body || doc.body.innerHTML.length === 0 ) {
-                            fetch( previewUrl, { credentials: 'same-origin' } )
-                                .then( function( response ) {
-                                    return response.ok ? response.text() : null;
-                                } )
-                                .then( function( html ) {
-                                    if ( html && html.length > 0 ) {
-                                        iframe.srcdoc = html;
-                                    }
-                                } )
-                                .catch( function() {} );
-                        }
-                    } catch ( e ) {
-                        // Cross-origin or other error, ignore.
-                    }
-                } );
-            }, 2000 );
-        },
+				case 'OPEN_FILE_SUCCESS':
+					if ( data.requestId === this.openRequestId && ! this.isSaving ) {
+						this.saveBtn.prop( 'disabled', false );
+					}
+					break;
 
-        /**
-         * Refresh a specific attachment's data.
-         *
-         * @param {number} attachmentId The attachment ID.
-         * @param {string} previewUrl The new preview URL (optional).
-         */
-        refreshAttachment: function( attachmentId, previewUrl ) {
-            if ( ! wp.media ) {
-                return;
-            }
+				case 'OPEN_FILE_ERROR':
+					if ( data.requestId === this.openRequestId ) {
+						console.error( 'ExeLearningEditor: OPEN_FILE_ERROR', data.error );
+						this.openSent = false;
+					}
+					break;
 
-            try {
-                var attachment = wp.media.attachment( attachmentId );
-                if ( attachment && ! attachment.destroyed ) {
-                    // Force fetch fresh data from server.
-                    attachment.fetch().done( function() {
-                        try {
-                            // Update preview URL in exelearning metadata if provided.
-                            if ( previewUrl ) {
-                                var exeData = attachment.get( 'exelearning' ) || {};
-                                exeData.preview_url = previewUrl;
-                                attachment.set( 'exelearning', exeData, { silent: true } );
-                            }
+				case 'EXPORT_FILE':
+					if ( data.requestId === this.exportRequestId ) {
+						await this.handleExportFile( data );
+					}
+					break;
 
-                            // Remove the processed class so preview gets re-rendered.
-                            $( '.attachment-details .thumbnail' )
-                                .removeClass( 'exelearning-details-preview-added' )
-                                .removeClass( 'exelearning-details-no-preview' );
+				case 'REQUEST_EXPORT_ERROR':
+					if ( data.requestId === this.exportRequestId ) {
+						console.error( 'ExeLearningEditor: REQUEST_EXPORT_ERROR', data.error );
+						this.setSavingState( false );
+					}
+					break;
+			}
+		},
 
-                            // Remove existing preview elements.
-                            $( '.exelearning-preview-actions, .exelearning-preview-link, .exelearning-metadata, .exelearning-edit-button' ).remove();
+		handleExportFile: async function( payload ) {
+			const format = 'elpx';
+			const filename = payload.filename || 'project.elpx';
+			const mimeType = payload.mimeType || 'application/zip';
+			try {
+				const blob = new Blob( [ payload.bytes ], { type: mimeType } );
+				const formData = new FormData();
+				formData.append( 'file', blob, filename );
+				formData.append( 'format', format );
 
-                            // Trigger change event to refresh views (only if not destroyed).
-                            if ( attachment && ! attachment.destroyed ) {
-                                attachment.trigger( 'change' );
-                            }
-                        } catch ( e ) {
-                            console.warn( 'ExeLearningEditor: Error updating attachment', e );
-                        }
-                    }).fail( function() {
-                        console.warn( 'ExeLearningEditor: Failed to fetch attachment', attachmentId );
-                    });
-                }
-            } catch ( e ) {
-                console.warn( 'ExeLearningEditor: Error refreshing attachment', e );
-            }
-        },
+				const endpoint = this.currentAttachmentId
+					? `${ exelearningEditorVars.restUrl }/save/${ this.currentAttachmentId }`
+					: `${ exelearningEditorVars.restUrl }/create`;
 
-        /**
-         * Refresh the media library.
-         */
-        refreshMediaLibrary: function() {
-            if ( wp.media && wp.media.frame ) {
-                try {
-                    wp.media.frame.content.get().collection.props.set( { ignore: ( + new Date() ) } );
-                } catch ( e ) {
-                    // Ignore errors if media library structure is different.
-                }
-            }
-        }
-    };
+				const response = await fetch( endpoint, {
+					method: 'POST',
+					headers: { 'X-WP-Nonce': exelearningEditorVars.nonce },
+					body: formData,
+					credentials: 'same-origin',
+				} );
 
-    // Initialize on document ready.
-    $( document ).ready( function() {
-        ExeLearningEditor.init();
+				const result = await response.json();
+				if ( ! response.ok || ! result?.success ) {
+					throw new Error( result?.message || `Save failed (${ response.status })` );
+				}
 
-        // Expose globally for other scripts to use.
-        window.ExeLearningEditor = ExeLearningEditor;
-    });
+				this.setSavingState( false );
+				this.onSaveComplete( {
+					attachmentId: result.attachment_id || result.attachmentId || this.currentAttachmentId,
+					previewUrl: result.preview_url || result.previewUrl || null,
+				} );
+				this.close();
+			} catch ( error ) {
+				console.error( 'ExeLearningEditor: Save failed', error );
+				this.setSavingState( false );
+			}
+		},
 
-})( jQuery );
+		defaultFilenameForFormat: function( format ) {
+			if ( format === 'elpx' ) {
+				return 'project.elpx';
+			}
+			if ( format === 'epub3' || format === 'epub' ) {
+				return 'project.epub';
+			}
+			return 'project.zip';
+		},
+
+		mimeForFilename: function( filename ) {
+			if ( filename.endsWith( '.epub' ) ) {
+				return 'application/epub+zip';
+			}
+			return 'application/zip';
+		},
+
+		downloadExport: function( bytes, filename, mimeType ) {
+			const blob = new Blob( [ bytes ], { type: mimeType } );
+			const url = URL.createObjectURL( blob );
+			const link = document.createElement( 'a' );
+			link.href = url;
+			link.download = filename;
+			document.body.appendChild( link );
+			link.click();
+			document.body.removeChild( link );
+			URL.revokeObjectURL( url );
+		},
+
+		onSaveComplete: function( data ) {
+			if ( data.attachmentId ) {
+				this.refreshAttachment( data.attachmentId, data.previewUrl );
+				this.updateBlockPreview( data.attachmentId, data.previewUrl );
+			}
+			this.refreshMediaLibrary();
+		},
+
+		updateBlockPreview: function( attachmentId, previewUrl ) {
+			if ( ! attachmentId || ! previewUrl || ! wp.data ) {
+				return;
+			}
+
+			let updated = false;
+			const blocks = wp.data.select( 'core/block-editor' ).getBlocks();
+			blocks.forEach( ( block ) => {
+				if (
+					block.name === 'exelearning/elp-upload' &&
+					block.attributes.attachmentId === attachmentId
+				) {
+					wp.data.dispatch( 'core/block-editor' ).updateBlockAttributes(
+						block.clientId,
+						{ previewUrl }
+					);
+					updated = true;
+				}
+			} );
+
+			if ( updated && wp.data.select( 'core/editor' ) ) {
+				wp.data.dispatch( 'core/editor' ).savePost();
+			}
+
+			if ( updated && previewUrl ) {
+				this.ensurePreviewLoaded( previewUrl );
+			}
+		},
+
+		ensurePreviewLoaded: function( previewUrl ) {
+			setTimeout( function() {
+				const iframes = document.querySelectorAll( '.exelearning-block-preview iframe' );
+				iframes.forEach( function( iframe ) {
+					try {
+						const doc = iframe.contentDocument;
+						if ( ! doc || ! doc.body || doc.body.innerHTML.length === 0 ) {
+							fetch( previewUrl, { credentials: 'same-origin' } )
+								.then( function( response ) {
+									return response.ok ? response.text() : null;
+								} )
+								.then( function( html ) {
+									if ( html && html.length > 0 ) {
+										iframe.srcdoc = html;
+									}
+								} )
+								.catch( function() {} );
+						}
+					} catch ( e ) {}
+				} );
+			}, 2000 );
+		},
+
+		refreshAttachment: function( attachmentId, previewUrl ) {
+			if ( ! wp.media ) {
+				return;
+			}
+
+			try {
+				const attachment = wp.media.attachment( attachmentId );
+				if ( attachment && ! attachment.destroyed ) {
+					attachment.fetch().done( function() {
+						try {
+							if ( previewUrl ) {
+								const exeData = attachment.get( 'exelearning' ) || {};
+								exeData.preview_url = previewUrl;
+								attachment.set( 'exelearning', exeData, { silent: true } );
+							}
+
+							$( '.attachment-details .thumbnail' )
+								.removeClass( 'exelearning-details-preview-added' )
+								.removeClass( 'exelearning-details-no-preview' );
+
+							$( '.exelearning-preview-actions, .exelearning-preview-link, .exelearning-metadata, .exelearning-edit-button' ).remove();
+
+							if ( attachment && ! attachment.destroyed ) {
+								attachment.trigger( 'change' );
+							}
+						} catch ( e ) {
+							console.warn( 'ExeLearningEditor: Error updating attachment', e );
+						}
+					} ).fail( function() {
+						console.warn( 'ExeLearningEditor: Failed to fetch attachment', attachmentId );
+					} );
+				}
+			} catch ( e ) {
+				console.warn( 'ExeLearningEditor: Error refreshing attachment', e );
+			}
+		},
+
+		refreshMediaLibrary: function() {
+			if ( wp.media && wp.media.frame ) {
+				try {
+					wp.media.frame.content.get().collection.props.set( { ignore: + new Date() } );
+				} catch ( e ) {}
+			}
+		},
+	};
+
+	$( document ).ready( function() {
+		ExeLearningEditor.init();
+		window.ExeLearningEditor = ExeLearningEditor;
+	} );
+} )( jQuery );
