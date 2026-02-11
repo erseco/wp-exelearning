@@ -183,6 +183,7 @@ class ExeLearning_Elp_File_Service {
 			mkdir( $destination, 0755, true );
 		}
 
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Native ZipArchive property name.
 		$expected_count = $zip->numFiles;
 		$result         = $zip->extractTo( $destination );
 		$zip->close();

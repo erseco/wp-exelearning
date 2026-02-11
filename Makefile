@@ -15,60 +15,79 @@ check-bun:
 		exit 1; \
 	}
 
-# Initialize submodule if not already initialized (does not change branch if already present)
-update-submodule:
-	@if [ ! -f exelearning/package.json ]; then \
-		echo "Initializing eXeLearning submodule..."; \
-		git submodule update --init exelearning; \
-		cd exelearning && git fetch origin main && git checkout origin/main; \
-		echo "Submodule initialized to main branch."; \
-	else \
-		echo "Submodule already initialized, skipping update (use 'make force-update-submodule' to force)."; \
-	fi
-
-# Force update submodule to main branch (use when you want to explicitly update)
-force-update-submodule:
-	@echo "Force updating eXeLearning submodule to origin/main..."
-	git submodule update --init exelearning
-	cd exelearning && git fetch origin main && git checkout origin/main
-	@echo "Submodule updated to main branch."
-
+EDITOR_SUBMODULE_PATH := exelearning
 EDITOR_OUTPUT_DIR := $(CURDIR)/dist/static
+EDITOR_REPO_DEFAULT := https://github.com/exelearning/exelearning.git
+EDITOR_REF_DEFAULT := main
+
+# Fetch editor source code from remote repository (branch/tag, shallow clone)
+fetch-editor-source:
+	@set -e; \
+	get_env() { \
+		if [ -f .env ]; then \
+			grep -E "^$$1=" .env | tail -n1 | cut -d '=' -f2-; \
+		fi; \
+	}; \
+	REPO_URL="$${EXELEARNING_EDITOR_REPO_URL:-$$(get_env EXELEARNING_EDITOR_REPO_URL)}"; \
+	REF="$${EXELEARNING_EDITOR_REF:-$$(get_env EXELEARNING_EDITOR_REF)}"; \
+	REF_TYPE="$${EXELEARNING_EDITOR_REF_TYPE:-$$(get_env EXELEARNING_EDITOR_REF_TYPE)}"; \
+	if [ -z "$$REPO_URL" ]; then REPO_URL="$(EDITOR_REPO_DEFAULT)"; fi; \
+	if [ -z "$$REF" ]; then REF="$${EXELEARNING_EDITOR_DEFAULT_BRANCH:-$$(get_env EXELEARNING_EDITOR_DEFAULT_BRANCH)}"; fi; \
+	if [ -z "$$REF" ]; then REF="$(EDITOR_REF_DEFAULT)"; fi; \
+	if [ -z "$$REF_TYPE" ]; then REF_TYPE="auto"; fi; \
+	echo "Fetching editor source from $$REPO_URL (ref=$$REF, type=$$REF_TYPE)"; \
+	rm -rf $(EDITOR_SUBMODULE_PATH); \
+	git init -q $(EDITOR_SUBMODULE_PATH); \
+	git -C $(EDITOR_SUBMODULE_PATH) remote add origin "$$REPO_URL"; \
+	case "$$REF_TYPE" in \
+		tag) \
+			git -C $(EDITOR_SUBMODULE_PATH) fetch --depth 1 origin "refs/tags/$$REF:refs/tags/$$REF"; \
+			git -C $(EDITOR_SUBMODULE_PATH) checkout -q "tags/$$REF"; \
+			;; \
+		branch) \
+			git -C $(EDITOR_SUBMODULE_PATH) fetch --depth 1 origin "$$REF"; \
+			git -C $(EDITOR_SUBMODULE_PATH) checkout -q FETCH_HEAD; \
+			;; \
+		auto) \
+			if git -C $(EDITOR_SUBMODULE_PATH) fetch --depth 1 origin "refs/tags/$$REF:refs/tags/$$REF" > /dev/null 2>&1; then \
+				echo "Resolved $$REF as tag"; \
+				git -C $(EDITOR_SUBMODULE_PATH) checkout -q "tags/$$REF"; \
+			else \
+				echo "Resolved $$REF as branch"; \
+				git -C $(EDITOR_SUBMODULE_PATH) fetch --depth 1 origin "$$REF"; \
+				git -C $(EDITOR_SUBMODULE_PATH) checkout -q FETCH_HEAD; \
+			fi; \
+			;; \
+		*) \
+			echo "Error: EXELEARNING_EDITOR_REF_TYPE must be one of: auto, branch, tag"; \
+			exit 1; \
+			;; \
+	esac
 
 # Build static version of eXeLearning editor
-build-editor: check-bun update-submodule
+build-editor: check-bun fetch-editor-source
 	@echo "Building eXeLearning static editor..."
 	rm -rf $(EDITOR_OUTPUT_DIR)
-	cd exelearning && bun install && OUTPUT_DIR=$(EDITOR_OUTPUT_DIR) bun run build:static
-	@# If the build script ignored OUTPUT_DIR, copy from submodule output.
-	@if [ ! -f "$(EDITOR_OUTPUT_DIR)/index.html" ] && [ -f "exelearning/dist/static/index.html" ]; then \
+	cd $(EDITOR_SUBMODULE_PATH) && bun install && OUTPUT_DIR=$(EDITOR_OUTPUT_DIR) bun run build:static
+	@# If the build script ignored OUTPUT_DIR, copy from fetched source output.
+	@if [ ! -f "$(EDITOR_OUTPUT_DIR)/index.html" ] && [ -f "$(EDITOR_SUBMODULE_PATH)/dist/static/index.html" ]; then \
 		echo "Copying build output to dist/static/..."; \
 		mkdir -p $(EDITOR_OUTPUT_DIR); \
-		cp -R exelearning/dist/static/* $(EDITOR_OUTPUT_DIR)/; \
+		cp -R $(EDITOR_SUBMODULE_PATH)/dist/static/* $(EDITOR_OUTPUT_DIR)/; \
 	fi
 	@echo ""
 	@echo "============================================"
 	@echo "  Static editor built at dist/static/"
 	@echo "============================================"
 
-# Build editor without updating submodule (for CI/CD)
-build-editor-no-update: check-bun
-	@echo "Building eXeLearning static editor (without submodule update)..."
-	rm -rf $(EDITOR_OUTPUT_DIR)
-	cd exelearning && bun install && OUTPUT_DIR=$(EDITOR_OUTPUT_DIR) bun run build:static
-	@# If the build script ignored OUTPUT_DIR, copy from submodule output.
-	@if [ ! -f "$(EDITOR_OUTPUT_DIR)/index.html" ] && [ -f "exelearning/dist/static/index.html" ]; then \
-		echo "Copying build output to dist/static/..."; \
-		mkdir -p $(EDITOR_OUTPUT_DIR); \
-		cp -R exelearning/dist/static/* $(EDITOR_OUTPUT_DIR)/; \
-	fi
-	@echo "Static editor built at dist/static/"
+# Backward-compatible alias
+build-editor-no-update: build-editor
 
 # Clean editor build
 clean-editor:
 	rm -rf dist/static
-	rm -rf exelearning/dist/static
-	rm -rf exelearning/node_modules
+	rm -rf $(EDITOR_SUBMODULE_PATH)/dist/static
+	rm -rf $(EDITOR_SUBMODULE_PATH)/node_modules
 
 # ============================================
 # WORDPRESS ENVIRONMENT
@@ -98,8 +117,8 @@ start-if-not-running:
 		echo "wp-env is already running, skipping start."; \
 	fi
 
-# Bring up Docker containers (updates submodule and rebuilds static editor)
-up: check-docker force-update-submodule build-editor-no-update start-if-not-running
+# Bring up Docker containers (fetch editor source and rebuild static editor)
+up: check-docker build-editor-no-update start-if-not-running
 
 flush-permalinks:
 	npx wp-env run cli wp rewrite structure '/%postname%/'
@@ -376,14 +395,13 @@ help:
 	@echo "Available commands:"
 	@echo ""
 	@echo "eXeLearning Static Editor:"
-	@echo "  build-editor       - Build static eXeLearning editor from submodule"
-	@echo "  build-editor-no-update - Build without updating submodule (for CI/CD)"
-	@echo "  update-submodule   - Initialize submodule if not present (safe, does not change existing branch)"
-	@echo "  force-update-submodule - Force update submodule to origin/main"
-	@echo "  clean-editor       - Remove static editor build and node_modules"
+	@echo "  build-editor       - Build static eXeLearning editor from configured repo/ref"
+	@echo "  build-editor-no-update - Alias of build-editor"
+	@echo "  clean-editor       - Remove static editor build and fetched source node_modules"
+	@echo "  fetch-editor-source - Download editor source from configured repo/ref"
 	@echo ""
 	@echo "General:"
-	@echo "  up                 - Update submodule, build static editor, and start Docker containers"
+	@echo "  up                 - Fetch source, build static editor, and start Docker containers"
 	@echo "  down               - Stop and remove Docker containers"
 	@echo "  logs               - Show the docker container logs"
 	@echo "  logs-test          - Show logs from test environment"

@@ -39,9 +39,17 @@ Try eXeLearning instantly in your browser using WordPress Playground! Note that 
 If you clone the repository directly, you must build the eXeLearning editor:
 
 ```bash
-git clone --recursive https://github.com/erseco/wp-exelearning.git
+git clone https://github.com/erseco/wp-exelearning.git
 cd wp-exelearning
 make build-editor
+```
+
+By default, `make build-editor` fetches `https://github.com/exelearning/exelearning` from `main` using a shallow checkout. You can override source/ref at runtime:
+
+```bash
+EXELEARNING_EDITOR_REF=vX.Y.Z EXELEARNING_EDITOR_REF_TYPE=tag make build-editor
+# or
+EXELEARNING_EDITOR_REF=my-feature EXELEARNING_EDITOR_REF_TYPE=branch make build-editor
 ```
 
 > **Important:** Cloning the repository without building the editor will show version `0.0.0` and the editor will not work. Always download from [Releases](https://github.com/erseco/wp-exelearning/releases) for production use.

@@ -58,3 +58,6 @@ test-results/*
 # Built static editor - download from releases or build with `make build-editor`
 dist/static/
 composer.phar
+
+# Local editor checkout fetched during build
+exelearning/
