@@ -97,6 +97,10 @@ class ExeLearning_Elp_Upload_Block {
 						'type'    => 'string',
 						'default' => 'none',
 					),
+					'teacherModeVisible' => array(
+						'type'    => 'boolean',
+						'default' => true,
+					),
 				),
 				'supports'        => array(
 					'align' => array( 'left', 'center', 'right', 'wide', 'full' ),
@@ -122,6 +126,8 @@ class ExeLearning_Elp_Upload_Block {
 		$has_preview   = get_post_meta( $attachment_id, '_exelearning_has_preview', true );
 		$height        = isset( $attributes['height'] ) ? absint( $attributes['height'] ) : 600;
 		$align         = isset( $attributes['align'] ) ? $attributes['align'] : '';
+		$teacher_mode_visible = ! isset( $attributes['teacherModeVisible'] ) || (bool) $attributes['teacherModeVisible'];
+		$container_id = 'exelearning-block-' . wp_unique_id();
 
 		// Build wrapper classes.
 		$wrapper_classes = array( 'wp-block-exelearning-elp-upload', 'exelearning-block-frontend' );
@@ -158,8 +164,8 @@ class ExeLearning_Elp_Upload_Block {
 		}
 
 		// Show iframe with the content.
-		return sprintf(
-			'<div class="%s">
+		$html = sprintf(
+			'<div id="%s" class="%s" data-teacher-mode-visible="%s">
                 <iframe
                     src="%s"
                     style="width: 100%%; height: %dpx; border: 1px solid #ddd; border-radius: 4px;"
@@ -169,10 +175,21 @@ class ExeLearning_Elp_Upload_Block {
                     referrerpolicy="no-referrer"
                 ></iframe>
             </div>',
+			esc_attr( $container_id ),
 			esc_attr( implode( ' ', $wrapper_classes ) ),
+			$teacher_mode_visible ? '1' : '0',
 			$preview_url,
 			$height,
 			esc_attr( get_the_title( $attachment_id ) )
 		);
+
+		if ( ! $teacher_mode_visible ) {
+			$html .= sprintf(
+				'<script>(function(){var c=document.getElementById("%1$s");if(!c)return;var f=c.querySelector("iframe");if(!f)return;var css="#teacher-mode-toggler-wrapper { visibility: hidden !important; }";var inject=function(){try{if(!f.contentDocument)return;var d=f.contentDocument;var st=d.createElement("style");st.textContent=css;(d.head||d.documentElement).appendChild(st);}catch(e){}};f.addEventListener("load",inject);inject();})();</script>',
+				esc_js( $container_id )
+			);
+		}
+
+		return $html;
 	}
 }

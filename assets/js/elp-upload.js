@@ -15,6 +15,7 @@
     var ResizableBox = wp.components.ResizableBox;
     var PanelBody = wp.components.PanelBody;
     var RangeControl = wp.components.RangeControl;
+    var ToggleControl = wp.components.ToggleControl;
     var useState = wp.element.useState;
 
     registerBlockType( 'exelearning/elp-upload', {
@@ -52,6 +53,10 @@
             align: {
                 type: 'string',
                 default: 'none',
+            },
+            teacherModeVisible: {
+                type: 'boolean',
+                default: true,
             },
         },
 
@@ -99,6 +104,7 @@
                     previewUrl: undefined,
                     title: undefined,
                     hasPreview: false,
+                    teacherModeVisible: true,
                 });
             }
 
@@ -153,6 +159,13 @@
                             min: 200,
                             max: 1200,
                             step: 10,
+                        }),
+                        el( ToggleControl, {
+                            label: __( 'Show Teacher Mode toggler', 'exelearning' ),
+                            checked: attributes.teacherModeVisible !== false,
+                            onChange: function( value ) {
+                                setAttributes( { teacherModeVisible: value } );
+                            },
                         }),
                         el( Button, {
                             isPrimary: true,
