@@ -70,7 +70,7 @@ jobs:
         run: cp exelearning-${RELEASE_TAG}.zip exelearning.zip
 
       - name: Upload ZIPs as workflow artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: exelearning-${{ env.RELEASE_TAG }}
           path: |
