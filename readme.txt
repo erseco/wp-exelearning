@@ -45,16 +45,20 @@ Yes. The plugin exposes actions and filters (all prefixed with `exelearning_`) f
 
 == External services ==
 
-The plugin itself contacts no external service. Uploading, storing, extracting,
-editing and embedding an ELPX package all happen on your own site: the bundled
-eXeLearning editor is a static application served from the plugin directory and
-runs entirely in the browser.
+ELPX uploads and storage are handled on your WordPress site. The bundled editor
+runs locally in the browser, but some editor features and embedded content make
+requests to external providers. Requests can occur while editing, previewing or
+viewing published content, including content created by another author.
 
-The editor does let an author build content that uses third-party services. Those
-requests are made by the browser, only when the author picks the corresponding
-iDevice or embeds that kind of content, and again by any visitor who later views
-a page containing it. No account is required for any of them, and the plugin
-sends no site or user data of its own to any of them.
+For each browser request, the provider receives the requested resource or content
+identifier, the user's IP address and browser request headers. Depending on browser
+settings and the provider, requests may also include a referrer and cookies; embedded
+services may collect interactions within their content. Account and access
+requirements depend on the provider and the selected content. The plugin does not
+require a third-party account for uploading or editing local ELPX files.
+
+The features below use external services or remote resources. Listing a resource
+here describes its use; it does not make a CDN-hosted library an external service.
 
 * **YouTube** — used by the media and video iDevices. When an author embeds a
 YouTube video, the editor loads the YouTube iframe player API and the video is
@@ -66,16 +70,20 @@ Privacy: https://policies.google.com/privacy
 player.vimeo.com. Terms: https://vimeo.com/terms
 Privacy: https://vimeo.com/privacy
 
-* **GeoGebra** — used by the GeoGebra iDevice. When an author searches for or
-inserts a GeoGebra activity, the search term and the material identifier are sent
+* **GeoGebra** — used by the GeoGebra iDevice. When an author loads an
+activity by URL or identifier, the material identifier is sent
 to https://www.geogebra.org/api/json.php, and the applet is then loaded from
 geogebra.org for the visitor. Terms: https://www.geogebra.org/tos
 Privacy: https://www.geogebra.org/privacy
 
 * **H5P** — when an author embeds an H5P activity, the activity is loaded from
 the site that hosts it (h5p.org, or the WordPress site the author copied the
-embed code from). Terms: https://h5p.org/terms-of-use
-Privacy: https://h5p.org/privacy-policy
+embed code from), when the iframe is loaded. Activity identifiers and interactions
+within the iframe go to that host. Its own access rules, terms and privacy policy
+apply; H5P is a format, not a single hosting provider.
+H5P.org content licensing: https://h5p.org/licensing
+H5P Hub terms (for content hosted by that service): https://h5p.org/node/1075432
+H5P.org privacy: https://h5p.org/privacy
 
 * **RCSB Protein Data Bank and PubChem** — used by the 3D molecule iDevice. When
 an author or a visitor loads a structure by its identifier, that identifier is
@@ -95,13 +103,16 @@ features of a formula. Terms and privacy: https://www.jsdelivr.com/terms
 https://www.jsdelivr.com/terms/privacy-policy
 
 * **EducaMadrid Mediateca** — the interactive video iDevice loads the JW Player
-script from https://mediateca.educa.madrid.org while the author edits that
-iDevice. Terms: https://www.educa2.madrid.org/web/educamadrid/principal/avisolegal
-Privacy: https://www.educa2.madrid.org/web/educamadrid/principal/proteccion-de-datos
+script from https://mediateca.educa.madrid.org when its editing page is opened,
+even before an EducaMadrid video is selected. Playing hosted media also requests
+the selected media URL. Some hosted content requires an EducaMadrid account.
+Terms, privacy and cookies: https://mediateca.educa.madrid.org/aviso-legal
 
-* **X (Twitter) and Facebook** — the image lightbox offers share buttons that
-load the sharing widgets from platform.twitter.com and www.facebook.com when a
-visitor opens an image that has sharing enabled.
+* **X (Twitter) and Facebook** — the bundled legacy lightbox includes optional share
+widgets from platform.twitter.com and www.facebook.com. The editor's normal
+lightbox initialization disables them (`social_tools: ""`). Content that enables
+these widgets can send the page URL and browser request data to those providers
+when the lightbox opens, before a visitor clicks a share button.
 X terms: https://x.com/en/tos  Privacy: https://x.com/en/privacy
 Facebook terms: https://www.facebook.com/terms.php
 Privacy: https://www.facebook.com/privacy/policy/
@@ -122,7 +133,7 @@ The plugin itself is developed at https://github.com/exelearning/wp-exelearning.
 
 = 0.0.0 =
 * Initial release
-* Document every third-party service the bundled editor can reach, and under
+* Document external services and remote resources used by editor features, and under
   which conditions, in the new "External services" section of this readme.
 * Ship the shortcode and block embed behavior (fullscreen button, click-to-load
   poster) as an enqueued script instead of an inline <script> printed once per
