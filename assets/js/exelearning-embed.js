@@ -1,35 +1,11 @@
 /**
  * Toolbar and poster behavior for embedded eXeLearning packages.
  *
- * The shortcode and the block used to print one <script> block per embed, which
- * WordPress.org does not allow (and which shipped the same code again for every
- * embed on the page). This file carries that behavior once, enqueued through
- * wp_enqueue_script(), for every embed the page renders.
- *
- * Everything is delegated from `document`, so nothing has to be bound per
- * instance: an embed inserted later -- a lazy-loaded block, an AJAX-rendered
- * excerpt -- works without a second pass. The embed a click belongs to is found
- * by walking up from the clicked control to the first ancestor that contains an
- * `.exelearning-iframe`, so the script stays out of the markup's business and
- * several embeds on one page never reach into each other.
+ * One enqueued script serves shortcode and block controls, including embeds
+ * inserted after load. Each click stays within its own embed container.
  */
 ( function () {
 	'use strict';
-
-	/**
-	 * The embed a control belongs to.
-	 *
-	 * @param {Element} element The clicked control.
-	 * @return {Element|null} The nearest ancestor holding an embed frame.
-	 */
-	function containerFor( element ) {
-		for ( var node = element.parentElement; node; node = node.parentElement ) {
-			if ( node.querySelector( '.exelearning-iframe' ) ) {
-				return node;
-			}
-		}
-		return null;
-	}
 
 	/**
 	 * Promote a deferred frame: load it, reveal it and drop the poster.
@@ -93,7 +69,7 @@
 			return;
 		}
 
-		var container = containerFor( control );
+		var container = control.closest( '.exelearning-preview, .exelearning-block-frontend' );
 		if ( ! container ) {
 			return;
 		}

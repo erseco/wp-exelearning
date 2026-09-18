@@ -82,6 +82,18 @@ afterEach( () => {
 } );
 
 describe( 'exelearning-embed: the fullscreen button', () => {
+	it( 'does not reach a neighboring embed when its own frame is missing', () => {
+		document.body.innerHTML =
+			embedMarkup( { id: 'exelearning-1', fullscreen: true } ) +
+			embedMarkup( { id: 'exelearning-2', fullscreen: true } );
+		document.querySelector( '#exelearning-1 iframe' ).remove();
+		const [ neighbor ] = stubFullscreen();
+
+		click( document.querySelector( '#exelearning-1 .exelearning-fullscreen-btn' ) );
+
+		expect( neighbor.length ).toBe( 0 );
+	} );
+
 	it( 'fullscreens the frame of the embed it belongs to', () => {
 		document.body.innerHTML =
 			embedMarkup( { id: 'exelearning-1', fullscreen: true } ) +
