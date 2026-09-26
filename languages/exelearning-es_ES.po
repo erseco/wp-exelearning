@@ -635,46 +635,46 @@ msgstr "El archivo contiene más de un config.xml."
 msgid "The style package is missing config.xml."
 msgstr "Al paquete de estilo le falta config.xml."
 
-#: includes/class-style-package.php:203
+#: includes/class-style-package.php:198
 msgid "The archive must contain a single root folder or place all files at the root."
 msgstr "El archivo debe contener una única carpeta raíz o tener todos los ficheros en la raíz."
 
 #. translators: %s: offending filename.
-#: includes/class-style-package.php:211
+#: includes/class-style-package.php:210
 #, php-format
 msgid "File type not allowed in style package: %s"
 msgstr "Tipo de archivo no permitido en el paquete de estilo: %s"
 
-#: includes/class-style-package.php:232
+#: includes/class-style-package.php:231
 msgid "Failed to reopen ZIP archive."
 msgstr "No se pudo reabrir el archivo ZIP."
 
-#: includes/class-style-package.php:243
+#: includes/class-style-package.php:242
 msgid "Refused unsafe archive entry during extraction."
 msgstr "Se rechazó una entrada no segura del archivo durante la extracción."
 
-#: includes/class-style-package.php:290
+#: includes/class-style-package.php:289
 msgid "Refused path traversal during extraction."
 msgstr "Se rechazó un intento de escape de ruta durante la extracción."
 
-#: includes/class-style-package.php:297
-#: includes/class-style-package.php:301
+#: includes/class-style-package.php:296
+#: includes/class-style-package.php:300
 msgid "Failed to create a directory from the archive."
 msgstr "No se pudo crear un directorio del archivo."
 
-#: includes/class-style-package.php:306
+#: includes/class-style-package.php:305
 msgid "Failed to read a file from the archive."
 msgstr "No se pudo leer un archivo del archivo comprimido."
 
-#: includes/class-style-package.php:310
+#: includes/class-style-package.php:309
 msgid "Failed to write an extracted file."
 msgstr "No se pudo escribir un archivo extraído."
 
-#: includes/class-style-package.php:396
+#: includes/class-style-package.php:395
 msgid "config.xml is not valid XML."
 msgstr "config.xml no es XML válido."
 
-#: includes/class-style-package.php:401
+#: includes/class-style-package.php:400
 msgid "config.xml must declare a <name> element."
 msgstr "config.xml debe declarar un elemento <name>."
 
