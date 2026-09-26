@@ -18,7 +18,7 @@ msgstr ""
 #: exelearning.php:9
 #: admin/class-admin-settings.php:84
 #: includes/class-mime-types.php:73
-#: includes/integrations/class-media-library.php:381
+#: includes/integrations/class-media-library.php:382
 msgid "eXeLearning"
 msgstr "eXeLearning"
 
@@ -513,7 +513,7 @@ msgstr "No tens permís per a editar este fitxer."
 #: includes/class-exelearning-editor.php:263
 #: includes/class-exelearning-editor.php:296
 #: includes/integrations/class-media-library.php:195
-#: includes/integrations/class-media-library.php:349
+#: includes/integrations/class-media-library.php:350
 #: assets/js/elp-upload.js:470
 #: assets/js/elp-upload.js:510
 msgid "Edit in eXeLearning"
@@ -736,14 +736,14 @@ msgid "exported"
 msgstr "exportat"
 
 #: includes/integrations/class-media-library.php:189
-#: includes/integrations/class-media-library.php:368
-#: includes/integrations/class-media-library.php:407
+#: includes/integrations/class-media-library.php:369
+#: includes/integrations/class-media-library.php:408
 msgid "License:"
 msgstr "Llicència:"
 
 #: includes/integrations/class-media-library.php:190
-#: includes/integrations/class-media-library.php:369
-#: includes/integrations/class-media-library.php:411
+#: includes/integrations/class-media-library.php:370
+#: includes/integrations/class-media-library.php:412
 msgid "Language:"
 msgstr "Idioma:"
 
@@ -752,13 +752,13 @@ msgid "Type:"
 msgstr "Tipus:"
 
 #: includes/integrations/class-media-library.php:192
-#: includes/integrations/class-media-library.php:329
+#: includes/integrations/class-media-library.php:330
 #: assets/js/elp-upload.js:607
 msgid "No preview available"
 msgstr "Previsualització no disponible"
 
 #: includes/integrations/class-media-library.php:193
-#: includes/integrations/class-media-library.php:330
+#: includes/integrations/class-media-library.php:331
 msgid "This is an eXeLearning v2 source file (.elp). To view the content, open it in eXeLearning and export it as HTML."
 msgstr "Este és un fitxer font d'eXeLearning v2 (.elp). Per a veure el contingut, obri'l en eXeLearning i exporta'l com a HTML."
 
@@ -782,20 +782,20 @@ msgstr "Processant…"
 msgid "This file could not be processed as eXeLearning."
 msgstr "Aquest fitxer no s'ha pogut processar com a eXeLearning."
 
-#: includes/integrations/class-media-library.php:290
+#: includes/integrations/class-media-library.php:291
 msgid "eXeLearning Content Preview"
 msgstr "Previsualització del contingut eXeLearning"
 
-#: includes/integrations/class-media-library.php:301
+#: includes/integrations/class-media-library.php:302
 msgid "eXeLearning Metadata"
 msgstr "Metadades d'eXeLearning"
 
-#: includes/integrations/class-media-library.php:326
+#: includes/integrations/class-media-library.php:327
 msgid "Open in new tab"
 msgstr "Obrir en una pestanya nova"
 
-#: includes/integrations/class-media-library.php:370
-#: includes/integrations/class-media-library.php:415
+#: includes/integrations/class-media-library.php:371
+#: includes/integrations/class-media-library.php:416
 msgid "Resource Type:"
 msgstr "Tipus de recurs:"
 
