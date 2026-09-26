@@ -6,6 +6,8 @@ jQuery( document ).ready( function( $ ) {
 
     // REST settings for the one-click "Process as eXeLearning" action.
     var settings = window.exelearningMediaSettings || {};
+    // Opaque origin: untrusted package HTML must not reach wp-admin.
+    var previewSandbox = settings.previewSandbox || 'allow-scripts';
 
     // Cache buster to avoid stale iframe content
     var cacheBuster = Date.now();
@@ -90,7 +92,7 @@ jQuery( document ).ready( function( $ ) {
                             'transform: scale(' + scale + '); ' +
                             'transform-origin: 0 0;" ' +
                         'scrolling="no" ' +
-                        'sandbox="allow-scripts" ' +
+                        'sandbox="' + esc( previewSandbox ) + '" ' +
                         'referrerpolicy="no-referrer"></iframe>' +
                     '</div>' +
                     '<div class="exelearning-filename-overlay">' + esc( filename ) + '</div>'
@@ -244,7 +246,7 @@ jQuery( document ).ready( function( $ ) {
                         'transform-origin: 0 0; ' +
                         'pointer-events: none;" ' +
                     'scrolling="no" ' +
-                    'sandbox="allow-scripts" ' +
+                    'sandbox="' + esc( previewSandbox ) + '" ' +
                     'referrerpolicy="no-referrer"></iframe>' +
             '</div>'
         );

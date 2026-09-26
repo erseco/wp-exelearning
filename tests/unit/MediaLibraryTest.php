@@ -204,6 +204,7 @@ class MediaLibraryTest extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'sandbox="allow-scripts allow-popups"', $output );
 		// Untrusted package HTML must not share the wp-admin origin.
 		$this->assertStringNotContainsString( 'allow-same-origin', $output );
+		$this->assertSame( 'allow-scripts', ExeLearning_Media_Library::preview_sandbox() );
 		$this->assertStringContainsString( 'referrerpolicy="no-referrer"', $output );
 	}
 

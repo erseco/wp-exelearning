@@ -205,8 +205,9 @@ class ExeLearning_Media_Library {
 				'exelearning-media-modal',
 				'exelearningMediaSettings',
 				array(
-					'nonce'   => wp_create_nonce( 'wp_rest' ),
-					'restUrl' => esc_url_raw( rest_url( 'exelearning/v1' ) ),
+					'nonce'          => wp_create_nonce( 'wp_rest' ),
+					'restUrl'        => esc_url_raw( rest_url( 'exelearning/v1' ) ),
+					'previewSandbox' => self::preview_sandbox(),
 				)
 			);
 
@@ -321,7 +322,7 @@ class ExeLearning_Media_Library {
 				$preview_url = ExeLearning_Content_Proxy::get_proxy_url( $directory );
 
 				echo '<div style="width: 100%; height: 600px; overflow: auto; margin-bottom: 15px;">';
-				echo '<iframe src="' . esc_url( $preview_url ) . '" style="width: 100%; height: 100%; border: none;" sandbox="allow-scripts allow-popups" referrerpolicy="no-referrer"></iframe>';
+				echo '<iframe src="' . esc_url( $preview_url ) . '" style="width: 100%; height: 100%; border: none;" sandbox="' . esc_attr( self::preview_sandbox() . ' allow-popups' ) . '" referrerpolicy="no-referrer"></iframe>';
 				echo '</div>';
 				echo '<p><a href="' . esc_url( $preview_url ) . '" target="_blank" rel="noopener noreferrer">' . esc_html__( 'Open in new tab', 'exelearning' ) . '</a></p>';
 			} else {
@@ -417,5 +418,21 @@ class ExeLearning_Media_Library {
 
 			echo '</div>';
 		}
+	}
+
+	/**
+	 * Sandbox tokens for the wp-admin package previews.
+	 *
+	 * Package HTML is untrusted author content served on the site origin, so the
+	 * previews get an opaque origin. The dev-only EXELEARNING_UNSAFE_LEGACY_IFRAME
+	 * constant restores allow-same-origin for WordPress Playground, whose Service
+	 * Worker cannot serve opaque-origin subframes. Never set it in production.
+	 *
+	 * @return string
+	 */
+	public static function preview_sandbox() {
+		$legacy = defined( 'EXELEARNING_UNSAFE_LEGACY_IFRAME' )
+			&& filter_var( EXELEARNING_UNSAFE_LEGACY_IFRAME, FILTER_VALIDATE_BOOLEAN );
+		return $legacy ? 'allow-scripts allow-same-origin' : 'allow-scripts';
 	}
 }

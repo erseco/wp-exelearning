@@ -377,6 +377,18 @@ describe( 'exelearning-media-modal: the grid thumbnail', () => {
 			.toContain( 'exelearning-attachment' );
 	} );
 
+	it( 'uses the sandbox the server hands over (the Playground-only escape hatch)', async () => {
+		window.exelearningMediaSettings.previewSandbox = 'allow-scripts allow-same-origin';
+		registerAttachment( 52, { exelearning: previewMetadata(), filename: 'curso.elpx' } );
+		document.body.innerHTML = gridMarkup( 52 );
+
+		await loadScript();
+		await vi.advanceTimersByTimeAsync( 50 );
+
+		const iframe = document.querySelector( '.exelearning-preview-wrapper iframe' );
+		expect( iframe.getAttribute( 'sandbox' ) ).toBe( 'allow-scripts allow-same-origin' );
+	} );
+
 	it( 'appends the cache buster with & when the preview URL already has a query', async () => {
 		registerAttachment( 51, {
 			exelearning: previewMetadata( {
