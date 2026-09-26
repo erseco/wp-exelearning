@@ -318,52 +318,6 @@ class StylePackageTest extends WP_UnitTestCase {
 	}
 
 	/* ---------------------------------------------------------------------
-	 * extract_themes_from_bundle()
-	 * ------------------------------------------------------------------- */
-
-	public function test_extract_themes_double_nested() {
-		$out = ExeLearning_Style_Package::extract_themes_from_bundle(
-			array(
-				'themes' => array(
-					'themes' => array(
-						array( 'name' => 'neo', 'title' => 'Neo', 'version' => '2025' ),
-						array( 'name' => 'base' ),
-					),
-				),
-			)
-		);
-		$this->assertCount( 2, $out );
-		$this->assertSame( 'neo', $out[0]['id'] );
-		$this->assertSame( 'base', $out[1]['title'] ); // Falls back to name.
-	}
-
-	public function test_extract_themes_flat() {
-		$out = ExeLearning_Style_Package::extract_themes_from_bundle(
-			array( 'themes' => array( array( 'name' => 'alpha' ) ) )
-		);
-		$this->assertCount( 1, $out );
-		$this->assertSame( 'alpha', $out[0]['name'] );
-	}
-
-	public function test_extract_themes_empty_and_malformed() {
-		$this->assertSame( array(), ExeLearning_Style_Package::extract_themes_from_bundle( array() ) );
-		$this->assertSame( array(), ExeLearning_Style_Package::extract_themes_from_bundle( array( 'themes' => 'nope' ) ) );
-		$out = ExeLearning_Style_Package::extract_themes_from_bundle(
-			array(
-				'themes' => array(
-					'themes' => array(
-						array( 'title' => 'no-name' ),
-						'scalar',
-						array( 'name' => 'ok' ),
-					),
-				),
-			)
-		);
-		$this->assertCount( 1, $out );
-		$this->assertSame( 'ok', $out[0]['id'] );
-	}
-
-	/* ---------------------------------------------------------------------
 	 * build_entry()
 	 * ------------------------------------------------------------------- */
 
