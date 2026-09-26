@@ -139,6 +139,104 @@ class StylePackageTest extends WP_UnitTestCase {
 		wp_delete_file( $zip_path );
 	}
 
+	/**
+	 * A root-level config.xml must not exempt nested files from the extension
+	 * allowlist: server-executable or server-config files are refused at any depth.
+	 *
+	 * @dataProvider nested_forbidden_entry_provider
+	 *
+	 * @param string $entry Nested entry name.
+	 */
+	public function test_validate_rejects_nested_forbidden_file_when_config_sits_at_the_root( $entry ) {
+		$zip_path = $this->make_zip(
+			array(
+				'config.xml' => $this->sample_config_xml( 'acme' ),
+				'style.css'  => 'body{}',
+				$entry       => 'payload',
+			)
+		);
+		$result = ExeLearning_Style_Package::validate( $zip_path, self::MAX );
+		wp_delete_file( $zip_path );
+		$this->assertInstanceOf( 'WP_Error', $result );
+		$this->assertSame( 'zip_bad_extension', $result->get_error_code() );
+	}
+
+	public function nested_forbidden_entry_provider() {
+		return array(
+			'php'       => array( 'x/shell.php' ),
+			'htaccess'  => array( 'x/.htaccess' ),
+			'user.ini'  => array( 'x/.user.ini' ),
+			'phtml'     => array( 'deep/er/a.phtml' ),
+			'no suffix' => array( 'fonts/LICENSE' ),
+		);
+	}
+
+	/**
+	 * Directory entries carry no file type: archives made by tools that store
+	 * them (most do) validate, with or without a root folder.
+	 */
+	public function test_validate_accepts_directory_entries() {
+		$rooted = $this->make_zip(
+			array(
+				'config.xml'   => $this->sample_config_xml( 'acme' ),
+				'img/'         => null,
+				'img/logo.png' => 'binary',
+			)
+		);
+		$folder = $this->make_zip(
+			array(
+				'acme/'            => null,
+				'acme/config.xml'  => $this->sample_config_xml( 'acme' ),
+				'acme/img/'        => null,
+				'acme/img/logo.png' => 'binary',
+			)
+		);
+		$rooted_result = ExeLearning_Style_Package::validate( $rooted, self::MAX );
+		$folder_result = ExeLearning_Style_Package::validate( $folder, self::MAX );
+		wp_delete_file( $rooted );
+		wp_delete_file( $folder );
+		$this->assertIsArray( $rooted_result );
+		$this->assertIsArray( $folder_result );
+		$this->assertSame( 'acme/', $folder_result['prefix'] );
+	}
+
+	/**
+	 * A directory outside the package's root folder still breaks the single-root
+	 * rule, even though directories carry no file type.
+	 */
+	public function test_validate_rejects_a_directory_outside_the_root_folder() {
+		$zip_path = $this->make_zip(
+			array(
+				'acme/'           => null,
+				'acme/config.xml' => $this->sample_config_xml( 'acme' ),
+				'acme/style.css'  => 'body{}',
+				'evil/'           => null,
+			)
+		);
+		$result = ExeLearning_Style_Package::validate( $zip_path, self::MAX );
+		wp_delete_file( $zip_path );
+		$this->assertInstanceOf( 'WP_Error', $result );
+		$this->assertSame( 'zip_mixed_roots', $result->get_error_code() );
+	}
+
+	/**
+	 * Rejection messages quote the entry name escaped, since core prints
+	 * settings errors without escaping.
+	 */
+	public function test_validate_escapes_entry_name_in_error_message() {
+		$zip_path = $this->make_zip(
+			array(
+				'config.xml'               => $this->sample_config_xml( 'acme' ),
+				'<img src=x onerror=1>.x' => 'x',
+			)
+		);
+		$result = ExeLearning_Style_Package::validate( $zip_path, self::MAX );
+		wp_delete_file( $zip_path );
+		$this->assertInstanceOf( 'WP_Error', $result );
+		$this->assertStringNotContainsString( '<img', $result->get_error_message() );
+		$this->assertStringContainsString( '&lt;img', $result->get_error_message() );
+	}
+
 	public function test_validate_accepts_root_package() {
 		$zip_path = $this->make_zip(
 			array(
@@ -294,6 +392,8 @@ class StylePackageTest extends WP_UnitTestCase {
 			'css'          => array( 'style.css', true ),
 			'svg nested'   => array( 'icons/a.svg', true ),
 			'php'          => array( 'evil.php', false ),
+			'php upper'    => array( 'x/SHELL.PHP', false ),
+			'htaccess'     => array( 'x/.htaccess', false ),
 			'no extension' => array( 'Makefile', false ),
 			'directory'    => array( 'assets/', false ),
 			'empty'        => array( '', false ),
@@ -423,6 +523,10 @@ class StylePackageTest extends WP_UnitTestCase {
 		$zip = new ZipArchive();
 		$this->assertTrue( true === $zip->open( $path, ZipArchive::CREATE ) );
 		foreach ( $entries as $name => $contents ) {
+			if ( '/' === substr( $name, -1 ) ) {
+				$zip->addEmptyDir( rtrim( $name, '/' ) );
+				continue;
+			}
 			$zip->addFromString( $name, $contents );
 		}
 		$zip->close();

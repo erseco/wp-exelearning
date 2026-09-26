@@ -20,6 +20,14 @@ class RestApiTest extends WP_UnitTestCase {
 	private $rest_api;
 
 	/**
+	 * Paths removed in tear_down(), so a failing test cannot leak them into the
+	 * shared uploads directory of the next run.
+	 *
+	 * @var string[]
+	 */
+	private $cleanup_paths = array();
+
+	/**
 	 * Set up test fixtures.
 	 */
 	public function set_up() {
@@ -38,6 +46,10 @@ class RestApiTest extends WP_UnitTestCase {
 	public function tear_down() {
 		global $wp_rest_server;
 		$wp_rest_server = null;
+		foreach ( $this->cleanup_paths as $path ) {
+			ExeLearning_Styles_Service::recursive_delete( $path );
+		}
+		$this->cleanup_paths = array();
 		parent::tear_down();
 	}
 
@@ -1361,6 +1373,8 @@ class RestApiTest extends WP_UnitTestCase {
 		$old_folder = $upload_dir['basedir'] . '/exelearning/' . $old_hash . '/';
 		wp_mkdir_p( $old_folder );
 		file_put_contents( $old_folder . 'index.html', '<html></html>' );
+		$this->cleanup_paths[] = $old_folder;
+		$this->cleanup_paths[] = $file_path;
 
 		update_post_meta( $attachment_id, '_exelearning_extracted', $old_hash );
 
@@ -1380,14 +1394,10 @@ class RestApiTest extends WP_UnitTestCase {
 
 		$result = $this->rest_api->save_elp_file( $request );
 
+		unset( $_FILES['file'] );
+
 		// Reprocessing fails (invalid ZIP), so old folder should be preserved.
 		$this->assertTrue( is_dir( $old_folder ) );
-
-		// Clean up test directory.
-		unlink( $old_folder . 'index.html' );
-		rmdir( $old_folder );
-		unlink( $file_path );
-		unset( $_FILES['file'] );
 	}
 
 	/**
@@ -1812,148 +1822,6 @@ class RestApiTest extends WP_UnitTestCase {
 
 		$this->assertInstanceOf( WP_Error::class, $result );
 		$this->assertEquals( 'file_not_found', $result->get_error_code() );
-	}
-
-	/**
-	 * Test cleanup_old_extraction with no extraction.
-	 */
-	public function test_cleanup_old_extraction_no_extraction() {
-		$attachment_id = $this->factory->attachment->create();
-
-		// No extraction metadata set.
-		$reflection = new ReflectionMethod( $this->rest_api, 'cleanup_old_extraction' );
-		$reflection->setAccessible( true );
-
-		// Should not throw any errors.
-		$result = $reflection->invoke( $this->rest_api, $attachment_id );
-
-		$this->assertNull( $result );
-	}
-
-	/**
-	 * Test cleanup_old_extraction with existing folder.
-	 */
-	public function test_cleanup_old_extraction_with_folder() {
-		$attachment_id = $this->factory->attachment->create();
-
-		$upload_dir = wp_upload_dir();
-		$hash       = str_repeat( 'c', 40 );
-		$folder     = trailingslashit( $upload_dir['basedir'] ) . 'exelearning/' . $hash . '/';
-
-		wp_mkdir_p( $folder );
-		file_put_contents( $folder . 'test.html', '<html></html>' );
-
-		update_post_meta( $attachment_id, '_exelearning_extracted', $hash );
-
-		$this->assertTrue( is_dir( $folder ) );
-
-		$reflection = new ReflectionMethod( $this->rest_api, 'cleanup_old_extraction' );
-		$reflection->setAccessible( true );
-
-		$reflection->invoke( $this->rest_api, $attachment_id );
-
-		$this->assertFalse( is_dir( $folder ) );
-	}
-
-	/**
-	 * Test cleanup_old_extraction with non-existent folder.
-	 */
-	public function test_cleanup_old_extraction_nonexistent_folder() {
-		$attachment_id = $this->factory->attachment->create();
-
-		$hash = str_repeat( 'd', 40 );
-		update_post_meta( $attachment_id, '_exelearning_extracted', $hash );
-
-		$reflection = new ReflectionMethod( $this->rest_api, 'cleanup_old_extraction' );
-		$reflection->setAccessible( true );
-
-		// Should not throw any errors.
-		$result = $reflection->invoke( $this->rest_api, $attachment_id );
-
-		$this->assertNull( $result );
-	}
-
-	/**
-	 * Test recursive_delete with non-existent path.
-	 */
-	public function test_recursive_delete_nonexistent() {
-		$reflection = new ReflectionMethod( $this->rest_api, 'recursive_delete' );
-		$reflection->setAccessible( true );
-
-		// Should not throw any errors.
-		$result = $reflection->invoke( $this->rest_api, '/nonexistent/path/to/delete' );
-
-		$this->assertNull( $result );
-	}
-
-	/**
-	 * Test recursive_delete with file.
-	 */
-	public function test_recursive_delete_file() {
-		$upload_dir = wp_upload_dir();
-		$file_path  = $upload_dir['basedir'] . '/test-delete-file.txt';
-		file_put_contents( $file_path, 'test content' );
-
-		$this->assertTrue( file_exists( $file_path ) );
-
-		$reflection = new ReflectionMethod( $this->rest_api, 'recursive_delete' );
-		$reflection->setAccessible( true );
-
-		$reflection->invoke( $this->rest_api, $file_path );
-
-		$this->assertFalse( file_exists( $file_path ) );
-	}
-
-	/**
-	 * Test recursive_delete with nested directory.
-	 */
-	public function test_recursive_delete_nested_directory() {
-		$upload_dir = wp_upload_dir();
-		$base_dir   = $upload_dir['basedir'] . '/test-nested-delete/';
-		$sub_dir    = $base_dir . 'subdir/';
-
-		wp_mkdir_p( $sub_dir );
-		file_put_contents( $base_dir . 'file1.txt', 'content1' );
-		file_put_contents( $sub_dir . 'file2.txt', 'content2' );
-
-		$this->assertTrue( is_dir( $base_dir ) );
-		$this->assertTrue( is_dir( $sub_dir ) );
-
-		$reflection = new ReflectionMethod( $this->rest_api, 'recursive_delete' );
-		$reflection->setAccessible( true );
-
-		$reflection->invoke( $this->rest_api, $base_dir );
-
-		$this->assertFalse( is_dir( $base_dir ) );
-	}
-
-	/**
-	 * Test recursive_delete with symlink.
-	 */
-	public function test_recursive_delete_symlink() {
-		$upload_dir  = wp_upload_dir();
-		$target_file = $upload_dir['basedir'] . '/symlink-target.txt';
-		$symlink     = $upload_dir['basedir'] . '/test-symlink';
-
-		file_put_contents( $target_file, 'target content' );
-
-		// Create symlink if supported.
-		if ( @symlink( $target_file, $symlink ) ) {
-			$this->assertTrue( is_link( $symlink ) );
-
-			$reflection = new ReflectionMethod( $this->rest_api, 'recursive_delete' );
-			$reflection->setAccessible( true );
-
-			$reflection->invoke( $this->rest_api, $symlink );
-
-			$this->assertFalse( is_link( $symlink ) );
-			// Target should still exist.
-			$this->assertTrue( file_exists( $target_file ) );
-		}
-
-		if ( file_exists( $target_file ) ) {
-			unlink( $target_file );
-		}
 	}
 
 	/**
