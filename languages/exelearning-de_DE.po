@@ -678,16 +678,16 @@ msgstr "config.xml ist kein gültiges XML."
 msgid "config.xml must declare a <name> element."
 msgstr "config.xml muss ein <name>-Element deklarieren."
 
-#: includes/class-styles-service.php:307
-#: includes/class-styles-service.php:346
+#: includes/class-styles-service.php:305
+#: includes/class-styles-service.php:344
 msgid "Style not found."
 msgstr "Stil nicht gefunden."
 
-#: includes/class-styles-service.php:399
+#: includes/class-styles-service.php:397
 msgid "Failed to create style directory."
 msgstr "Stilverzeichnis konnte nicht erstellt werden."
 
-#: includes/class-styles-service.php:413
+#: includes/class-styles-service.php:411
 msgid "The uploaded style does not contain any stylesheet."
 msgstr "Der hochgeladene Stil enthält kein Stylesheet."
 

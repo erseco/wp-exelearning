@@ -678,16 +678,16 @@ msgstr "config.xml ez da baliozko XML."
 msgid "config.xml must declare a <name> element."
 msgstr "config.xml-ek <name> elementu bat deklaratu behar du."
 
-#: includes/class-styles-service.php:307
-#: includes/class-styles-service.php:346
+#: includes/class-styles-service.php:305
+#: includes/class-styles-service.php:344
 msgid "Style not found."
 msgstr "Ez da estiloa aurkitu."
 
-#: includes/class-styles-service.php:399
+#: includes/class-styles-service.php:397
 msgid "Failed to create style directory."
 msgstr "Ezin izan da estiloaren direktorioa sortu."
 
-#: includes/class-styles-service.php:413
+#: includes/class-styles-service.php:411
 msgid "The uploaded style does not contain any stylesheet."
 msgstr "Igotako estiloak ez du estilo-orririk."
 
