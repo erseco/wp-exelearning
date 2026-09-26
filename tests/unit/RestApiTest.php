@@ -20,6 +20,14 @@ class RestApiTest extends WP_UnitTestCase {
 	private $rest_api;
 
 	/**
+	 * Paths removed in tear_down(), so a failing test cannot leak them into the
+	 * shared uploads directory of the next run.
+	 *
+	 * @var string[]
+	 */
+	private $cleanup_paths = array();
+
+	/**
 	 * Set up test fixtures.
 	 */
 	public function set_up() {
@@ -38,6 +46,10 @@ class RestApiTest extends WP_UnitTestCase {
 	public function tear_down() {
 		global $wp_rest_server;
 		$wp_rest_server = null;
+		foreach ( $this->cleanup_paths as $path ) {
+			ExeLearning_Styles_Service::recursive_delete( $path );
+		}
+		$this->cleanup_paths = array();
 		parent::tear_down();
 	}
 
@@ -1361,6 +1373,8 @@ class RestApiTest extends WP_UnitTestCase {
 		$old_folder = $upload_dir['basedir'] . '/exelearning/' . $old_hash . '/';
 		wp_mkdir_p( $old_folder );
 		file_put_contents( $old_folder . 'index.html', '<html></html>' );
+		$this->cleanup_paths[] = $old_folder;
+		$this->cleanup_paths[] = $file_path;
 
 		update_post_meta( $attachment_id, '_exelearning_extracted', $old_hash );
 
@@ -1380,14 +1394,10 @@ class RestApiTest extends WP_UnitTestCase {
 
 		$result = $this->rest_api->save_elp_file( $request );
 
+		unset( $_FILES['file'] );
+
 		// Reprocessing fails (invalid ZIP), so old folder should be preserved.
 		$this->assertTrue( is_dir( $old_folder ) );
-
-		// Clean up test directory.
-		unlink( $old_folder . 'index.html' );
-		rmdir( $old_folder );
-		unlink( $file_path );
-		unset( $_FILES['file'] );
 	}
 
 	/**
@@ -1842,6 +1852,7 @@ class RestApiTest extends WP_UnitTestCase {
 
 		wp_mkdir_p( $folder );
 		file_put_contents( $folder . 'test.html', '<html></html>' );
+		$this->cleanup_paths[] = $folder;
 
 		update_post_meta( $attachment_id, '_exelearning_extracted', $hash );
 

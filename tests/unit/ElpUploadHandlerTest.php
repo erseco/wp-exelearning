@@ -20,11 +20,30 @@ class ElpUploadHandlerTest extends WP_UnitTestCase {
 	private $handler;
 
 	/**
+	 * Paths removed in tear_down(), so a failing test cannot leak them into the
+	 * shared uploads directory of the next run.
+	 *
+	 * @var string[]
+	 */
+	private $cleanup_paths = array();
+
+	/**
 	 * Set up test fixtures.
 	 */
 	public function set_up() {
 		parent::set_up();
 		$this->handler = new ExeLearning_Elp_Upload_Handler();
+	}
+
+	/**
+	 * Tear down test fixtures.
+	 */
+	public function tear_down() {
+		foreach ( $this->cleanup_paths as $path ) {
+			ExeLearning_Styles_Service::recursive_delete( $path );
+		}
+		$this->cleanup_paths = array();
+		parent::tear_down();
 	}
 
 	/**
@@ -170,6 +189,7 @@ class ElpUploadHandlerTest extends WP_UnitTestCase {
 
 		wp_mkdir_p( $path );
 		file_put_contents( $path . 'index.html', '<!doctype html>' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+		$this->cleanup_paths[] = $path;
 
 		return array( $hash, $path );
 	}
@@ -196,7 +216,7 @@ class ElpUploadHandlerTest extends WP_UnitTestCase {
 	public function test_delete_extracted_folder_nonexistent_dir() {
 		list( , $bystander ) = $this->create_extraction_folder();
 		$attachment_id       = $this->factory->attachment->create();
-		$missing_hash        = str_repeat( 'f', 40 );
+		$missing_hash        = sha1( uniqid( 'exe-missing-', true ) );
 
 		update_post_meta( $attachment_id, '_exelearning_extracted', $missing_hash );
 
