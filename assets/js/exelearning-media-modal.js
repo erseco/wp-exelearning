@@ -90,7 +90,7 @@ jQuery( document ).ready( function( $ ) {
                             'transform: scale(' + scale + '); ' +
                             'transform-origin: 0 0;" ' +
                         'scrolling="no" ' +
-                        'sandbox="allow-scripts allow-same-origin" ' +
+                        'sandbox="allow-scripts" ' +
                         'referrerpolicy="no-referrer"></iframe>' +
                     '</div>' +
                     '<div class="exelearning-filename-overlay">' + esc( filename ) + '</div>'
@@ -244,7 +244,7 @@ jQuery( document ).ready( function( $ ) {
                         'transform-origin: 0 0; ' +
                         'pointer-events: none;" ' +
                     'scrolling="no" ' +
-                    'sandbox="allow-scripts allow-same-origin" ' +
+                    'sandbox="allow-scripts" ' +
                     'referrerpolicy="no-referrer"></iframe>' +
             '</div>'
         );

@@ -369,7 +369,8 @@ describe( 'exelearning-media-modal: the grid thumbnail', () => {
 		await vi.advanceTimersByTimeAsync( 50 );
 
 		const iframe = document.querySelector( '.exelearning-preview-wrapper iframe' );
-		expect( iframe.getAttribute( 'sandbox' ) ).toBe( 'allow-scripts allow-same-origin' );
+		// No allow-same-origin: untrusted package HTML must not reach wp-admin.
+		expect( iframe.getAttribute( 'sandbox' ) ).toBe( 'allow-scripts' );
 		expect( iframe.getAttribute( 'referrerpolicy' ) ).toBe( 'no-referrer' );
 		expect( iframe.getAttribute( 'src' ) ).toContain( '_cb=' );
 		expect( document.querySelector( '.attachment' ).classList )

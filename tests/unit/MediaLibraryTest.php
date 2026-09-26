@@ -201,7 +201,9 @@ class MediaLibraryTest extends WP_UnitTestCase {
 		$output = ob_get_clean();
 
 		$this->assertStringContainsString( '<iframe', $output );
-		$this->assertStringContainsString( 'sandbox=', $output );
+		$this->assertStringContainsString( 'sandbox="allow-scripts allow-popups"', $output );
+		// Untrusted package HTML must not share the wp-admin origin.
+		$this->assertStringNotContainsString( 'allow-same-origin', $output );
 		$this->assertStringContainsString( 'referrerpolicy="no-referrer"', $output );
 	}
 
