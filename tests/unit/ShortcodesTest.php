@@ -20,11 +20,30 @@ class ShortcodesTest extends WP_UnitTestCase {
 	private $shortcodes;
 
 	/**
+	 * Paths removed in tear_down(), so a failing test cannot leak them into the
+	 * shared uploads directory of the next run.
+	 *
+	 * @var string[]
+	 */
+	private $cleanup_paths = array();
+
+	/**
 	 * Set up test fixtures.
 	 */
 	public function set_up() {
 		parent::set_up();
 		$this->shortcodes = new ExeLearning_Shortcodes();
+	}
+
+	/**
+	 * Tear down test fixtures.
+	 */
+	public function tear_down() {
+		foreach ( $this->cleanup_paths as $path ) {
+			ExeLearning_Styles_Service::recursive_delete( $path );
+		}
+		$this->cleanup_paths = array();
+		parent::tear_down();
 	}
 
 	/**
@@ -317,6 +336,7 @@ class ShortcodesTest extends WP_UnitTestCase {
 			$dir        = trailingslashit( $upload_dir['basedir'] ) . 'exelearning/' . $hash;
 			wp_mkdir_p( $dir );
 			file_put_contents( $dir . '/screenshot.png', 'PNG' ); // phpcs:ignore
+			$this->cleanup_paths[] = $dir;
 		}
 
 		return $attachment_id;

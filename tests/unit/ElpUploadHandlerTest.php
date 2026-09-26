@@ -20,11 +20,30 @@ class ElpUploadHandlerTest extends WP_UnitTestCase {
 	private $handler;
 
 	/**
+	 * Paths removed in tear_down(), so a failing test cannot leak them into the
+	 * shared uploads directory of the next run.
+	 *
+	 * @var string[]
+	 */
+	private $cleanup_paths = array();
+
+	/**
 	 * Set up test fixtures.
 	 */
 	public function set_up() {
 		parent::set_up();
 		$this->handler = new ExeLearning_Elp_Upload_Handler();
+	}
+
+	/**
+	 * Tear down test fixtures.
+	 */
+	public function tear_down() {
+		foreach ( $this->cleanup_paths as $path ) {
+			ExeLearning_Styles_Service::recursive_delete( $path );
+		}
+		$this->cleanup_paths = array();
+		parent::tear_down();
 	}
 
 	/**
@@ -68,15 +87,6 @@ class ElpUploadHandlerTest extends WP_UnitTestCase {
 
 		// We can't easily test file creation in unit tests,
 		// but we can verify the method exists and is callable.
-		$this->assertTrue( $method->isPrivate() );
-	}
-
-	/**
-	 * Test recursive delete method exists.
-	 */
-	public function test_recursive_delete_exists() {
-		$method = new ReflectionMethod( ExeLearning_Elp_Upload_Handler::class, 'exelearning_recursive_delete' );
-		$method->setAccessible( true );
 		$this->assertTrue( $method->isPrivate() );
 	}
 
@@ -170,6 +180,7 @@ class ElpUploadHandlerTest extends WP_UnitTestCase {
 
 		wp_mkdir_p( $path );
 		file_put_contents( $path . 'index.html', '<!doctype html>' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+		$this->cleanup_paths[] = $path;
 
 		return array( $hash, $path );
 	}
@@ -196,7 +207,7 @@ class ElpUploadHandlerTest extends WP_UnitTestCase {
 	public function test_delete_extracted_folder_nonexistent_dir() {
 		list( , $bystander ) = $this->create_extraction_folder();
 		$attachment_id       = $this->factory->attachment->create();
-		$missing_hash        = str_repeat( 'f', 40 );
+		$missing_hash        = sha1( uniqid( 'exe-missing-', true ) );
 
 		update_post_meta( $attachment_id, '_exelearning_extracted', $missing_hash );
 
@@ -213,14 +224,6 @@ class ElpUploadHandlerTest extends WP_UnitTestCase {
 			get_post_meta( $attachment_id, '_exelearning_extracted', true ),
 			'The stored hash must survive a no-op delete.'
 		);
-	}
-
-	/**
-	 * Test recursive_delete method is private.
-	 */
-	public function test_recursive_delete_is_private() {
-		$method = new ReflectionMethod( ExeLearning_Elp_Upload_Handler::class, 'exelearning_recursive_delete' );
-		$this->assertTrue( $method->isPrivate() );
 	}
 
 	/**
@@ -444,7 +447,7 @@ class ElpUploadHandlerTest extends WP_UnitTestCase {
 	 */
 	public function test_delete_extracted_folder_removes_dir() {
 		$attachment_id = $this->factory->attachment->create();
-		$hash          = 'test' . uniqid();
+		$hash          = sha1( uniqid( 'exe-remove-', true ) );
 
 		// Create the directory.
 		$upload_dir = wp_upload_dir();
@@ -459,6 +462,20 @@ class ElpUploadHandlerTest extends WP_UnitTestCase {
 		$this->handler->exelearning_delete_extracted_folder( $attachment_id );
 
 		$this->assertDirectoryDoesNotExist( $folder );
+	}
+
+	/**
+	 * A stored value that is not an extraction hash never names a folder to
+	 * delete: '..' would otherwise resolve to the uploads directory itself.
+	 */
+	public function test_delete_extracted_folder_ignores_a_malformed_hash() {
+		list( , $bystander ) = $this->create_extraction_folder();
+		$attachment_id       = $this->factory->attachment->create();
+		update_post_meta( $attachment_id, '_exelearning_extracted', '..' );
+
+		$this->handler->exelearning_delete_extracted_folder( $attachment_id );
+
+		$this->assertDirectoryExists( $bystander, 'The whole extraction root was deleted.' );
 	}
 
 	/**
@@ -562,20 +579,6 @@ class ElpUploadHandlerTest extends WP_UnitTestCase {
 		$this->assertNotEmpty( $created );
 		$this->assertDirectoryDoesNotExist( $created[0] );
 	}
-
-	/**
-	 * Deleting a directory that is not there is a no-op.
-	 */
-	public function test_recursive_delete_ignores_a_missing_directory() {
-		$method = new ReflectionMethod( ExeLearning_Elp_Upload_Handler::class, 'exelearning_recursive_delete' );
-		$method->setAccessible( true );
-
-		$missing = wp_upload_dir()['basedir'] . '/never-created-' . wp_rand();
-		$method->invoke( $this->handler, $missing );
-
-		$this->assertDirectoryDoesNotExist( $missing );
-	}
-
 
 	/**
 	 * If the extraction directory cannot be created the upload is rejected and
