@@ -509,7 +509,6 @@ class StylesServiceTest extends WP_UnitTestCase {
 				'icons/alert.svg'      => '<svg/>',
 				'icons/photo.JPG'      => 'JPEG',
 				'icons/readme.txt'     => 'ignore',
-				'icons/no-extension'   => 'ignore',
 			)
 		);
 		$this->assertIsArray( ExeLearning_Styles_Service::install_from_zip( $zip_path ) );

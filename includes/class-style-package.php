@@ -151,7 +151,7 @@ class ExeLearning_Style_Package {
 					sprintf(
 						/* translators: %s: offending entry name. */
 						__( 'Rejected unsafe archive entry: %s', 'exelearning' ),
-						$name
+						esc_html( $name )
 					)
 				);
 			}
@@ -192,12 +192,11 @@ class ExeLearning_Style_Package {
 	 */
 	private static function verify_entries( array $entries, $prefix ) {
 		foreach ( $entries as $entry ) {
-			if ( '' === $prefix ) {
-				// Subdirectories at the root are allowed when config.xml is at the root.
-				if ( false !== strpos( $entry['name'], '/' ) ) {
-					continue;
-				}
-			} elseif ( 0 !== strpos( $entry['name'], $prefix ) ) {
+			// Directory entries carry no file type; every file below is still checked.
+			if ( '/' === substr( $entry['name'], -1 ) ) {
+				continue;
+			}
+			if ( '' !== $prefix && 0 !== strpos( $entry['name'], $prefix ) ) {
 				return new WP_Error(
 					'zip_mixed_roots',
 					__( 'The archive must contain a single root folder or place all files at the root.', 'exelearning' )
@@ -209,7 +208,7 @@ class ExeLearning_Style_Package {
 					sprintf(
 						/* translators: %s: offending filename. */
 						__( 'File type not allowed in style package: %s', 'exelearning' ),
-						$entry['name']
+						esc_html( $entry['name'] )
 					)
 				);
 			}
