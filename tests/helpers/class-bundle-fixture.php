@@ -26,7 +26,7 @@ class ExeLearning_Bundle_Fixture {
 	private static $dir = '';
 
 	/**
-	 * Themes the default fixture bundle.json declares.
+	 * Themes the default fixture bundle ships under files/perm/themes/base/.
 	 *
 	 * @var array<int, array<string,string>>
 	 */
@@ -49,11 +49,13 @@ class ExeLearning_Bundle_Fixture {
 	 * Build a minimal but valid editor bundle and make the plugin use it.
 	 *
 	 * Valid means what ExeLearning_Editor_Bundle::is_available() requires: a
-	 * readable index.html plus at least one asset directory.
+	 * readable index.html plus at least one asset directory. Like a release
+	 * build, it ships each theme's config.xml and only the compressed
+	 * data/bundle.json.zst, never a plain data/bundle.json.
 	 *
-	 * @param array|null $themes Theme entries for data/bundle.json, or null for
-	 *                           {@see self::DEFAULT_THEMES}. Pass an empty array
-	 *                           for a bundle that declares no themes.
+	 * @param array|null $themes Theme entries written as config.xml files, or
+	 *                           null for {@see self::DEFAULT_THEMES}. Pass an
+	 *                           empty array for a bundle that ships no themes.
 	 * @return string The fixture plugin directory (the parent of dist/static/).
 	 */
 	public static function create( $themes = null ) {
@@ -69,10 +71,15 @@ class ExeLearning_Bundle_Fixture {
 			$static . '/index.html',
 			"<!DOCTYPE html>\n<html>\n<head>\n<title>eXeLearning</title>\n</head>\n<body>\n<div id=\"app\"></div>\n</body>\n</html>\n"
 		);
-		file_put_contents( // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
-			$static . '/data/bundle.json',
-			(string) wp_json_encode( self::bundle_payload( null === $themes ? self::DEFAULT_THEMES : $themes ) )
-		);
+		// zstd magic number: the real file is compressed and PHP cannot read it.
+		file_put_contents( $static . '/data/bundle.json.zst', "\x28\xb5\x2f\xfd" ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+		foreach ( null === $themes ? self::DEFAULT_THEMES : $themes as $theme ) {
+			wp_mkdir_p( $static . '/files/perm/themes/base/' . $theme['name'] );
+			file_put_contents( // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+				$static . '/files/perm/themes/base/' . $theme['name'] . '/config.xml',
+				self::config_xml( $theme )
+			);
+		}
 
 		ExeLearning_Editor_Bundle::set_path_override( self::$dir );
 
@@ -138,16 +145,17 @@ class ExeLearning_Bundle_Fixture {
 	}
 
 	/**
-	 * Wrap theme entries in the double-nested shape the core build emits.
+	 * Render a theme entry as the config.xml the editor ships for it.
 	 *
-	 * @param array $themes Theme entries.
-	 * @return array<string,mixed>
+	 * @param array<string,string> $theme Theme entry.
+	 * @return string
 	 */
-	private static function bundle_payload( array $themes ) {
-		return array(
-			'version' => 'fixture',
-			'themes'  => array( 'themes' => $themes ),
-		);
+	private static function config_xml( array $theme ) {
+		$xml = '<?xml version="1.0"?><theme>';
+		foreach ( $theme as $tag => $value ) {
+			$xml .= '<' . $tag . '>' . htmlspecialchars( $value, ENT_XML1 ) . '</' . $tag . '>';
+		}
+		return $xml . '</theme>';
 	}
 
 	/**

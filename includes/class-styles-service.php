@@ -11,9 +11,9 @@
  * The registry (built-in disable list + uploaded metadata) is persisted as
  * a WordPress option named {@see ExeLearning_Styles_Service::OPTION_REGISTRY}.
  *
- * Built-in styles are discovered by reading the bundled editor's
- * `dist/static/data/bundle.json`. No writes ever happen inside `dist/static`,
- * so reinstalling the embedded editor never destroys uploaded styles.
+ * Built-in styles are discovered by reading the bundled editor's theme
+ * `config.xml` files under `dist/static/files/perm/themes/base/`. No writes
+ * ever happen inside `dist/static`, so reinstalling the embedded editor never destroys uploaded styles.
  *
  * @package Exelearning
  */
@@ -158,41 +158,39 @@ class ExeLearning_Styles_Service {
 	/**
 	 * Read the bundled editor's themes list.
 	 *
-	 * Returns an empty array if the editor is not installed, if the bundle
-	 * file is unreadable, or if the JSON is malformed. Failure here is
-	 * non-fatal: the admin UI simply shows no built-ins to disable.
+	 * Reads each dist/static/files/perm/themes/base/<dir>/config.xml instead
+	 * of data/bundle.json: editor builds now ship only the zstd-compressed
+	 * bundle.json.zst, which PHP cannot decode without the rarely installed
+	 * zstd extension. The directory name is the id the editor uses.
 	 *
-	 * The bundle stores the themes array double-nested as
-	 * `{ themes: { themes: [ ... ] } }` because the build script serializes
-	 * the raw API response shape. Older/alternative builds used a flat
-	 * array — we accept both.
+	 * Returns an empty array if the editor is not installed. A theme whose
+	 * config.xml is missing or invalid is skipped: failure here is non-fatal
+	 * and the admin UI simply shows fewer built-ins to disable.
 	 *
 	 * @return array<int, array<string,mixed>>
 	 */
 	public static function list_builtin_themes() {
-		$bundle_path = ExeLearning_Editor_Bundle::get_path() . 'data/bundle.json';
-		if ( ! file_exists( $bundle_path ) || ! is_readable( $bundle_path ) ) {
-			return array();
+		$pattern = ExeLearning_Editor_Bundle::get_path() . 'files/perm/themes/base/*/config.xml';
+		$paths   = glob( $pattern );
+		$out     = array();
+		foreach ( false === $paths ? array() : $paths as $config_path ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+			$xml    = file_get_contents( $config_path );
+			$config = false === $xml ? null : ExeLearning_Style_Package::parse_config_xml( $xml );
+			if ( ! is_array( $config ) ) {
+				continue;
+			}
+			$id    = basename( dirname( $config_path ) );
+			$out[] = array(
+				'id'          => $id,
+				'name'        => $id,
+				'title'       => $config['title'],
+				'version'     => $config['version'],
+				'description' => $config['description'],
+				'author'      => $config['author'],
+			);
 		}
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
-		$json = file_get_contents( $bundle_path );
-		if ( false === $json || '' === $json ) {
-			return array();
-		}
-		$data = json_decode( $json, true );
-		return self::extract_themes_from_bundle( is_array( $data ) ? $data : array() );
-	}
-
-	/**
-	 * Walk a decoded bundle.json payload and return a normalized list of
-	 * theme entries. Accepts both the double-nested shape the core build
-	 * produces and the flat shape for forward/backward compatibility.
-	 *
-	 * @param array $data Decoded bundle.
-	 * @return array<int, array<string,mixed>>
-	 */
-	public static function extract_themes_from_bundle( array $data ) {
-		return ExeLearning_Style_Package::extract_themes_from_bundle( $data );
+		return $out;
 	}
 
 	/**

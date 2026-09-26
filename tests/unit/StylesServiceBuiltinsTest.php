@@ -3,8 +3,10 @@
  * Tests for the built-in editor styles ExeLearning_Styles_Service reads out of
  * the bundled editor.
  *
- * The list comes from dist/static/data/bundle.json, which only exists once the
- * editor has been built. Rather than assert against whatever the machine has,
+ * The list comes from each dist/static/files/perm/themes/base/<dir>/config.xml,
+ * which only exists once the editor has been built. The build ships the themes
+ * manifest only as the zstd-compressed data/bundle.json.zst, which PHP cannot
+ * read, so the config.xml files are the source of truth. Rather than assert against whatever the machine has,
  * these tests point the bundle helper at a fixture they wrote themselves, so a
  * source checkout, a developer machine and CI all see the same two themes.
  *
@@ -28,7 +30,7 @@ class StylesServiceBuiltinsTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * The themes declared by the bundle are read and normalized.
+	 * The themes shipped by the bundle are read from their config.xml files.
 	 */
 	public function test_the_builtin_themes_come_from_the_bundle() {
 		ExeLearning_Bundle_Fixture::create();
@@ -51,40 +53,39 @@ class StylesServiceBuiltinsTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * A bundle whose data/bundle.json was never written is the same as none.
+	 * A theme directory without its config.xml is skipped.
 	 */
-	public function test_a_bundle_without_its_manifest_yields_no_themes() {
+	public function test_a_theme_without_its_config_is_skipped() {
 		ExeLearning_Bundle_Fixture::create();
-		ExeLearning_Bundle_Fixture::delete( 'data/bundle.json' );
+		ExeLearning_Bundle_Fixture::delete( 'files/perm/themes/base/pukao/config.xml' );
 
-		$this->assertSame( array(), ExeLearning_Styles_Service::list_builtin_themes() );
+		$this->assertSame( array( 'base' ), wp_list_pluck( ExeLearning_Styles_Service::list_builtin_themes(), 'id' ) );
 	}
 
 	/**
-	 * A truncated or unreadable manifest is ignored rather than fatal.
+	 * An empty config.xml is ignored rather than fatal.
 	 */
-	public function test_an_empty_manifest_yields_no_themes() {
+	public function test_an_empty_config_is_skipped() {
 		ExeLearning_Bundle_Fixture::create();
-		ExeLearning_Bundle_Fixture::write( 'data/bundle.json', '' );
+		ExeLearning_Bundle_Fixture::write( 'files/perm/themes/base/pukao/config.xml', '' );
 
-		$this->assertSame( array(), ExeLearning_Styles_Service::list_builtin_themes() );
+		$this->assertSame( array( 'base' ), wp_list_pluck( ExeLearning_Styles_Service::list_builtin_themes(), 'id' ) );
 	}
 
 	/**
-	 * Nor does a manifest that is not JSON at all bring the screen down.
+	 * Nor does a config.xml that is not XML at all bring the screen down.
 	 */
-	public function test_a_corrupt_manifest_yields_no_themes() {
+	public function test_a_corrupt_config_is_skipped() {
 		ExeLearning_Bundle_Fixture::create();
-		ExeLearning_Bundle_Fixture::write( 'data/bundle.json', 'not json {' );
+		ExeLearning_Bundle_Fixture::write( 'files/perm/themes/base/pukao/config.xml', 'not xml <<<' );
 
-		$this->assertSame( array(), ExeLearning_Styles_Service::list_builtin_themes() );
+		$this->assertSame( array( 'base' ), wp_list_pluck( ExeLearning_Styles_Service::list_builtin_themes(), 'id' ) );
 	}
 
 	/**
-	 * A manifest that declares an empty theme list is read successfully and
-	 * simply has nothing in it.
+	 * A bundle that ships no themes simply has nothing in it.
 	 */
-	public function test_a_manifest_can_declare_no_themes() {
+	public function test_a_bundle_can_ship_no_themes() {
 		ExeLearning_Bundle_Fixture::create( array() );
 
 		$this->assertSame( array(), ExeLearning_Styles_Service::list_builtin_themes() );

@@ -449,52 +449,6 @@ class ExeLearning_Style_Package {
 	}
 
 	/**
-	 * Walk a decoded bundle.json payload and return a normalized list of theme
-	 * entries. Accepts both the double-nested shape the core build produces and
-	 * the flat shape for forward/backward compatibility.
-	 *
-	 * @param array $data Decoded bundle.
-	 * @return array<int, array<string,mixed>>
-	 */
-	public static function extract_themes_from_bundle( array $data ) {
-		if ( empty( $data['themes'] ) ) {
-			return array();
-		}
-		$themes = $data['themes'];
-		if ( is_array( $themes ) && isset( $themes['themes'] ) && is_array( $themes['themes'] ) ) {
-			$themes = $themes['themes'];
-		}
-		if ( ! is_array( $themes ) ) {
-			return array();
-		}
-		$out = array();
-		foreach ( $themes as $theme ) {
-			if ( ! is_array( $theme ) || empty( $theme['name'] ) ) {
-				continue;
-			}
-			$out[] = self::normalize_theme( $theme );
-		}
-		return $out;
-	}
-
-	/**
-	 * Normalize a single theme entry from bundle.json.
-	 *
-	 * @param array $theme Raw theme entry (already known to have a name).
-	 * @return array<string,mixed>
-	 */
-	private static function normalize_theme( array $theme ) {
-		return array(
-			'id'          => (string) $theme['name'],
-			'name'        => (string) $theme['name'],
-			'title'       => (string) ( $theme['title'] ?? $theme['name'] ),
-			'version'     => (string) ( $theme['version'] ?? '' ),
-			'description' => (string) ( $theme['description'] ?? '' ),
-			'author'      => (string) ( $theme['author'] ?? '' ),
-		);
-	}
-
-	/**
 	 * Build the registry metadata entry for a newly installed style.
 	 *
 	 * @param array  $config    Parsed config.xml values.
