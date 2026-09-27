@@ -1109,7 +1109,7 @@ class ContentProxyTest extends WP_UnitTestCase {
 		// The shim source itself is inlined.
 		$this->assertStringContainsString( 'data-exe-embed-id', $out );
 		// Injected before the closing body tag.
-		$this->assertStringContainsString( '</script></body>', $out );
+		$this->assertMatchesRegularExpression( '#</script>\s*</body>#', $out );
 	}
 
 	/**

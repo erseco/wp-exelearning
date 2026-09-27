@@ -124,11 +124,8 @@ $exelearning_preview_snapshot    = array(
 $exelearning_preview_snapshot_js = "\n            previewSnapshot: " . wp_json_encode( $exelearning_preview_snapshot ) . ',';
 
 // Inject WordPress configuration BEFORE the closing </head> tag.
-// phpcs:disable WordPress.WP.EnqueuedResources.NonEnqueuedScript -- Standalone HTML page output, not a WordPress template.
 $exelearning_wp_config_script = sprintf(
 	'
-    <!-- WordPress Integration Configuration -->
-    <script>
         // WordPress Integration Configuration
         window.__WP_EXE_CONFIG__ = {
             mode: "WordPress",
@@ -403,8 +400,6 @@ $exelearning_wp_config_script = sprintf(
                 });
             }
         })();
-    </script>
-    <script src="%s/js/wp-exe-bridge.js"></script>
 ',
 	$exelearning_attachment_id,
 	wp_json_encode( $exelearning_elp_url ),
@@ -417,15 +412,11 @@ $exelearning_wp_config_script = sprintf(
 	wp_json_encode( $exelearning_editor_base_url ),
 	wp_json_encode( $exelearning_i18n ),
 	wp_json_encode( $exelearning_theme_registry_override ),
-	$exelearning_preview_snapshot_js,
-	esc_url( $exelearning_plugin_assets_url )
+	$exelearning_preview_snapshot_js
 );
-// phpcs:enable WordPress.WP.EnqueuedResources.NonEnqueuedScript
 
 // WordPress-specific styles.
 $exelearning_page_styles = '
-    <!-- WordPress-specific styles -->
-    <style>
         /* WordPress-specific overrides */
         html, body {
             height: 100%;
@@ -468,11 +459,21 @@ $exelearning_page_styles = '
         #mobile-navbar-button-openuserodefiles {
             display: none !important;
         }
-    </style>
 ';
 
-// Insert config script and styles before </head>.
-$exelearning_template = str_replace( '</head>', $exelearning_wp_config_script . $exelearning_page_styles . '</head>', $exelearning_template );
+// Standalone document without a theme header: print only our handles, with
+// the config inline before the bridge.
+wp_register_script( 'exelearning-editor-bridge', $exelearning_plugin_assets_url . '/js/wp-exe-bridge.js', array(), EXELEARNING_VERSION, false );
+wp_enqueue_script( 'exelearning-editor-bridge' );
+wp_add_inline_script( 'exelearning-editor-bridge', $exelearning_wp_config_script, 'before' );
+wp_register_style( 'exelearning-editor-page', false, array(), EXELEARNING_VERSION );
+wp_enqueue_style( 'exelearning-editor-page' );
+wp_add_inline_style( 'exelearning-editor-page', $exelearning_page_styles );
+ob_start();
+wp_print_scripts( array( 'exelearning-editor-bridge' ) );
+wp_print_styles( array( 'exelearning-editor-page' ) );
+$exelearning_integration_assets = ob_get_clean();
+$exelearning_template           = str_replace( '</head>', $exelearning_integration_assets . '</head>', $exelearning_template );
 
 // Add <base> tag to set the base URL for all relative paths, and a first-thing
 // Service Worker hygiene script that purges caches left by an earlier editor
@@ -487,11 +488,14 @@ $exelearning_template = str_replace( '</head>', $exelearning_wp_config_script . 
 // `<header id="head">`, which `<head[^>]*>` also matches, so without them a
 // second <base> — and a second copy of the purge script, which would then run
 // twice — land in the middle of the body.
-// phpcs:disable WordPress.WP.EnqueuedResources.NonEnqueuedScript -- Standalone HTML page output, not a WordPress template.
-$exelearning_cache_purge_tag = '<script>' . ExeLearning_Editor::purge_stale_editor_caches_script() . '</script>';
-// phpcs:enable WordPress.WP.EnqueuedResources.NonEnqueuedScript
-$exelearning_base_tag = sprintf( '<base href="%s/">', esc_url( $exelearning_editor_base_url ) );
-$exelearning_template = preg_replace(
+wp_register_script( 'exelearning-editor-cache-purge', false, array(), EXELEARNING_VERSION, false );
+wp_enqueue_script( 'exelearning-editor-cache-purge' );
+wp_add_inline_script( 'exelearning-editor-cache-purge', ExeLearning_Editor::purge_stale_editor_caches_script() );
+ob_start();
+wp_print_scripts( array( 'exelearning-editor-cache-purge' ) );
+$exelearning_cache_purge_tag = ob_get_clean();
+$exelearning_base_tag        = sprintf( '<base href="%s/">', esc_url( $exelearning_editor_base_url ) );
+$exelearning_template        = preg_replace(
 	'/(<head\b[^>]*>)/i',
 	'$1' . $exelearning_cache_purge_tag . $exelearning_base_tag,
 	$exelearning_template,

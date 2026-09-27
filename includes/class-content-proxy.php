@@ -376,9 +376,9 @@ class ExeLearning_Content_Proxy {
 			return $html;
 		}
 
-		$script  = '<script id="exelearning-embed-shim">';
-		$script .= $shim;
-		$script .= '</script>';
+		// A served package file, not a WordPress page: there is no queue to join,
+		// so the tag is built with core's inline-script helper.
+		$script = wp_get_inline_script_tag( $shim, array( 'id' => 'exelearning-embed-shim' ) );
 
 		if ( false !== stripos( $html, '</body>' ) ) {
 			return preg_replace( '/<\/body>/i', $script . '</body>', $html, 1 );
