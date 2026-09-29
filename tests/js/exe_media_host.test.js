@@ -1,7 +1,9 @@
 // Unit test for the parent-side modal media host (exe-media-host.js). Mirrors the
 // canonical core test: it loads the policy first (sets window.exeMediaPolicy) then the
 // host (sets window.exeMediaHost), completes the window-identity handshake, and drives
-// commands over the transferred MessageChannel port. Globals come from vitest.config.mts.
+// commands over the transferred MessageChannel port.
+import { afterEach, describe, expect, it } from 'vitest';
+
 require( '../../assets/js/exe-media-policy.js' );
 require( '../../assets/js/exe-media-host.js' );
 const host = window.exeMediaHost;

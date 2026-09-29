@@ -12,7 +12,12 @@ import { defineConfig } from 'vitest/config';
 // this side too. The auto-running shim (assets/js/exe-embed-shim.js) is not covered.
 export default defineConfig( {
 	test: {
-		globals: true,
+		globals: false,
+		// Explicit so a change of Vitest defaults cannot alter the suite: these
+		// are the Vitest 5 defaults the tests were written against.
+		clearMocks: true,
+		mockReset: false,
+		restoreMocks: false,
 		environment: 'happy-dom',
 		include: [ 'tests/js/**/*.test.js' ],
 		// No unit test may touch the network: happy-dom would really resolve and

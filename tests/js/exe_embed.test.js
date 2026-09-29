@@ -2,7 +2,7 @@
  * This suite drives real iframes: the relay pins overlays onto content frames
  * and reads their geometry, so it needs happy-dom to load them. Every other
  * file runs with iframe page loading disabled so the suite never touches the
- * network -- see vitest.config.mts.
+ * network -- see vitest.config.mjs.
  *
  * @vitest-environment-options { "settings": { "disableIframePageLoading": false } }
  */
@@ -12,7 +12,9 @@
 // to the host), in 'strict' mode the maintained host allowlist. This file MIRRORS the
 // RELAY describe-blocks of the canonical mod_exelearning suite (tests/js/exe_embed.test.js)
 // so drift in the validate()/makePlayer()/sync() logic is caught here too. The relay is a
-// require()-able dual-export module; globals come from vitest.config.mts.
+// require()-able dual-export module.
+import { beforeEach, describe, expect, it } from 'vitest';
+
 const relay = require( '../../assets/js/exe-embed-relay.js' );
 
 const HOSTS = [

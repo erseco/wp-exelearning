@@ -7,6 +7,8 @@
 // on, so the toggle now travels the way the front end has always sent it: on the URL.
 //
 // These are the two pure decisions behind that change, tested without a block editor.
+import { afterEach, describe, expect, it } from 'vitest';
+
 const editor = require( '../../assets/js/elp-upload.js' );
 
 const PREVIEW = 'http://example.test/wp-json/exelearning/v1/content/' + 'a'.repeat( 40 ) + '/index.html';
