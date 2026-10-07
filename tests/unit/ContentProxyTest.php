@@ -1282,6 +1282,17 @@ class ContentProxyTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * The opaque package reads its own files with fetch(), so secure mode lets any
+	 * origin read them (never with credentials); legacy is same-origin.
+	 */
+	public function test_cors_allow_origin_only_in_secure_mode() {
+		$method = new ReflectionMethod( ExeLearning_Content_Proxy::class, 'cors_allow_origin' );
+		$method->setAccessible( true );
+		$this->assertSame( '*', $method->invoke( $this->proxy, true ) );
+		$this->assertSame( '', $method->invoke( $this->proxy, false ) );
+	}
+
+	/**
 	 * In legacy (same-origin) mode a PDF gets no CSP, matching the HTML legacy policy.
 	 */
 	public function test_select_csp_pdf_legacy_gets_no_policy() {

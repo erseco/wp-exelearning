@@ -701,6 +701,24 @@ class ExeLearning_Content_Proxy {
 	}
 
 	/**
+	 * Access-Control-Allow-Origin value for a served package file.
+	 *
+	 * In secure mode the package runs in an opaque (null) origin, so its own
+	 * fetch() of package files (e.g. the download-source-file button rebuilding
+	 * the .elpx) is cross-origin and fails without CORS. `*` is safe on this
+	 * route: the hash is its only credential (permission_callback is open and no
+	 * cookie is required), and `*` never pairs with credentials, so another
+	 * origin reads only what an anonymous GET already returns. Legacy mode is
+	 * same-origin and needs nothing.
+	 *
+	 * @param bool $secure Whether secure (opaque) mode is active.
+	 * @return string Header value, or '' to send none.
+	 */
+	private function cors_allow_origin( $secure ) {
+		return $secure ? '*' : '';
+	}
+
+	/**
 	 * Send HTTP headers for the response.
 	 *
 	 * @param string $mime_type Content MIME type.
@@ -725,6 +743,10 @@ class ExeLearning_Content_Proxy {
 		header( 'X-Content-Type-Options: nosniff' );
 		header( 'Referrer-Policy: no-referrer' );
 		header( 'Permissions-Policy: geolocation=(), microphone=(), camera=(), payment=()' );
+		$cors = $this->cors_allow_origin( ExeLearning_Iframe_Sandbox::is_secure() );
+		if ( '' !== $cors ) {
+			header( 'Access-Control-Allow-Origin: ' . $cors );
+		}
 
 		// CSP by MIME type (see select_csp): HTML keeps a functional policy;
 		// SVG/XML get a script-free lockdown; any other type (PDF, media) is
