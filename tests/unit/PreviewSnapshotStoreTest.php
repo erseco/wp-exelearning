@@ -208,6 +208,9 @@ class PreviewSnapshotStoreTest extends WP_UnitTestCase {
 		$proxy = new ExeLearning_Preview_Proxy( new ExeLearning_Preview_Snapshot_Store( $this->root ) );
 		$this->assertStringContainsString( 'allow-downloads', ExeLearning_Preview_Proxy::SANDBOX_CSP );
 		$this->assertStringContainsString( 'allow-presentation', ExeLearning_Preview_Proxy::SANDBOX_CSP );
+		// fflate compresses the package's .elpx rebuild in blob: workers; without
+		// worker-src the child-src fallback blocks them (ADR-156-01).
+		$this->assertStringContainsString( "worker-src 'self' blob:", ExeLearning_Preview_Proxy::SANDBOX_CSP );
 		$this->assertStringNotContainsString( 'allow-same-origin', ExeLearning_Preview_Proxy::SANDBOX_CSP );
 		// The proxy registers its routes on rest_api_init (wired in its
 		// constructor); fire the action so registration happens in the correct
