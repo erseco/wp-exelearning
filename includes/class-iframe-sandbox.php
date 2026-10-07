@@ -86,10 +86,12 @@ class ExeLearning_Iframe_Sandbox {
 	 * The allow-forms token lets the form-based eXeLearning iDevices submit inside the
 	 * sandbox; it is orthogonal to allow-same-origin and does not weaken isolation.
 	 * Aligned with mod_exelearning's canonical token set (DEC-0059/DEC-0062).
+	 * allow-downloads lets the package's own .elpx download button save the file it
+	 * builds (ADR-156-01); it grants no access to the WordPress origin.
 	 *
 	 * @var string
 	 */
-	const TOKENS_SECURE = 'allow-scripts allow-popups allow-forms';
+	const TOKENS_SECURE = 'allow-scripts allow-popups allow-forms allow-downloads';
 
 	/**
 	 * Sandbox tokens for legacy mode (same-origin). Mirrors the secure set plus
@@ -97,7 +99,7 @@ class ExeLearning_Iframe_Sandbox {
 	 *
 	 * @var string
 	 */
-	const TOKENS_LEGACY = 'allow-scripts allow-same-origin allow-popups allow-forms allow-popups-to-escape-sandbox';
+	const TOKENS_LEGACY = 'allow-scripts allow-same-origin allow-popups allow-forms allow-popups-to-escape-sandbox allow-downloads';
 
 	/**
 	 * Script handle for the parent-page embed relay.

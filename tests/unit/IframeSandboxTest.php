@@ -23,10 +23,12 @@ class IframeSandboxTest extends WP_UnitTestCase {
 	public function test_default_mode_is_secure() {
 		$this->assertSame( 'secure', ExeLearning_Iframe_Sandbox::mode() );
 		$this->assertTrue( ExeLearning_Iframe_Sandbox::is_secure() );
-		$this->assertSame( 'allow-scripts allow-popups allow-forms', ExeLearning_Iframe_Sandbox::sandbox_tokens() );
+		$this->assertSame( 'allow-scripts allow-popups allow-forms allow-downloads', ExeLearning_Iframe_Sandbox::sandbox_tokens() );
 		$this->assertStringNotContainsString( 'allow-same-origin', ExeLearning_Iframe_Sandbox::sandbox_tokens() );
 		// allow-forms is required so the form-based iDevices can submit in the sandbox.
 		$this->assertStringContainsString( 'allow-forms', ExeLearning_Iframe_Sandbox::sandbox_tokens() );
+		// allow-downloads lets the package's .elpx download button save its file (ADR-156-01).
+		$this->assertStringContainsString( 'allow-downloads', ExeLearning_Iframe_Sandbox::sandbox_tokens() );
 	}
 
 	/**

@@ -1053,8 +1053,10 @@ class ContentProxyTest extends WP_UnitTestCase {
 
 		// The CSP sandbox must mirror the secure iframe tokens, incl. allow-forms, or
 		// form-based iDevices are blocked by the CSP even though the iframe allows them.
-		$this->assertStringContainsString( 'sandbox allow-scripts allow-popups allow-forms', $csp );
+		$this->assertStringContainsString( 'sandbox allow-scripts allow-popups allow-forms allow-downloads', $csp );
 		$this->assertStringContainsString( "default-src 'self'", $csp );
+		// fflate compresses the package's .elpx rebuild in blob: workers (ADR-156-01).
+		$this->assertStringContainsString( "worker-src 'self' blob:", $csp );
 		// Strict (default): no bare https: channels, so the served document cannot exfiltrate
 		// the content URL; frame-src is limited to the maintained providers.
 		$this->assertDoesNotMatchRegularExpression( '~\bhttps:(?!//)~', $csp );
@@ -1078,7 +1080,7 @@ class ContentProxyTest extends WP_UnitTestCase {
 		remove_filter( 'exelearning_csp_profile', $callback );
 
 		$this->assertMatchesRegularExpression( '~img-src[^;]*\bhttps:(?!//)~', $csp );
-		$this->assertStringContainsString( 'sandbox allow-scripts allow-popups allow-forms', $csp );
+		$this->assertStringContainsString( 'sandbox allow-scripts allow-popups allow-forms allow-downloads', $csp );
 	}
 
 	/**
@@ -1274,7 +1276,7 @@ class ContentProxyTest extends WP_UnitTestCase {
 		$method = new ReflectionMethod( ExeLearning_Content_Proxy::class, 'select_csp' );
 		$method->setAccessible( true );
 		$this->assertEquals(
-			'sandbox allow-scripts allow-popups allow-forms',
+			'sandbox allow-scripts allow-popups allow-forms allow-downloads',
 			$method->invoke( $this->proxy, 'application/pdf', "'self'", true )
 		);
 	}
@@ -1295,7 +1297,7 @@ class ContentProxyTest extends WP_UnitTestCase {
 		$method = new ReflectionMethod( ExeLearning_Content_Proxy::class, 'select_csp' );
 		$method->setAccessible( true );
 		$this->assertEquals(
-			'sandbox allow-scripts allow-popups allow-forms',
+			'sandbox allow-scripts allow-popups allow-forms allow-downloads',
 			$method->invoke( $this->proxy, 'video/mp4', "'self'", true )
 		);
 	}
@@ -1319,7 +1321,7 @@ class ContentProxyTest extends WP_UnitTestCase {
 		$method->setAccessible( true );
 		$secure = $method->invoke( $this->proxy, 'text/html', "'self'", true );
 		$legacy = $method->invoke( $this->proxy, 'text/html', "'self'", false );
-		$this->assertStringContainsString( 'sandbox allow-scripts allow-popups allow-forms', $secure );
+		$this->assertStringContainsString( 'sandbox allow-scripts allow-popups allow-forms allow-downloads', $secure );
 		$this->assertStringNotContainsString( 'sandbox', $legacy );
 	}
 

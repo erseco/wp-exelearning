@@ -769,7 +769,7 @@ class ExeLearning_Content_Proxy {
 			return $this->build_html_csp( $frame_ancestors, $secure );
 		}
 		if ( $secure ) {
-			return 'sandbox allow-scripts allow-popups allow-forms';
+			return 'sandbox ' . ExeLearning_Iframe_Sandbox::TOKENS_SECURE;
 		}
 		return '';
 	}
@@ -810,6 +810,11 @@ class ExeLearning_Content_Proxy {
 		$directives = array(
 			"default-src 'self'",
 			$script_src,
+			// The package's download-source-file button rebuilds the .elpx
+			// with fflate, which compresses in blob: workers. Scripts here
+			// already run with 'unsafe-inline'/'unsafe-eval', so this adds
+			// no capability (ADR-156-01).
+			"worker-src 'self' blob:",
 			"style-src 'self' 'unsafe-inline'",
 			$img_src,
 			$media_src,
@@ -824,8 +829,10 @@ class ExeLearning_Content_Proxy {
 			// Mirror the secure iframe sandbox tokens (ExeLearning_Iframe_Sandbox::TOKENS_SECURE).
 			// allow-forms lets the form-based eXeLearning iDevices submit inside the opaque
 			// sandbox; a CSP sandbox without it would block submission even though the iframe
-			// attribute permits it (the effective sandbox is the intersection of both).
-			$directives[] = 'sandbox allow-scripts allow-popups allow-forms';
+			// attribute permits it (the effective sandbox is the intersection of both). The
+			// same applies to allow-downloads and the package's .elpx download button
+			// (ADR-156-01).
+			$directives[] = 'sandbox ' . ExeLearning_Iframe_Sandbox::TOKENS_SECURE;
 		}
 		return implode( '; ', $directives );
 	}

@@ -19,7 +19,7 @@ function withTeacherMode( url, visible ) {
 
 function sandboxTokens() {
     var data = window.exeLearningBlockEditor;
-    return ( data && data.sandboxTokens ) || 'allow-scripts allow-popups allow-forms';
+    return ( data && data.sandboxTokens ) || 'allow-scripts allow-popups allow-forms allow-downloads';
 }
 
 ( function( wp ) {
@@ -555,6 +555,8 @@ function sandboxTokens() {
                                     // an uploaded package cannot reach the admin session of the
                                     // author previewing it. External embeds inside are promoted
                                     // by the host loaded alongside this script, as on the front end.
+                                    // Both modes carry allow-downloads so the package's own .elpx
+                                    // download button can save its file (ADR-156-01).
                                     sandbox: sandboxTokens(),
                                     style: {
                                         width: '100%',

@@ -27,7 +27,7 @@ jQuery( document ).ready( function( $ ) {
         if ( ! src ) {
             return;
         }
-        var sandbox = ( settings && settings.sandbox ) || 'allow-scripts allow-popups allow-forms';
+        var sandbox = ( settings && settings.sandbox ) || 'allow-scripts allow-popups allow-forms allow-downloads';
         var $overlay = $( '<div class="exelearning-fs-overlay" style="position:fixed;inset:0;z-index:2147483647;background:#1a1a1a;display:flex;flex-direction:column;"></div>' );
         var $bar = $( '<div style="flex:none;display:flex;justify-content:flex-end;padding:6px;background:#111;"></div>' );
         var $close = $( '<button type="button" class="button" aria-label="' + ( strings.close || 'Close' ) + '" style="font-size:16px;line-height:1;">✕</button>' );
@@ -224,7 +224,7 @@ jQuery( document ).ready( function( $ ) {
 
         var detailsIframeSrc = metadata.preview_url + ( metadata.preview_url.indexOf( '?' ) > -1 ? '&' : '?' ) + '_cb=' + cacheBuster;
 
-        var sandbox = ( settings.sandbox || 'allow-scripts allow-popups allow-forms' );
+        var sandbox = ( settings.sandbox || 'allow-scripts allow-popups allow-forms allow-downloads' );
 
         if ( $detailsThumbnail.closest( '.media-sidebar' ).length > 0 ) {
             // Media selection sidebar: a compact, zoomed-out thumbnail (fit to
