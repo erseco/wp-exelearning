@@ -4,7 +4,7 @@
  * file runs with iframe page loading disabled so the suite never touches the
  * network -- see vitest.config.mjs.
  *
- * @vitest-environment-options { "settings": { "disableIframePageLoading": false } }
+ * @vitest-environment-options { "settings": { "disableIframePageLoading": false, "enableIframePageLoading": true } }
  */
 
 // Unit tests for the secure-mode external-embed relay (DEC-0061). The relay (parent) is
