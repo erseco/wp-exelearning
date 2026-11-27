@@ -293,6 +293,8 @@ describe( 'exelearning-editor: the saving overlay', () => {
 
 		const modal = document.getElementById( 'exelearning-loading-modal' );
 		expect( modal.classList.contains( 'is-error' ) ).toBe( true );
+		// The overlay is hidden without is-visible: the message must not be.
+		expect( modal.classList.contains( 'is-visible' ) ).toBe( true );
 		expect( modal.querySelector( '.exelearning-loading-modal__error-text' ).textContent ).toBe(
 			'Save failed (503)'
 		);
@@ -301,6 +303,25 @@ describe( 'exelearning-editor: the saving overlay', () => {
 
 		expect( modal.classList.contains( 'is-error' ) ).toBe( false );
 		expect( modal.classList.contains( 'is-visible' ) ).toBe( false );
+	} );
+
+	it( 'keeps the reason on screen when the editor was closed during the save', async () => {
+		// close() hides the overlay a moment later: that must not take a failure
+		// reported in between with it.
+		const editor = await loadEditorOn( MODAL_MARKUP );
+		editor.isOpen = true;
+		editor.setSavingState( true );
+		vi.useFakeTimers();
+		try {
+			editor.close( true );
+			editor.showLoadingError( 'Save failed (503)' );
+			vi.advanceTimersByTime( 1500 );
+		} finally {
+			vi.useRealTimers();
+		}
+
+		const modal = document.getElementById( 'exelearning-loading-modal' );
+		expect( modal.classList.contains( 'is-visible' ) ).toBe( true );
 	} );
 
 	it( 'clears a previous error when the next save starts', async () => {
@@ -529,7 +550,7 @@ describe( 'exelearning-editor: the conversation with the editor', () => {
 		expect( editor.hasUnsavedChanges ).toBe( true );
 	} );
 
-	it( 'gives the save button back when the editor reports a failure', async () => {
+	it( 'gives the save button back and says why when the editor reports a failure', async () => {
 		const editor = await loadEditorOn( MODAL_MARKUP );
 		stubEditorWindow( editor );
 		editor.setSavingState( true );
@@ -543,6 +564,12 @@ describe( 'exelearning-editor: the conversation with the editor', () => {
 
 		expect( editor.isSaving ).toBe( false );
 		expect( document.getElementById( 'exelearning-editor-save' ).disabled ).toBe( false );
+		// The export failed inside the editor: without a message the overlay just vanishes.
+		const overlay = document.getElementById( 'exelearning-loading-modal' );
+		expect( overlay.classList.contains( 'is-visible' ) ).toBe( true );
+		expect( overlay.querySelector( '.exelearning-loading-modal__error-text' ).textContent ).toBe(
+			'exporter blew up'
+		);
 	} );
 
 	it( 'ignores a failure that belongs to an earlier save', async () => {
@@ -716,6 +743,26 @@ describe( 'exelearning-editor: writing the file back to WordPress', () => {
 		expect( document.getElementById( 'exelearning-editor-save' ).disabled ).toBe( false );
 	} );
 
+	it( 'reports the status when the error response is not JSON', async () => {
+		// A 413 or 502 from the web server is an HTML page: the parser's own
+		// "Unexpected token <" says nothing to the person saving.
+		const editor = await loadEditorOn( MODAL_MARKUP );
+		stubEditorWindow( editor );
+		editor.isOpen = true;
+		editor.currentAttachmentId = 42;
+		stubRestApi( {
+			ok: false,
+			status: 413,
+			json: () => Promise.reject( new SyntaxError( 'Unexpected token <' ) ),
+		} );
+
+		await editor.handleExportFile( { bytes: new Uint8Array( [ 1 ] ) } );
+
+		expect(
+			document.querySelector( '.exelearning-loading-modal__error-text' ).textContent
+		).toBe( 'Save failed (413)' );
+	} );
+
 	it( 'treats a 200 that did not save as a failure', async () => {
 		const editor = await loadEditorOn( MODAL_MARKUP );
 		stubEditorWindow( editor );
@@ -726,9 +773,9 @@ describe( 'exelearning-editor: writing the file back to WordPress', () => {
 		await editor.handleExportFile( { bytes: new Uint8Array( [ 1 ] ) } );
 
 		expect( editor.isOpen ).toBe( true );
-		expect(
-			document.querySelector( '.exelearning-loading-modal' ).classList.contains( 'is-error' )
-		).toBe( true );
+		const overlay = document.querySelector( '.exelearning-loading-modal' );
+		expect( overlay.classList.contains( 'is-error' ) ).toBe( true );
+		expect( overlay.classList.contains( 'is-visible' ) ).toBe( true );
 	} );
 } );
 
@@ -765,10 +812,38 @@ describe( 'exelearning-editor: what the rest of the screen sees after a save', (
 
 		editor.updateBlockPreview( 42, 'https://files.test/preview.html' );
 
+		// A save that returns a preview URL means the package now has a preview.
 		expect( record.updates ).toEqual( [
-			{ clientId: 'a', attributes: { previewUrl: 'https://files.test/preview.html' } },
+			{ clientId: 'a', attributes: { previewUrl: 'https://files.test/preview.html', hasPreview: true } },
 		] );
 		expect( record.postSaved ).toBe( 1 );
+	} );
+
+	it( 'reaches a block nested inside a group or columns', async () => {
+		const editor = await loadEditorOn( MODAL_MARKUP );
+		const nested = { name: 'exelearning/elp-upload', clientId: 'deep', attributes: { attachmentId: 42 } };
+		const record = stubBlockEditor( [
+			{
+				name: 'core/group',
+				clientId: 'g',
+				attributes: {},
+				innerBlocks: [ { name: 'core/columns', clientId: 'c', attributes: {}, innerBlocks: [ nested ] } ],
+			},
+		] );
+
+		editor.updateBlockPreview( 42, 'https://files.test/preview.html' );
+
+		expect( record.updates.map( ( update ) => update.clientId ) ).toEqual( [ 'deep' ] );
+		expect( record.postSaved ).toBe( 1 );
+	} );
+
+	it( 'does nothing where wp.data is loaded without the block editor', async () => {
+		// Another script can enqueue wp-data on the media library: a save that
+		// succeeded must not then be reported as failed.
+		const editor = await loadEditorOn( MODAL_MARKUP );
+		global.wp.data = { select: () => undefined, dispatch: () => undefined };
+
+		expect( () => editor.updateBlockPreview( 42, 'https://files.test/preview.html' ) ).not.toThrow();
 	} );
 
 	it( 'leaves the post alone when no block was pointing at the file', async () => {
