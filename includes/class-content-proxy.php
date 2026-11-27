@@ -422,6 +422,7 @@ class ExeLearning_Content_Proxy {
 			// request URL needs them absolute, and so does a document with a
 			// <base> tag, which the rewrite below moves.
 			'keep_page_links' => self::is_path_request_for( $hash, $file_path ) && ! preg_match( '/<base\s/i', $html ),
+			'mode_args'       => self::requested_mode_args(),
 			// Levels a kept-relative link may climb before it leaves the package root.
 			'depth'           => '' === $current_dir ? 0 : substr_count( $current_dir, '/' ) + 1,
 		);
@@ -517,8 +518,70 @@ class ExeLearning_Content_Proxy {
 		// Script-capable documents (HTML/SVG/XML) go through the proxy so they
 		// get hardened headers; other assets are served directly from uploads.
 		$base_url = self::is_proxied_path( $resolved_path ) ? $context['proxy_url'] : $context['uploads_url'];
+		$target   = $base_url . $resolved_path;
 
-		return $prefix . $attr . esc_url( $base_url . $resolved_path ) . $end_quote;
+		// The package JS skips absolute links, so the mode travels in the URL.
+		if ( $context['mode_args'] && 0 === stripos( $attr, 'href' ) && self::is_html_path( $resolved_path ) ) {
+			// A parameter the link sets itself wins: of a repeated name the
+			// browser reads the first copy and PHP the last.
+			wp_parse_str( wp_specialchars_decode( (string) wp_parse_url( $resolved_path, PHP_URL_QUERY ) ), $own_args );
+			$mode_args = array_diff_key( $context['mode_args'], $own_args );
+			if ( $mode_args ) {
+				// Explicit separator: arg_separator.output is not always "&".
+				$target = self::append_query( $target, http_build_query( $mode_args, '', '&' ) );
+			}
+		}
+
+		return $prefix . $attr . esc_url( $target ) . $end_quote;
+	}
+
+	/**
+	 * Append a query string to a URL, before its fragment.
+	 *
+	 * Unlike add_query_arg(), the existing query (e.g. ?rest_route=/a/b) is
+	 * left exactly as it is.
+	 *
+	 * @param string $url   URL, with or without query and fragment.
+	 * @param string $query Encoded query string to append, without `?`.
+	 * @return string URL with the query appended.
+	 */
+	private static function append_query( $url, $query ) {
+		$parts = explode( '#', $url, 2 );
+		$url   = $parts[0] . ( false === strpos( $parts[0], '?' ) ? '?' : '&' ) . $query;
+
+		return isset( $parts[1] ) ? $url . '#' . $parts[1] : $url;
+	}
+
+	/**
+	 * Mode parameters of the current request that package pages understand.
+	 *
+	 * Exported packages read these from the URL (teacher layer, presentation
+	 * mode, menu state) and append them to relative links themselves. Links the
+	 * proxy must make absolute get them from here instead.
+	 *
+	 * @return array<string,string> Parameter name => simple value (1, 0, true...).
+	 */
+	private static function requested_mode_args() {
+		$args = array();
+
+		foreach ( array( 'exe-teacher', 'teacher-mode', 'exe-teacher-toggler', 'exe-presentation', 'nav' ) as $name ) {
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Public read-only display flags.
+			$value = isset( $_GET[ $name ] ) && is_string( $_GET[ $name ] ) ? sanitize_text_field( wp_unslash( $_GET[ $name ] ) ) : null;
+			if ( null !== $value && preg_match( '/^[a-z0-9]{1,5}$/i', $value ) ) {
+				$args[ $name ] = $value;
+			} elseif ( null !== $value && 'exe-presentation' === $name ) {
+				// The package offers the control for any value, switched off.
+				$args[ $name ] = '0';
+			}
+		}
+
+		// The menu state belongs to presentation mode: carried without it, a
+		// reader who reopened the menu would get it hidden again on every page.
+		if ( ! in_array( $args['exe-presentation'] ?? '', array( '1', 'true', 'yes' ), true ) ) {
+			unset( $args['nav'] );
+		}
+
+		return $args;
 	}
 
 	/**
@@ -540,10 +603,9 @@ class ExeLearning_Content_Proxy {
 
 		// file_path is the decoded filesystem path: re-encode it so names with
 		// &, #, + or % keep addressing this page.
-		$page_url  = $context['proxy_url'] . implode( '/', array_map( 'rawurlencode', explode( '/', $context['file_path'] ) ) );
-		$separator = false === strpos( $context['proxy_url'], '?' ) ? '?' : '&';
+		$page_url = $context['proxy_url'] . implode( '/', array_map( 'rawurlencode', explode( '/', $context['file_path'] ) ) );
 
-		return $prefix . $attr . esc_url( $page_url . $separator . substr( $url, 1 ) ) . $end_quote;
+		return $prefix . $attr . esc_url( self::append_query( $page_url, substr( $url, 1 ) ) ) . $end_quote;
 	}
 
 	/**
@@ -587,7 +649,7 @@ class ExeLearning_Content_Proxy {
 	 */
 	private static function is_html_path( $path ) {
 		// Strip query string and fragment before checking extension.
-		$clean_path = strtok( $path, '?#' );
+		$clean_path = substr( $path, 0, strcspn( $path, '?#' ) );
 		$extension  = strtolower( pathinfo( $clean_path, PATHINFO_EXTENSION ) );
 		return 'html' === $extension || 'htm' === $extension;
 	}
