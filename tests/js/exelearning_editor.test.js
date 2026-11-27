@@ -10,7 +10,7 @@
 // publishes itself as window.ExeLearningEditor on document ready. Each test therefore imports a
 // fresh copy against a fresh DOM, under a cache-busting URL so the module actually re-executes.
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const path = require( 'path' );
 const { pathToFileURL } = require( 'url' );
@@ -293,6 +293,8 @@ describe( 'exelearning-editor: the saving overlay', () => {
 
 		const modal = document.getElementById( 'exelearning-loading-modal' );
 		expect( modal.classList.contains( 'is-error' ) ).toBe( true );
+		// The overlay is hidden without is-visible: the message must not be.
+		expect( modal.classList.contains( 'is-visible' ) ).toBe( true );
 		expect( modal.querySelector( '.exelearning-loading-modal__error-text' ).textContent ).toBe(
 			'Save failed (503)'
 		);
@@ -301,6 +303,25 @@ describe( 'exelearning-editor: the saving overlay', () => {
 
 		expect( modal.classList.contains( 'is-error' ) ).toBe( false );
 		expect( modal.classList.contains( 'is-visible' ) ).toBe( false );
+	} );
+
+	it( 'keeps the reason on screen when the editor was closed during the save', async () => {
+		// close() hides the overlay a moment later: that must not take a failure
+		// reported in between with it.
+		const editor = await loadEditorOn( MODAL_MARKUP );
+		editor.isOpen = true;
+		editor.setSavingState( true );
+		vi.useFakeTimers();
+		try {
+			editor.close( true );
+			editor.showLoadingError( 'Save failed (503)' );
+			vi.advanceTimersByTime( 1500 );
+		} finally {
+			vi.useRealTimers();
+		}
+
+		const modal = document.getElementById( 'exelearning-loading-modal' );
+		expect( modal.classList.contains( 'is-visible' ) ).toBe( true );
 	} );
 
 	it( 'clears a previous error when the next save starts', async () => {
@@ -529,7 +550,7 @@ describe( 'exelearning-editor: the conversation with the editor', () => {
 		expect( editor.hasUnsavedChanges ).toBe( true );
 	} );
 
-	it( 'gives the save button back when the editor reports a failure', async () => {
+	it( 'gives the save button back and says why when the editor reports a failure', async () => {
 		const editor = await loadEditorOn( MODAL_MARKUP );
 		stubEditorWindow( editor );
 		editor.setSavingState( true );
@@ -543,6 +564,12 @@ describe( 'exelearning-editor: the conversation with the editor', () => {
 
 		expect( editor.isSaving ).toBe( false );
 		expect( document.getElementById( 'exelearning-editor-save' ).disabled ).toBe( false );
+		// The export failed inside the editor: without a message the overlay just vanishes.
+		const overlay = document.getElementById( 'exelearning-loading-modal' );
+		expect( overlay.classList.contains( 'is-visible' ) ).toBe( true );
+		expect( overlay.querySelector( '.exelearning-loading-modal__error-text' ).textContent ).toBe(
+			'exporter blew up'
+		);
 	} );
 
 	it( 'ignores a failure that belongs to an earlier save', async () => {
@@ -716,6 +743,26 @@ describe( 'exelearning-editor: writing the file back to WordPress', () => {
 		expect( document.getElementById( 'exelearning-editor-save' ).disabled ).toBe( false );
 	} );
 
+	it( 'reports the status when the error response is not JSON', async () => {
+		// A 413 or 502 from the web server is an HTML page: the parser's own
+		// "Unexpected token <" says nothing to the person saving.
+		const editor = await loadEditorOn( MODAL_MARKUP );
+		stubEditorWindow( editor );
+		editor.isOpen = true;
+		editor.currentAttachmentId = 42;
+		stubRestApi( {
+			ok: false,
+			status: 413,
+			json: () => Promise.reject( new SyntaxError( 'Unexpected token <' ) ),
+		} );
+
+		await editor.handleExportFile( { bytes: new Uint8Array( [ 1 ] ) } );
+
+		expect(
+			document.querySelector( '.exelearning-loading-modal__error-text' ).textContent
+		).toBe( 'Save failed (413)' );
+	} );
+
 	it( 'treats a 200 that did not save as a failure', async () => {
 		const editor = await loadEditorOn( MODAL_MARKUP );
 		stubEditorWindow( editor );
@@ -726,9 +773,9 @@ describe( 'exelearning-editor: writing the file back to WordPress', () => {
 		await editor.handleExportFile( { bytes: new Uint8Array( [ 1 ] ) } );
 
 		expect( editor.isOpen ).toBe( true );
-		expect(
-			document.querySelector( '.exelearning-loading-modal' ).classList.contains( 'is-error' )
-		).toBe( true );
+		const overlay = document.querySelector( '.exelearning-loading-modal' );
+		expect( overlay.classList.contains( 'is-error' ) ).toBe( true );
+		expect( overlay.classList.contains( 'is-visible' ) ).toBe( true );
 	} );
 } );
 
@@ -765,10 +812,38 @@ describe( 'exelearning-editor: what the rest of the screen sees after a save', (
 
 		editor.updateBlockPreview( 42, 'https://files.test/preview.html' );
 
+		// A save that returns a preview URL means the package now has a preview.
 		expect( record.updates ).toEqual( [
-			{ clientId: 'a', attributes: { previewUrl: 'https://files.test/preview.html' } },
+			{ clientId: 'a', attributes: { previewUrl: 'https://files.test/preview.html', hasPreview: true } },
 		] );
 		expect( record.postSaved ).toBe( 1 );
+	} );
+
+	it( 'reaches a block nested inside a group or columns', async () => {
+		const editor = await loadEditorOn( MODAL_MARKUP );
+		const nested = { name: 'exelearning/elp-upload', clientId: 'deep', attributes: { attachmentId: 42 } };
+		const record = stubBlockEditor( [
+			{
+				name: 'core/group',
+				clientId: 'g',
+				attributes: {},
+				innerBlocks: [ { name: 'core/columns', clientId: 'c', attributes: {}, innerBlocks: [ nested ] } ],
+			},
+		] );
+
+		editor.updateBlockPreview( 42, 'https://files.test/preview.html' );
+
+		expect( record.updates.map( ( update ) => update.clientId ) ).toEqual( [ 'deep' ] );
+		expect( record.postSaved ).toBe( 1 );
+	} );
+
+	it( 'does nothing where wp.data is loaded without the block editor', async () => {
+		// Another script can enqueue wp-data on the media library: a save that
+		// succeeded must not then be reported as failed.
+		const editor = await loadEditorOn( MODAL_MARKUP );
+		global.wp.data = { select: () => undefined, dispatch: () => undefined };
+
+		expect( () => editor.updateBlockPreview( 42, 'https://files.test/preview.html' ) ).not.toThrow();
 	} );
 
 	it( 'leaves the post alone when no block was pointing at the file', async () => {
@@ -781,6 +856,122 @@ describe( 'exelearning-editor: what the rest of the screen sees after a save', (
 
 		expect( record.updates ).toEqual( [] );
 		expect( record.postSaved ).toBe( 0 );
+	} );
+
+	it( 'reloads an empty block preview from its URL, not as srcdoc', async () => {
+		// The proxied HTML keeps links between package pages relative: as srcdoc
+		// they would resolve against wp-admin instead of the proxy.
+		const editor = await loadEditorOn( MODAL_MARKUP );
+		document.body.insertAdjacentHTML(
+			'beforeend',
+			'<div class="exelearning-block-preview"><iframe></iframe></div>'
+		);
+		const iframe = document.querySelector( '.exelearning-block-preview iframe' );
+		// A same-origin frame always has a document, empty until something loads.
+		Object.defineProperty( iframe, 'contentDocument', { value: { readyState: 'complete', body: { innerHTML: '' } } } );
+		vi.useFakeTimers();
+		try {
+			editor.ensurePreviewLoaded( 'https://files.test/preview.html' );
+			vi.advanceTimersByTime( 2000 );
+		} finally {
+			vi.useRealTimers();
+		}
+
+		expect( iframe.getAttribute( 'src' ) ).toBe( 'https://files.test/preview.html' );
+		expect( iframe.hasAttribute( 'srcdoc' ) ).toBe( false );
+	} );
+
+	it( 'reaches a block preview inside the iframed editor canvas', async () => {
+		// With every block on API v3 the post editor renders blocks in the
+		// editor-canvas iframe, which the top document cannot query directly.
+		const editor = await loadEditorOn( MODAL_MARKUP );
+		const canvasDoc = document.implementation.createHTMLDocument( 'canvas' );
+		canvasDoc.body.innerHTML = '<div class="exelearning-block-preview"><iframe></iframe></div>';
+		const preview = canvasDoc.querySelector( 'iframe' );
+		Object.defineProperty( preview, 'contentDocument', { value: { readyState: 'complete', body: { innerHTML: '' } } } );
+		document.body.insertAdjacentHTML( 'beforeend', '<iframe name="editor-canvas"></iframe>' );
+		const canvas = document.querySelector( 'iframe[name="editor-canvas"]' );
+		Object.defineProperty( canvas, 'contentDocument', { value: canvasDoc } );
+		vi.useFakeTimers();
+		try {
+			editor.ensurePreviewLoaded( 'https://files.test/preview.html' );
+			vi.advanceTimersByTime( 2000 );
+		} finally {
+			vi.useRealTimers();
+		}
+
+		expect( preview.getAttribute( 'src' ) ).toBe( 'https://files.test/preview.html' );
+	} );
+
+	it( 'leaves the previews of other packages alone', async () => {
+		// With exelearning_content_origin every preview is cross-origin, so its
+		// contentDocument is null and would read as empty.
+		const editor = await loadEditorOn( MODAL_MARKUP );
+		document.body.insertAdjacentHTML(
+			'beforeend',
+			'<div class="exelearning-block-preview"><iframe src="https://files.test/other.html"></iframe></div>'
+		);
+		const other = document.querySelector( '.exelearning-block-preview iframe' );
+		Object.defineProperty( other, 'contentDocument', { value: null } );
+		vi.useFakeTimers();
+		try {
+			editor.ensurePreviewLoaded( 'https://files.test/preview.html' );
+			vi.advanceTimersByTime( 2000 );
+		} finally {
+			vi.useRealTimers();
+		}
+
+		expect( other.getAttribute( 'src' ) ).toBe( 'https://files.test/other.html' );
+	} );
+
+	it( 'leaves a preview it cannot read alone', async () => {
+		// With exelearning_content_origin the saved package's preview is
+		// cross-origin: unreadable is not empty, and it is loading by itself.
+		const editor = await loadEditorOn( MODAL_MARKUP );
+		document.body.insertAdjacentHTML(
+			'beforeend',
+			'<div class="exelearning-block-preview"><iframe src="https://files.test/preview.html"></iframe></div>'
+		);
+		const iframe = document.querySelector( '.exelearning-block-preview iframe' );
+		const reload = vi.fn();
+		Object.defineProperty( iframe, 'contentDocument', { value: null } );
+		Object.defineProperty( iframe, 'src', { set: reload, get: () => 'https://files.test/preview.html' } );
+		vi.useFakeTimers();
+		try {
+			editor.ensurePreviewLoaded( 'https://files.test/preview.html' );
+			vi.advanceTimersByTime( 2000 );
+		} finally {
+			vi.useRealTimers();
+		}
+
+		expect( reload ).not.toHaveBeenCalled();
+	} );
+
+	it( 'leaves a preview that is still loading or already loaded alone', async () => {
+		// A package's <head> scripts can outlast the two seconds: until the parser
+		// reaches <body> the document has none, and restarting it loads it twice.
+		const editor = await loadEditorOn( MODAL_MARKUP );
+		document.body.insertAdjacentHTML(
+			'beforeend',
+			'<div class="exelearning-block-preview"><iframe></iframe><iframe></iframe></div>'
+		);
+		const [ loading, loaded ] = document.querySelectorAll( '.exelearning-block-preview iframe' );
+		Object.defineProperty( loading, 'contentDocument', {
+			value: { readyState: 'loading', body: null },
+		} );
+		Object.defineProperty( loaded, 'contentDocument', {
+			value: { readyState: 'complete', body: { innerHTML: '<p>Page</p>' } },
+		} );
+		vi.useFakeTimers();
+		try {
+			editor.ensurePreviewLoaded( 'https://files.test/preview.html' );
+			vi.advanceTimersByTime( 2000 );
+		} finally {
+			vi.useRealTimers();
+		}
+
+		expect( loading.hasAttribute( 'src' ) ).toBe( false );
+		expect( loaded.hasAttribute( 'src' ) ).toBe( false );
 	} );
 
 	it( 'does nothing outside the block editor', async () => {

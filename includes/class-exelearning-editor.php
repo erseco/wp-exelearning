@@ -257,6 +257,7 @@ class ExeLearning_Editor {
 					'saveToWordPress'   => __( 'Save to WordPress', 'exelearning' ),
 					'saving'            => __( 'Saving...', 'exelearning' ),
 					'pleaseWait'        => __( 'Please wait while the file is being saved.', 'exelearning' ),
+					'saveFailed'        => __( 'Failed to save the file.', 'exelearning' ),
 					'unsavedChanges'    => __( 'You have unsaved changes. Are you sure you want to close?', 'exelearning' ),
 				),
 			)
@@ -290,6 +291,7 @@ class ExeLearning_Editor {
 					'saveToWordPress'   => __( 'Save to WordPress', 'exelearning' ),
 					'saving'            => __( 'Saving...', 'exelearning' ),
 					'pleaseWait'        => __( 'Please wait while the file is being saved.', 'exelearning' ),
+					'saveFailed'        => __( 'Failed to save the file.', 'exelearning' ),
 					'unsavedChanges'    => __( 'You have unsaved changes. Are you sure you want to close?', 'exelearning' ),
 				),
 			)
