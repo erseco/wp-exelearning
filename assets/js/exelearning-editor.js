@@ -490,19 +490,30 @@
 
 		ensurePreviewLoaded: function( previewUrl ) {
 			setTimeout( function() {
-				const iframes = document.querySelectorAll( '.exelearning-block-preview iframe' );
+				// Blocks render in the editor-canvas iframe when the editor is
+				// iframed (every block on API v3), otherwise in this document.
+				const canvas = document.querySelector( 'iframe[name="editor-canvas"]' );
+				const roots = [ document, canvas && canvas.contentDocument ].filter( Boolean );
+				const iframes = roots.flatMap( function( root ) {
+					return Array.from( root.querySelectorAll( '.exelearning-block-preview iframe' ) );
+				} );
 				iframes.forEach( function( iframe ) {
 					try {
 						const doc = iframe.contentDocument;
 						const src = iframe.getAttribute( 'src' );
-						// Only this save's preview: a cross-origin frame (content
-						// origin) reads as empty, and other packages' are not ours.
+						// Only this save's preview: other packages' are not ours.
 						if ( src && src !== previewUrl ) {
+							return;
+						}
+						// Unreadable means cross-origin (content origin), not empty,
+						// and still parsing is not empty either: restarting those
+						// would only load them twice.
+						if ( ! doc || doc.readyState === 'loading' ) {
 							return;
 						}
 						// Load from the URL, never as srcdoc: package page links are
 						// relative and must resolve against the proxy, not wp-admin.
-						if ( ! doc || ! doc.body || doc.body.innerHTML.length === 0 ) {
+						if ( ! doc.body || doc.body.innerHTML.length === 0 ) {
 							iframe.src = previewUrl;
 						}
 					} catch ( e ) {}

@@ -792,6 +792,8 @@ describe( 'exelearning-editor: what the rest of the screen sees after a save', (
 			'<div class="exelearning-block-preview"><iframe></iframe></div>'
 		);
 		const iframe = document.querySelector( '.exelearning-block-preview iframe' );
+		// A same-origin frame always has a document, empty until something loads.
+		Object.defineProperty( iframe, 'contentDocument', { value: { readyState: 'complete', body: { innerHTML: '' } } } );
 		vi.useFakeTimers();
 		try {
 			editor.ensurePreviewLoaded( 'https://files.test/preview.html' );
@@ -802,6 +804,28 @@ describe( 'exelearning-editor: what the rest of the screen sees after a save', (
 
 		expect( iframe.getAttribute( 'src' ) ).toBe( 'https://files.test/preview.html' );
 		expect( iframe.hasAttribute( 'srcdoc' ) ).toBe( false );
+	} );
+
+	it( 'reaches a block preview inside the iframed editor canvas', async () => {
+		// With every block on API v3 the post editor renders blocks in the
+		// editor-canvas iframe, which the top document cannot query directly.
+		const editor = await loadEditorOn( MODAL_MARKUP );
+		const canvasDoc = document.implementation.createHTMLDocument( 'canvas' );
+		canvasDoc.body.innerHTML = '<div class="exelearning-block-preview"><iframe></iframe></div>';
+		const preview = canvasDoc.querySelector( 'iframe' );
+		Object.defineProperty( preview, 'contentDocument', { value: { readyState: 'complete', body: { innerHTML: '' } } } );
+		document.body.insertAdjacentHTML( 'beforeend', '<iframe name="editor-canvas"></iframe>' );
+		const canvas = document.querySelector( 'iframe[name="editor-canvas"]' );
+		Object.defineProperty( canvas, 'contentDocument', { value: canvasDoc } );
+		vi.useFakeTimers();
+		try {
+			editor.ensurePreviewLoaded( 'https://files.test/preview.html' );
+			vi.advanceTimersByTime( 2000 );
+		} finally {
+			vi.useRealTimers();
+		}
+
+		expect( preview.getAttribute( 'src' ) ).toBe( 'https://files.test/preview.html' );
 	} );
 
 	it( 'leaves the previews of other packages alone', async () => {
@@ -823,6 +847,56 @@ describe( 'exelearning-editor: what the rest of the screen sees after a save', (
 		}
 
 		expect( other.getAttribute( 'src' ) ).toBe( 'https://files.test/other.html' );
+	} );
+
+	it( 'leaves a preview it cannot read alone', async () => {
+		// With exelearning_content_origin the saved package's preview is
+		// cross-origin: unreadable is not empty, and it is loading by itself.
+		const editor = await loadEditorOn( MODAL_MARKUP );
+		document.body.insertAdjacentHTML(
+			'beforeend',
+			'<div class="exelearning-block-preview"><iframe src="https://files.test/preview.html"></iframe></div>'
+		);
+		const iframe = document.querySelector( '.exelearning-block-preview iframe' );
+		const reload = vi.fn();
+		Object.defineProperty( iframe, 'contentDocument', { value: null } );
+		Object.defineProperty( iframe, 'src', { set: reload, get: () => 'https://files.test/preview.html' } );
+		vi.useFakeTimers();
+		try {
+			editor.ensurePreviewLoaded( 'https://files.test/preview.html' );
+			vi.advanceTimersByTime( 2000 );
+		} finally {
+			vi.useRealTimers();
+		}
+
+		expect( reload ).not.toHaveBeenCalled();
+	} );
+
+	it( 'leaves a preview that is still loading or already loaded alone', async () => {
+		// A package's <head> scripts can outlast the two seconds: until the parser
+		// reaches <body> the document has none, and restarting it loads it twice.
+		const editor = await loadEditorOn( MODAL_MARKUP );
+		document.body.insertAdjacentHTML(
+			'beforeend',
+			'<div class="exelearning-block-preview"><iframe></iframe><iframe></iframe></div>'
+		);
+		const [ loading, loaded ] = document.querySelectorAll( '.exelearning-block-preview iframe' );
+		Object.defineProperty( loading, 'contentDocument', {
+			value: { readyState: 'loading', body: null },
+		} );
+		Object.defineProperty( loaded, 'contentDocument', {
+			value: { readyState: 'complete', body: { innerHTML: '<p>Page</p>' } },
+		} );
+		vi.useFakeTimers();
+		try {
+			editor.ensurePreviewLoaded( 'https://files.test/preview.html' );
+			vi.advanceTimersByTime( 2000 );
+		} finally {
+			vi.useRealTimers();
+		}
+
+		expect( loading.hasAttribute( 'src' ) ).toBe( false );
+		expect( loaded.hasAttribute( 'src' ) ).toBe( false );
 	} );
 
 	it( 'does nothing outside the block editor', async () => {
