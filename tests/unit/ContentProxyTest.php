@@ -45,6 +45,8 @@ class ContentProxyTest extends WP_UnitTestCase {
 	public function tear_down() {
 		$_GET = array();
 		$this->reset__SERVER();
+		// Back to the suite's plain permalinks: the rewrite global outlives a test.
+		$this->set_permalink_structure( '' );
 		parent::tear_down();
 	}
 
@@ -1107,7 +1109,8 @@ class ContentProxyTest extends WP_UnitTestCase {
 
 		$result = $method->invoke( $this->rewriter, '<a href="html/page-2.html?x=1&amp;exe-teacher=0">Next</a>', $hash, 'index.html' );
 
-		$this->assertStringContainsString( $hash . '/html/page-2.html?x=1&#038;exe-teacher=0&#038;exe-presentation=1"', $result );
+		// Plain permalinks: the link's query follows the rest_route value.
+		$this->assertStringContainsString( $hash . '/html/page-2.html&#038;x=1&#038;exe-teacher=0&#038;exe-presentation=1"', $result );
 		$this->assertStringNotContainsString( 'exe-teacher=1', $result );
 	}
 
@@ -1142,6 +1145,167 @@ class ContentProxyTest extends WP_UnitTestCase {
 		$this->assertTrue( $method->invoke( null, 'html/page.html?x=1#top' ) );
 		$this->assertFalse( $method->invoke( null, '?x=page.html' ) );
 		$this->assertFalse( $method->invoke( null, '#page.html' ) );
+	}
+
+	/**
+	 * A rest_url filter may add a query argument: the package path goes before
+	 * it, never glued after it.
+	 */
+	public function test_rewrite_urls_put_the_path_before_a_filtered_query() {
+		$this->set_permalink_structure( '/%postname%/' );
+		$html_method = new ReflectionMethod( ExeLearning_Content_Url_Rewriter::class, 'rewrite_relative_urls' );
+		$html_method->setAccessible( true );
+		$hash     = str_repeat( 'a', 40 );
+		$add_lang = static function ( $url ) {
+			return add_query_arg( 'lang', 'es', $url );
+		};
+		add_filter( 'rest_url', $add_lang );
+		$html = $html_method->invoke( $this->rewriter, '<iframe src="html/frame.html"></iframe><a href="html/page-2.html?x=1#top">2</a><div style="background:url(img/bg.svg)"></div>', $hash, 'index.html' );
+		$css  = $this->rewriter->rewrite_css_urls( 'a{background:url(../img/logo.svg)}', $hash, 'css/style.css' );
+		remove_filter( 'rest_url', $add_lang );
+
+		$this->assertStringContainsString( $hash . '/html/frame.html?lang=es"', $html );
+		$this->assertStringContainsString( $hash . '/html/page-2.html?lang=es&#038;x=1#top"', $html );
+		$this->assertStringContainsString( $hash . '/img/bg.svg?lang=es)', $html );
+		$this->assertStringContainsString( $hash . '/img/logo.svg?lang=es)', $css );
+	}
+
+	/**
+	 * With plain permalinks the link's own query must not end up inside the
+	 * rest_route value.
+	 */
+	public function test_rewrite_relative_urls_keeps_link_query_out_of_rest_route() {
+		$this->set_permalink_structure( '' );
+		$method = new ReflectionMethod( ExeLearning_Content_Url_Rewriter::class, 'rewrite_relative_urls' );
+		$method->setAccessible( true );
+		$hash = str_repeat( 'a', 40 );
+
+		$result = $method->invoke( $this->rewriter, '<a href="viewer.html?file=x.pdf#p2">PDF</a>', $hash, 'index.html' );
+
+		$this->assertStringContainsString( 'rest_route=/exelearning/v1/content/' . $hash . '/viewer.html&#038;file=x.pdf#p2"', $result );
+	}
+
+	/**
+	 * The hash and file come from the route: a query argument with the same
+	 * name (viewer.html?file=x.pdf) belongs to the package page.
+	 */
+	public function test_serve_content_reads_hash_and_file_from_the_route() {
+		$hash    = str_repeat( 'a', 40 );
+		$request = new WP_REST_Request( 'GET', '/exelearning/v1/content/' . $hash . '/viewer.html' );
+		$request->set_url_params(
+			array(
+				'hash' => $hash,
+				'file' => 'viewer.html',
+			)
+		);
+		$request->set_query_params(
+			array(
+				'hash' => 'not-a-hash',
+				'file' => '../../wp-config.php',
+			)
+		);
+
+		$result = $this->proxy->serve_content( $request );
+
+		// The route values pass validation and simply do not exist on disk.
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'file_not_found', $result->get_error_code() );
+	}
+
+	/**
+	 * With plain permalinks the path travels inside ?rest_route=, where a
+	 * literal + or & would be read as query syntax.
+	 */
+	public function test_rewrite_relative_urls_encodes_query_syntax_in_names_inside_rest_route() {
+		$hash = str_repeat( 'a', 40 );
+		$html = '<img src="img/a+b.svg"><img src="img/q&amp;a.svg"><img src="img/caf&eacute;.svg">';
+
+		$this->set_permalink_structure( '' );
+		$plain = $this->rewriter->rewrite_relative_urls( $html, $hash, 'index.html' );
+		$this->set_permalink_structure( '/%postname%/' );
+		$pretty = $this->rewriter->rewrite_relative_urls( $html, $hash, 'index.html' );
+
+		$this->assertStringContainsString( $hash . '/img/a%2Bb.svg"', $plain );
+		$this->assertStringContainsString( $hash . '/img/q%26a.svg"', $plain );
+		$this->assertStringContainsString( $hash . '/img/caf&eacute;.svg"', $plain );
+		// In a path they are ordinary characters.
+		$this->assertStringContainsString( $hash . '/img/a+b.svg"', $pretty );
+		$this->assertStringContainsString( $hash . '/img/q&#038;a.svg"', $pretty );
+	}
+
+	/**
+	 * A url() keeps the delimiters its author wrote: an added double quote
+	 * would end the style="" attribute.
+	 */
+	public function test_rewrite_relative_urls_keeps_inline_style_delimiters() {
+		$hash = str_repeat( 'a', 40 );
+		$base = ExeLearning_Content_Proxy::get_uploads_url( $hash );
+
+		$result = $this->rewriter->rewrite_relative_urls( '<p style="background:url(img/bg.png)"></p><p style="background:url( \'img/bg.png\' )"></p>', $hash, 'index.html' );
+
+		$this->assertSame( '<p style="background:url(' . $base . 'img/bg.png)"></p><p style="background:url( \'' . $base . 'img/bg.png\' )"></p>', $result );
+	}
+
+	/**
+	 * A stylesheet is not HTML: the query of a reference keeps its plain "&".
+	 */
+	public function test_rewrite_css_urls_writes_no_html_entities() {
+		$css = $this->rewriter->rewrite_css_urls( 'a{src:url("font.woff?a=1&b=2")}', str_repeat( 'a', 40 ), 'css/style.css' );
+
+		$this->assertStringContainsString( '/css/font.woff?a=1&b=2")', $css );
+	}
+
+	/**
+	 * Browsers serialize url() in a style attribute with entity quotes: they
+	 * are delimiters, not part of the URL.
+	 */
+	public function test_rewrite_relative_urls_reads_entity_quoted_style_urls() {
+		$method = new ReflectionMethod( ExeLearning_Content_Url_Rewriter::class, 'rewrite_relative_urls' );
+		$method->setAccessible( true );
+		$hash = str_repeat( 'a', 40 );
+
+		$absolute = '<div style="background:url(&quot;https://cdn.example.com/x.png&quot;)"></div><div style="background:url(&#39;data:image/png;base64,AAAA&#39;)"></div>';
+		$this->assertSame( $absolute, $method->invoke( $this->rewriter, $absolute, $hash, 'index.html' ) );
+
+		$result = $method->invoke( $this->rewriter, '<div style="background:url(&quot;img/bg.png&quot;)"></div>', $hash, 'index.html' );
+		$this->assertStringContainsString( 'url(&quot;http', $result );
+		$this->assertStringContainsString( $hash . '/img/bg.png&quot;)"', $result );
+	}
+
+	/**
+	 * A link to the package folder goes to the proxy, which serves its index:
+	 * the uploads directory blocks direct access.
+	 */
+	public function test_rewrite_relative_urls_sends_package_root_links_to_the_proxy() {
+		$this->set_permalink_structure( '/%postname%/' );
+		$method = new ReflectionMethod( ExeLearning_Content_Url_Rewriter::class, 'rewrite_relative_urls' );
+		$method->setAccessible( true );
+		$hash = str_repeat( 'a', 40 );
+
+		$result  = $method->invoke( $this->rewriter, '<a href="../">Home</a>', $hash, 'html/page.html' );
+		$result .= $method->invoke( $this->rewriter, '<a href="./#top">Top</a>', $hash, 'index.html' );
+
+		$this->assertStringContainsString( 'exelearning/v1/content/' . $hash . '/"', $result );
+		$this->assertStringContainsString( 'exelearning/v1/content/' . $hash . '/#top"', $result );
+		$this->assertStringNotContainsString( 'uploads/exelearning', $result );
+	}
+
+	/**
+	 * On a routed request the file comes from the route only: without one the
+	 * package index is served, whatever a query argument named "file" says.
+	 */
+	public function test_route_param_ignores_the_query_on_routed_requests() {
+		$method = new ReflectionMethod( ExeLearning_Content_Proxy::class, 'route_param' );
+		$method->setAccessible( true );
+		$request = new WP_REST_Request( 'GET', '/exelearning/v1/content/' . str_repeat( 'a', 40 ) );
+		$request->set_url_params( array( 'hash' => str_repeat( 'a', 40 ) ) );
+		$request->set_query_params( array( 'file' => 'nope.pdf' ) );
+
+		$this->assertNull( $method->invoke( null, $request, 'file' ) );
+
+		$direct = new WP_REST_Request( 'GET', '/exelearning/v1/content/x' );
+		$direct->set_param( 'file', 'index.html' );
+		$this->assertSame( 'index.html', $method->invoke( null, $direct, 'file' ) );
 	}
 
 	/**

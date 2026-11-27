@@ -91,8 +91,8 @@ class ExeLearning_Content_Proxy {
 	 * @return WP_REST_Response|WP_Error Response or error.
 	 */
 	public function serve_content( $request ) {
-		$hash = $request->get_param( 'hash' );
-		$file = $request->get_param( 'file' );
+		$hash = self::route_param( $request, 'hash' );
+		$file = self::route_param( $request, 'file' );
 
 		// Validate hash.
 		$hash_error = $this->validate_hash( $hash );
@@ -118,6 +118,28 @@ class ExeLearning_Content_Proxy {
 		// Serve the file.
 		$this->serve_file( $file_result['full_path'], $file_result['file'], $hash );
 		exit;
+	}
+
+	/**
+	 * Read a route parameter, ignoring a query argument of the same name.
+	 *
+	 * WP_REST_Request::get_param() prefers the query string over the URL, so
+	 * `.../viewer.html?file=x.pdf` would serve x.pdf instead of the page the
+	 * query belongs to. On a routed request only the route counts: a missing
+	 * file means the package index.
+	 *
+	 * @param WP_REST_Request $request REST request object.
+	 * @param string          $name    Parameter name.
+	 * @return mixed Route value; the merged parameter for a request built without a route.
+	 */
+	private static function route_param( $request, $name ) {
+		$url_params = $request->get_url_params();
+
+		if ( ! $url_params ) {
+			return $request->get_param( $name );
+		}
+
+		return isset( $url_params[ $name ] ) && '' !== $url_params[ $name ] ? $url_params[ $name ] : null;
 	}
 
 	/**
