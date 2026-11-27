@@ -494,17 +494,16 @@
 				iframes.forEach( function( iframe ) {
 					try {
 						const doc = iframe.contentDocument;
+						const src = iframe.getAttribute( 'src' );
+						// Only this save's preview: a cross-origin frame (content
+						// origin) reads as empty, and other packages' are not ours.
+						if ( src && src !== previewUrl ) {
+							return;
+						}
+						// Load from the URL, never as srcdoc: package page links are
+						// relative and must resolve against the proxy, not wp-admin.
 						if ( ! doc || ! doc.body || doc.body.innerHTML.length === 0 ) {
-							fetch( previewUrl, { credentials: 'same-origin' } )
-								.then( function( response ) {
-									return response.ok ? response.text() : null;
-								} )
-								.then( function( html ) {
-									if ( html && html.length > 0 ) {
-										iframe.srcdoc = html;
-									}
-								} )
-								.catch( function() {} );
+							iframe.src = previewUrl;
 						}
 					} catch ( e ) {}
 				} );
