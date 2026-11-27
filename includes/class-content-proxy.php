@@ -414,6 +414,7 @@ class ExeLearning_Content_Proxy {
 			'uploads_url'     => self::get_uploads_url( $hash ),
 			'proxy_url'       => $proxy_url,
 			'current_dir'     => $current_dir,
+			'file_path'       => $file_path,
 			// Links between package pages stay relative when the proxy URL is
 			// path-based: they already resolve to the proxy, and the package JS
 			// only carries its mode parameters (exe-teacher, exe-presentation)
@@ -473,6 +474,10 @@ class ExeLearning_Content_Proxy {
 			return $full;
 		}
 
+		if ( '?' === $url[0] ) {
+			return self::rewrite_query_only_url( $matches, $context );
+		}
+
 		// Resolve the relative URL based on current directory.
 		$resolved_path = $this->resolve_relative_path( $context['current_dir'], $url );
 
@@ -485,6 +490,31 @@ class ExeLearning_Content_Proxy {
 		$base_url = self::is_proxied_path( $resolved_path ) ? $context['proxy_url'] : $context['uploads_url'];
 
 		return $prefix . $attr . esc_url( $base_url . $resolved_path ) . $end_quote;
+	}
+
+	/**
+	 * Rewrite a query-only URL, which targets the current document.
+	 *
+	 * It stays relative where that resolves; otherwise it points at this page
+	 * through the proxy so the routing argument survives.
+	 *
+	 * @param string[] $matches Full match, tag prefix, attribute opening, URL, closing quote.
+	 * @param array    $context Rewrite context built by rewrite_relative_urls().
+	 * @return string Replacement for the full match.
+	 */
+	private static function rewrite_query_only_url( $matches, $context ) {
+		list( $full, $prefix, $attr, $url, $end_quote ) = $matches;
+
+		if ( $context['keep_page_links'] ) {
+			return $full;
+		}
+
+		// file_path is the decoded filesystem path: re-encode it so names with
+		// &, #, + or % keep addressing this page.
+		$page_url  = $context['proxy_url'] . implode( '/', array_map( 'rawurlencode', explode( '/', $context['file_path'] ) ) );
+		$separator = false === strpos( $context['proxy_url'], '?' ) ? '?' : '&';
+
+		return $prefix . $attr . esc_url( $page_url . $separator . substr( $url, 1 ) ) . $end_quote;
 	}
 
 	/**
@@ -592,15 +622,16 @@ class ExeLearning_Content_Proxy {
 	 * @return string Resolved path.
 	 */
 	private function resolve_relative_path( $base_dir, $relative_path ) {
-		// If no base directory, just return the relative path.
-		if ( empty( $base_dir ) ) {
-			// Still need to handle ../ at the start which would be invalid.
-			$relative_path = ltrim( $relative_path, './' );
-			return $relative_path;
-		}
+		// Only the path is normalized: a query or fragment (?file=https://...,
+		// #/route/) is appended verbatim.
+		$path_length = strcspn( $relative_path, '?#' );
+		$suffix      = substr( $relative_path, $path_length );
+		$path        = substr( $relative_path, 0, $path_length );
 
-		// Combine base directory with relative path.
-		$combined = $base_dir . '/' . $relative_path;
+		// Combine base directory with relative path. At the root, leading ../
+		// segments pop nothing, so they stay clamped to the package root, while
+		// dot-prefixed names (.hidden/) are kept.
+		$combined = $base_dir . '/' . $path;
 
 		// Normalize the path by resolving . and .. components.
 		$parts  = explode( '/', $combined );
@@ -618,7 +649,14 @@ class ExeLearning_Content_Proxy {
 			}
 		}
 
-		return implode( '/', $result );
+		$resolved = implode( '/', $result );
+
+		// Keep the trailing slash that marks a directory.
+		if ( '' !== $resolved && '/' === substr( $path, -1 ) ) {
+			$resolved .= '/';
+		}
+
+		return $resolved . $suffix;
 	}
 
 	/**
